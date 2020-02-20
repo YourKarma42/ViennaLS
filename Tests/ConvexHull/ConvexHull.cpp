@@ -13,7 +13,7 @@ int main() {
 
   constexpr int D = 2;
 
-  omp_set_num_threads(1);
+   
 
   // double extent = 100;
   // double gridDelta = 1;

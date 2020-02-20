@@ -24,7 +24,7 @@ int main() {
   // do not need to define dimension
   // since we are using predefined typedefs
   // constexpr int D = 3;
-  omp_set_num_threads(4);
+   
 
   double gridDelta = 0.25;
 

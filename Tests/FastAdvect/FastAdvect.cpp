@@ -60,7 +60,7 @@ int main() {
   lsVTKWriter(mesh, "surface.vtk").apply();
 
   // set up spherical advection dist
-  lsSphereDistribution<double, D> dist(20.0);
+  lsSphereDistribution<double, D> dist(10.0);
   lsFastAdvect<NumericType, D>(levelSet, dist).apply();
 
   lsToMesh<NumericType, D>(levelSet, mesh).apply();

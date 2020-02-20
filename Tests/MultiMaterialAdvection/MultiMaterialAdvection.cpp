@@ -43,7 +43,7 @@ public:
 int main() {
 
   constexpr int D = 3;
-  omp_set_num_threads(4);
+   
 
   // set up simulation domains and geometry
   double gridDelta = 0.25;

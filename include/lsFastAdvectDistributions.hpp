@@ -8,6 +8,8 @@
 /// by any advection distribution.
 template <class T, int D> class lsFastAdvectDistribution {
 public:
+  lsFastAdvectDistribution() {}
+
   /// Quick check whether a point relative to the distributions
   /// center is inside the distribution.
   virtual bool isInside(const std::array<hrleCoordType, D> &v,
@@ -20,6 +22,8 @@ public:
 
   /// Sets bounds to the bounding box of the distribution.
   virtual void getBounds(std::array<hrleCoordType, 2 * D> &bounds) const = 0;
+
+  virtual ~lsFastAdvectDistribution() {}
 };
 
 /// Concrete implementation of lsFastAdvectDistribution for a spherical
@@ -76,6 +80,8 @@ template <class T, int D>
 class lsBoxDistribution : public lsFastAdvectDistribution<T, D> {
 public:
   const hrleVectorType<T, D> posExtent;
+
+  lsBoxDistribution(const std::array<T, D> halfAxes) : posExtent(halfAxes) {}
 
   lsBoxDistribution(const hrleVectorType<T, D> halfAxes)
       : posExtent(halfAxes) {}

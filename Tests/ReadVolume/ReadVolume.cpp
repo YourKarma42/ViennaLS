@@ -9,7 +9,7 @@
 
 int main() {
   constexpr int D = 2;
-  omp_set_num_threads(1);
+   
 
   double gridDelta = 5e-10;
   double bounds[2 * D] = {-3.5e-8, 3.5e-8, -5e-8, 5e-8};

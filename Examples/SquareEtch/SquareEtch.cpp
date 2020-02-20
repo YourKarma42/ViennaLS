@@ -76,7 +76,7 @@ public:
 int main() {
 
   constexpr int D = 2;
-  omp_set_num_threads(1);
+   
 
   // Change this to use the analytical velocity field
   const bool useAnalyticalVelocity = false;

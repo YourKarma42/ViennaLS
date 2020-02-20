@@ -96,9 +96,7 @@ void makeRoundCone(lsMesh &mesh, hrleVectorType<double, 3> center,
 }
 
 int main() {
-
   constexpr int D = 3;
-  omp_set_num_threads(6);
 
   // scale in micrometers
   double coneDistance = 3.5;

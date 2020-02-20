@@ -40,8 +40,6 @@ vls.lsBooleanOperation(substrate, trench, vls.lsBooleanOperationEnum.RELATIVE_CO
 print("Creating new layer...")
 newLayer = vls.lsDomain(substrate)
 
-velocities = velocityField()
-
 print("Advecting")
 # Advect the level set
 dist = vls.lsSphereDistribution(4.0)

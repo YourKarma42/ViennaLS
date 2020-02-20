@@ -16,7 +16,7 @@
 int main() {
   constexpr int D = 3;
 
-  omp_set_num_threads(4);
+   
 
   lsDomain<double, D> levelSet;
 

@@ -128,12 +128,10 @@ public:
     hrleVectorType<hrleIndexType, D> lastIndex = min;
 
     // set first undefined run
-    {
-      // get iterator to min
-      hrleConstSparseIterator<DomainType> checkIt(levelSet->getDomain());
-      newDomain.insertNextUndefinedPoint(0, grid.getMinGridPoint(),
-                                         checkIt.getValue());
-    }
+    // get iterator to min
+    hrleConstSparseIterator<DomainType> checkIt(levelSet->getDomain());
+    newDomain.insertNextUndefinedPoint(0, grid.getMinGridPoint(),
+                                       checkIt.getValue());
 
     // Iterate through the bounds of new lsDomain lexicographically
     for (hrleVectorType<hrleIndexType, D> currentIndex = min;
@@ -141,19 +139,16 @@ public:
       // if point is already full in old level set, skip it
       // TODO: do not always initialize new iterator
       // but use the same and just increment it when necessary
-      {
-        hrleConstSparseIterator<DomainType> checkIt(levelSet->getDomain(),
-                                                    currentIndex);
-        // if run is negative undefined
-        if (checkIt.getValue() < -0.5) {
-          if (!currentFullRun) {
-            newDomain.insertNextUndefinedPoint(0, currentIndex,
-                                               levelSet->NEG_VALUE);
-            currentFullRun = true;
-            currentEmptyRun = false;
-          }
-          continue;
+      checkIt.goToIndices(currentIndex);
+      // if run is negative undefined
+      if (checkIt.getValue() < -0.5) {
+        if (!currentFullRun) {
+          newDomain.insertNextUndefinedPoint(0, currentIndex,
+                                             levelSet->NEG_VALUE);
+          currentFullRun = true;
+          currentEmptyRun = false;
         }
+        continue;
       }
 
       hrleVectorType<hrleCoordType, D> currentCoords;

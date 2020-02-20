@@ -283,6 +283,44 @@ PYBIND11_MODULE(VIENNALS_MODULE_NAME, module) {
           "Set advection distribution to use as kernel for the fast advection.")
       .def("apply", &lsFastAdvect<T, D>::apply, "Perform advection.");
 
+  // Fast Advection Disttributions
+  // lsFastAdvectDistribution
+  pybind11::class_<lsFastAdvectDistribution<T, D>, PylsFastAdvectDistribution>(module, "lsFastAdvectDistribution")
+      // methods
+      .def("isInside", &lsFastAdvectDistribution<T, D>::isInside,
+           "Check whether a point is inside the distribution.")
+      .def(
+          "getSignedDistance",
+          &lsFastAdvectDistribution<T, D>::getSignedDistance,
+          "Get the signed distance from a point to the surface of the distribution.")
+      .def("getBounds", &lsFastAdvectDistribution<T, D>::getBounds, "Get the bounding box of the distribution for quick bounds checking.");
+
+  // lsSphereDistribution
+  pybind11::class_<lsSphereDistribution<T, D>, lsFastAdvectDistribution<T, D>>(module, "lsSphereDistribution")
+      // constructors
+      .def(pybind11::init<T>())
+      // methods
+      .def("isInside", &lsSphereDistribution<T, D>::isInside,
+           "Check whether a point is inside the distribution.")
+      .def(
+          "getSignedDistance",
+          &lsSphereDistribution<T, D>::getSignedDistance,
+          "Get the signed distance from a point to the surface of the distribution.")
+      .def("getBounds", &lsSphereDistribution<T, D>::getBounds, "Get the bounding box of the distribution for quick bounds checking.");
+
+  // lsBoxDistribution
+  pybind11::class_<lsBoxDistribution<T, D>, lsFastAdvectDistribution<T, D>>(module, "lsBoxDistribution")
+      // constructors
+      .def(pybind11::init<std::array<T, D>>())
+      // methods
+      .def("isInside", &lsBoxDistribution<T, D>::isInside,
+           "Check whether a point is inside the distribution.")
+      .def(
+          "getSignedDistance",
+          &lsBoxDistribution<T, D>::getSignedDistance,
+          "Get the signed distance from a point to the surface of the distribution.")
+      .def("getBounds", &lsBoxDistribution<T, D>::getBounds, "Get the bounding box of the distribution for quick bounds checking.");
+
   // lsExpand
   pybind11::class_<lsExpand<T, D>>(module, "lsExpand")
       // constructors

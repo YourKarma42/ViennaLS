@@ -38,7 +38,7 @@ public:
 int main() {
 
   constexpr int D = 3;
-  omp_set_num_threads(6);
+   
 
   double extent = 20;
   double gridDelta = 0.5;
