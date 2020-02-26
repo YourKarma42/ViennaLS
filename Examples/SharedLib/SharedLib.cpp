@@ -24,7 +24,6 @@ int main() {
   // do not need to define dimension
   // since we are using predefined typedefs
   // constexpr int D = 3;
-   
 
   double gridDelta = 0.25;
 

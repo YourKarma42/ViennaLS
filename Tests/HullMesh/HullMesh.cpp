@@ -7,8 +7,6 @@
 int main() {
   constexpr int D = 3;
 
-  //  
-
   lsPointCloud<double, D> cloud;
 
   cloud.insertNextPoint(hrleVectorType<double, D>(0, 0, 1));

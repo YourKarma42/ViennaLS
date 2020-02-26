@@ -137,8 +137,6 @@ public:
     for (hrleVectorType<hrleIndexType, D> currentIndex = min;
          currentIndex <= max; incrementIndices(currentIndex, min, max)) {
       // if point is already full in old level set, skip it
-      // TODO: do not always initialize new iterator
-      // but use the same and just increment it when necessary
       checkIt.goToIndices(currentIndex);
       // if run is negative undefined
       if (checkIt.getValue() < -0.5) {

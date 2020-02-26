@@ -16,8 +16,6 @@
 int main() {
   constexpr int D = 3;
 
-   
-
   lsDomain<double, D> levelSet;
 
   const double radius = 7.3;

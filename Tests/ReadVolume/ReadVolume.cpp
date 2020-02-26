@@ -9,7 +9,6 @@
 
 int main() {
   constexpr int D = 2;
-   
 
   double gridDelta = 5e-10;
   double bounds[2 * D] = {-3.5e-8, 3.5e-8, -5e-8, 5e-8};

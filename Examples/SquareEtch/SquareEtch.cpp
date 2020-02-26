@@ -76,7 +76,6 @@ public:
 int main() {
 
   constexpr int D = 2;
-   
 
   // Change this to use the analytical velocity field
   const bool useAnalyticalVelocity = false;

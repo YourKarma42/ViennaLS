@@ -38,7 +38,6 @@ public:
 int main() {
 
   constexpr int D = 3;
-   
 
   double gridDelta = 0.25;
 

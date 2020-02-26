@@ -37,7 +37,6 @@ public:
 
 int main() {
   constexpr int D = 2;
-   
 
   double extent = 25;
   double gridDelta = 1;

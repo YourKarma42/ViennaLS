@@ -18,7 +18,6 @@
 int main() {
 
   constexpr int D = 3;
-   
 
   double gridDelta = 1.0;
   double bounds[2 * D] = {-20, 20, -20, 20};

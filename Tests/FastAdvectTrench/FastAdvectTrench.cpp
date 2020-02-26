@@ -4,13 +4,11 @@
 #include <lsExpand.hpp>
 #include <lsFastAdvect.hpp>
 #include <lsMakeGeometry.hpp>
-#include <lsToDiskMesh.hpp>
 #include <lsToMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
 #include <lsVTKWriter.hpp>
 
 int main() {
-   
 
   constexpr int D = 3;
   typedef double NumericType;

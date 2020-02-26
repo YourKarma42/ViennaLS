@@ -55,61 +55,61 @@ public:
 
     mesh->clear();
 
+    maxValue = std::abs(maxValue);
+
     lsExpand<T, D>(*levelSet, (maxValue * 4) + 1).apply();
-    lsCalculateNormalVectors<T, D>(*levelSet, maxValue).apply();
 
     const T gridDelta = levelSet->getGrid().getGridDelta();
-    const auto &normalVectors = levelSet->getNormalVectors();
 
     // set up data arrays
-    std::vector<double> values(normalVectors.size());
-    std::vector<double> gridSpacing(normalVectors.size());
-    std::vector<std::array<double, 3>> normals(normalVectors.size());
+    std::vector<double> values;
+    std::vector<double> gridSpacing;
+    std::vector<std::array<double, 3>> normals;
 
-    for (hrleConstSparseIterator<hrleDomainType> it(levelSet->getDomain());
+    for (hrleConstSparseStarIterator<hrleDomainType> it(levelSet->getDomain());
          !it.isFinished(); ++it) {
-      if (!it.isDefined() || std::abs(it.getValue()) > maxValue) {
+
+      auto &center = it.getCenter();
+      if (!center.isDefined() || std::abs(center.getValue()) > maxValue) {
         continue;
       }
 
-      unsigned pointId = it.getPointId();
+      // insert corresponding node shifted by ls value in direction of the
+      // normal vector
+      std::array<double, 3> normal;
+      normal[2] = 0.;
+      double modulus = 0.;
+      for (unsigned i = 0; i < D; ++i) {
+        normal[i] =
+            (it.getNeighbor(i).getValue() - it.getNeighbor(i + D).getValue()) *
+            0.5;
+        modulus += normal[i] * normal[i];
+      }
+      modulus = std::sqrt(modulus);
+      for (auto &n : normal) {
+        n /= modulus;
+      }
+      normals.push_back(normal);
+
+      std::array<double, 3> node;
+      node[2] = 0.;
+      for (unsigned i = 0; i < D; ++i) {
+        // original position
+        node[i] = double(center.getStartIndices(i)) * gridDelta;
+        // shift to surface
+        node[i] -= center.getValue() * gridDelta * normal[i] / modulus;
+      }
 
       // insert vertex
       std::array<unsigned, 1> vertex;
       vertex[0] = mesh->nodes.size();
       mesh->insertNextVertex(vertex);
 
-      // insert corresponding node shifted by ls value in direction of the
-      // normal vector
-      std::array<double, 3> node;
-      node[2] = 0.;
-      double max = 0.;
-      for (unsigned i = 0; i < D; ++i) {
-        // original position
-        node[i] = double(it.getStartIndices(i)) * gridDelta;
-
-        if (std::abs(normalVectors[pointId][i]) > max) {
-          max = std::abs(normalVectors[pointId][i]);
-        }
-      }
-
-      // now normalize vector to scale position correctly to manhatten distance
-      double scaling = it.getValue() * gridDelta * max;
-      for (unsigned i = 0; i < D; ++i) {
-        node[i] -= scaling * normalVectors[pointId][i];
-      }
-
       mesh->insertNextNode(node);
 
       // add data into mesh
-      values[pointId] = it.getValue();
-      gridSpacing[pointId] = gridDelta;
-      // copy normal
-      if (D == 2)
-        normals[pointId][2] = 0.;
-      for (unsigned i = 0; i < D; ++i) {
-        normals[pointId][i] = normalVectors[pointId][i];
-      }
+      values.push_back(center.getValue());
+      gridSpacing.push_back(gridDelta);
     }
 
     mesh->insertNextScalarData(values, "LSValues");

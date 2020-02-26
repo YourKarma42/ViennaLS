@@ -43,7 +43,6 @@ public:
 int main() {
 
   constexpr int D = 3;
-   
 
   // set up simulation domains and geometry
   double gridDelta = 0.25;

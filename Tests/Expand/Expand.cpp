@@ -18,8 +18,6 @@
 int main() {
   constexpr int D = 2;
 
-   
-
   double extent = 15;
   double gridDelta = 0.5;
 

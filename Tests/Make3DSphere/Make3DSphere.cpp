@@ -20,8 +20,6 @@ int main() {
 
   constexpr int D = 3;
 
-   
-
   double gridDelta = 0.4;
 
   lsDomain<double, D> sphere1(gridDelta); //, boundaryCons);

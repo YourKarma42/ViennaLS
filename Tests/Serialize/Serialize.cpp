@@ -13,8 +13,6 @@
 int main() {
   constexpr int D = 2;
 
-   
-
   lsDomain<double, D> levelSet;
   lsMesh mesh;
 

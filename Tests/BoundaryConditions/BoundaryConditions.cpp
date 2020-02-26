@@ -16,7 +16,6 @@
 int main() {
 
   constexpr int D = 3;
-   
 
   double extent = 15;
 
