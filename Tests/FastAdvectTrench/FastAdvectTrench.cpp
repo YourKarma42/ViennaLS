@@ -75,10 +75,10 @@ int main() {
   lsVTKWriter(mesh, "surface.vtk").apply();
 
   // set up spherical advection dist
-  // lsSphereDistribution<NumericType, D> dist(15.0);
+  lsSphereDistribution<NumericType, D> dist(15.0);
   std::cout << "Advecting..." << std::endl;
-  lsBoxDistribution<NumericType, D> dist(
-      hrleVectorType<NumericType, D>(1.5, 1.5, 15));
+  // lsBoxDistribution<NumericType, D> dist(
+  //     hrleVectorType<NumericType, D>(1.5, 1.5, 15));
   lsFastAdvect<NumericType, D>(substrate, dist).apply();
 
   std::cout << "Writing results..." << std::endl;

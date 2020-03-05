@@ -76,7 +76,7 @@ public:
 
     // expand for normalvector calculation
     lsExpand<T, D>(*levelSet, 3).apply();
-    lsCalculateNormalVectors<T, D>(*levelSet).apply();
+    lsCalculateNormalVectors<T, D>(*levelSet, 0.5, false).apply();
 
     auto &normalVectors = levelSet->getNormalVectors();
 
@@ -198,17 +198,16 @@ public:
         hrleVectorType<hrleCoordType, D> distCoords;
 
         auto distNormal = normalVectors[distIt.getPointId()];
-        double vectorMax = 0.;
+        double modulus = 0.;
         for (unsigned i = 0; i < D; ++i) {
           distCoords[i] = distIndex[i] * gridDelta;
-          if (std::abs(distNormal[i]) > vectorMax) {
-            vectorMax = std::abs(distNormal[i]);
-          }
+          modulus += distNormal[i] * distNormal[i];
         }
+        modulus = std::sqrt(modulus);
         for (unsigned i = 0; i < D; ++i) {
           // shift distcoords to surface from grid point
           distCoords[i] -=
-              distIt.getValue() * gridDelta * distNormal[i] * vectorMax;
+              distIt.getValue() * gridDelta * distNormal[i] / modulus;
         }
 
         std::array<hrleCoordType, D> localCoords;

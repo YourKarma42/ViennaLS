@@ -19,19 +19,22 @@
 template <class T, int D> class lsCalculateNormalVectors {
   lsDomain<T, D> *levelSet = nullptr;
   T maxValue = 0.5;
+  bool normalize = true;
 
 public:
   lsCalculateNormalVectors() {}
 
   lsCalculateNormalVectors(lsDomain<T, D> &passedLevelSet,
-                           T passedMaxValue = 0.5)
-      : levelSet(&passedLevelSet), maxValue(passedMaxValue) {}
+                           T passedMaxValue = 0.5, bool passedNormalize = true)
+      : levelSet(&passedLevelSet), maxValue(passedMaxValue), normalize(passedNormalize) {}
 
   void setLevelSet(lsDomain<T, D> &passedLevelSet) {
     levelSet = &passedLevelSet;
   }
 
   void setMaxValue(const T passedMaxValue) { maxValue = passedMaxValue; }
+
+  void setNormalize(const bool passedNormalize) { normalize = passedNormalize; }
 
   void apply() {
     if (levelSet == nullptr) {
@@ -55,6 +58,8 @@ public:
         double(levelSet->getLevelSetWidth());
 
     auto grid = levelSet->getGrid();
+
+    const bool norm = normalize;
 
     //! Calculate Normalvectors
 #pragma omp parallel num_threads(levelSet->getNumberOfSegments())
@@ -100,13 +105,15 @@ public:
           denominator += n[i] * n[i];
         }
 
-        denominator = std::sqrt(denominator);
-        if (std::abs(denominator) < 1e-12) {
-          for (unsigned i = 0; i < D; ++i)
-            n[i] = 0.;
-        } else {
-          for (unsigned i = 0; i < D; ++i) {
-            n[i] /= denominator;
+        if(norm) {
+          denominator = std::sqrt(denominator);
+          if (std::abs(denominator) < 1e-12) {
+            for (unsigned i = 0; i < D; ++i)
+              n[i] = 0.;
+          } else {
+            for (unsigned i = 0; i < D; ++i) {
+              n[i] /= denominator;
+            }
           }
         }
 

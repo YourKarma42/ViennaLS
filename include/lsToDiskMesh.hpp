@@ -58,6 +58,8 @@ public:
     maxValue = std::abs(maxValue);
 
     lsExpand<T, D>(*levelSet, (maxValue * 4) + 1).apply();
+    lsCalculateNormalVectors<T, D>(*levelSet, maxValue, false).apply();
+    const auto &normalVectors = levelSet->getNormalVectors();
 
     const T gridDelta = levelSet->getGrid().getGridDelta();
 
@@ -66,23 +68,21 @@ public:
     std::vector<double> gridSpacing;
     std::vector<std::array<double, 3>> normals;
 
-    for (hrleConstSparseStarIterator<hrleDomainType> it(levelSet->getDomain());
+    for (hrleConstSparseIterator<hrleDomainType> it(levelSet->getDomain());
          !it.isFinished(); ++it) {
 
-      auto &center = it.getCenter();
-      if (!center.isDefined() || std::abs(center.getValue()) > maxValue) {
+      if (!it.isDefined() || std::abs(it.getValue()) > maxValue) {
         continue;
       }
 
       // insert corresponding node shifted by ls value in direction of the
       // normal vector
-      std::array<double, 3> normal;
-      normal[2] = 0.;
+      std::array<double, 3> normal = {0, 0, 0};
+      for(unsigned i = 0; i < D; ++i) {
+        normal[i] = normalVectors[it.getPointId()][i];
+      }
       double modulus = 0.;
       for (unsigned i = 0; i < D; ++i) {
-        normal[i] =
-            (it.getNeighbor(i).getValue() - it.getNeighbor(i + D).getValue()) *
-            0.5;
         modulus += normal[i] * normal[i];
       }
       modulus = std::sqrt(modulus);
@@ -95,9 +95,9 @@ public:
       node[2] = 0.;
       for (unsigned i = 0; i < D; ++i) {
         // original position
-        node[i] = double(center.getStartIndices(i)) * gridDelta;
+        node[i] = double(it.getStartIndices(i)) * gridDelta;
         // shift to surface
-        node[i] -= center.getValue() * gridDelta * normal[i] / modulus;
+        node[i] -= it.getValue() * gridDelta * normal[i] / modulus;
       }
 
       // insert vertex
@@ -108,7 +108,7 @@ public:
       mesh->insertNextNode(node);
 
       // add data into mesh
-      values.push_back(center.getValue());
+      values.push_back(it.getValue());
       gridSpacing.push_back(gridDelta);
     }
 
