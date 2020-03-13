@@ -103,6 +103,12 @@ configure_package_config_file(
 
 
 #################################################
+# BUILD Development
+#################################################
+add_subdirectory(dev)
+
+
+#################################################
 # BUILD EXAMPLES
 #################################################
 option(VIENNALS_BUILD_EXAMPLES "Build examples." OFF)
