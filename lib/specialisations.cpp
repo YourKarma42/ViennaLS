@@ -6,6 +6,7 @@
 // add all headers which require template specialisation
 #include <lsAdvect.hpp>
 #include <lsBooleanOperation.hpp>
+#include<lsCalculateCurvatures.hpp>
 #include <lsCalculateNormalVectors.hpp>
 #include <lsCheck.hpp>
 #include <lsDomain.hpp>
@@ -27,6 +28,7 @@
 // now call the specialize macro to precompile them
 PRECOMPILE_SPECIALIZE(lsAdvect)
 PRECOMPILE_SPECIALIZE(lsBooleanOperation)
+PRECOMPILE_SPECIALIZE(lsCalculateCurvatures)
 PRECOMPILE_SPECIALIZE(lsCalculateNormalVectors)
 PRECOMPILE_SPECIALIZE(lsCheck)
 PRECOMPILE_SPECIALIZE(lsDomain)
