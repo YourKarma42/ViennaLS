@@ -31,26 +31,244 @@
 
 //____________testing end___________________________
 
+constexpr int D = 3;
+typedef double NumericType;
+
+
+void createPointCloudOutput(lsDomain<NumericType, D> &passedlsDomain, std::string outputName){
+
+  std::cout << "Calculating Curvatures..." << std::endl;
+
+
+  std::chrono::time_point<std::chrono::system_clock> start, end;
+
+
+  //TODO: this is shit the ls has to be extended here so that the sparsebox iterator is defined
+  lsCalculateCurvatures<double, D>::prepareLS(passedlsDomain);
+  
+
+  lsCalculateCurvatures<double, D> test_curvature(passedlsDomain);
+
+  lsCalculateNormalVectors<double, D> test_normals(passedlsDomain);
+
+  start = std::chrono::system_clock::now();
+ 
+  test_normals.apply();
+
+  end = std::chrono::system_clock::now();
+
+  std::cout << "Time for normals: "<< std::endl << std::chrono::duration_cast<std::chrono::microseconds>(end-start).count() << std::endl;
+
+
+
+  start = std::chrono::system_clock::now();
+ 
+  test_curvature.apply();
+
+  end = std::chrono::system_clock::now();
+
+  std::cout << "Time for my iterator: "<< std::endl << std::chrono::duration_cast<std::chrono::microseconds>(end-start).count() << std::endl;
+
+
+
+
+  auto& gauss_curve = test_curvature.getGaussianCurvature();
+  auto& mean_curve = test_curvature.getMeanCurvature();
+  auto& normGrads = test_curvature.getNormGrad();
+  auto& my_normals = test_curvature.getNormals();
+  auto& normalVectors = passedlsDomain.getNormalVectors();
+
+
+
+
+
+  std::vector<double> gauss;
+  std::vector<double> mean;
+  std::vector<double> normGrad;
+  std::vector<std::array<double, D>> my_normal;
+  std::vector<std::array<double, D>> normal;
+
+
+  // prepare curvature data to write into output file
+  for (hrleConstSparseIterator<lsDomain<double, D>::DomainType> it(
+           passedlsDomain.getDomain());
+       !it.isFinished(); ++it) {
+    if (!it.isDefined() || std::abs(it.getValue()) > 0.5)
+      continue;
+    
+    gauss.push_back(std::abs(gauss_curve[it.getPointId()]));
+    mean.push_back(std::abs(mean_curve[it.getPointId()]));
+    normGrad.push_back(normGrads[it.getPointId()]);
+    normal.push_back(normalVectors[it.getPointId()]);
+    my_normal.push_back(my_normals[it.getPointId()]);
+
+
+  }
+
+
+
+
+
+  std::cout << "Grid Delta: " << passedlsDomain.getGrid().getGridDelta() << std::endl;
+
+  double sum = 0;
+
+  for(auto c: gauss)
+    sum += c;
+
+  std::cout << "Gauss average " << (sum/gauss.size()) << std::endl;
+
+  sum = 0;
+
+  for(auto c: mean)
+    sum += c;
+
+  std::cout << "mean average " << (sum/gauss.size()) << std::endl;
+
+
+  lsMesh pointcloud;
+  std::cout << "Extracting point cloud..." << std::endl;
+  lsToDiskMesh<double, D>(passedlsDomain, pointcloud).apply();
+
+  pointcloud.insertNextScalarData(gauss , "Gaussian Curvature");
+  pointcloud.insertNextScalarData(mean , "Mean Curvature");
+  pointcloud.insertNextScalarData(normGrad , "Norm of Gradient");
+
+  pointcloud.insertNextVectorData(my_normal, "my Normals");
+
+  lsVTKWriter(pointcloud, lsFileFormatEnum::VTU , "points" + outputName ).apply();
+
+
+
+}
+
+NumericType testF(NumericType x, NumericType y){
+  std::cout << "testitest in function" << std::endl;
+  return 0;
+}
+
+
+lsDomain<double, D> makePlane(double gridDelta, std::vector<NumericType>& planeNormal){
+
+      std::cout << "creating Plane..." << std::endl;
+
+    double extent = 50;
+    double bounds[2 * D] = {-extent, extent, extent, extent};
+    if (D == 3) {
+      bounds[4] = -extent;
+      bounds[5] = extent;
+    }
+
+    typename lsDomain<NumericType, D>::BoundaryType boundaryCons[D];
+    for (unsigned i = 0; i < D - 1; ++i) {
+      boundaryCons[i] =
+          lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
+
+    }
+
+    boundaryCons[D - 2] =
+        lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
+
+    lsDomain<double, D> levelSet(bounds, boundaryCons, gridDelta);
+
+
+    std::vector<NumericType> origin = {0., 0., 0.};
+
+    lsMakeGeometry<double, D>(levelSet, lsPlane<double, D>(origin, planeNormal))
+      .apply();
+
+    return levelSet;
+
+
+}
+
+lsDomain<double, D> makeSphere(double gridDelta){
+
+    std::cout << "creating sphere..." << std::endl;
+
+    double origin[3] = {0., 0., 0.};
+    double radius = 10.0;
+
+    lsDomain<double,D> levelSet(gridDelta);
+
+    lsMakeGeometry<double, D>(levelSet, lsSphere<double, D>(origin, radius)).apply();
+
+    return levelSet;
+
+}
 
 
 
 int main() {
 
-  constexpr int D = 3;
-  typedef double NumericType;
-
-  double gridDelta = 0.5;
 
   omp_set_num_threads(1);
 
-  /*double bounds[2 * D] = {-extent, extent, -extent, extent, -extent, extent};
-  lsDomain<double, D>::BoundaryType boundaryCons[3];
-  for (unsigned i = 0; i < D; ++i)
-    boundaryCons[i] = lsDomain<double, D>::BoundaryType::REFLECTIVE_BOUNDARY;
-  
-  lsDomain<double,D> levelSet(bounds, boundaryCons, gridDelta);*/
+  //double gridDelta = 0.5;
 
+  std::vector<double> gridDeltas = {0.5/*, 0.5, 0.25, 0.1*/};
+
+  std::vector<std::vector<NumericType>> additionalParams;
+
+  //90 grad
+  std::vector<NumericType> planeNormal = {0. , 1. , 0.};
+  additionalParams.push_back(planeNormal);
+
+  //22.5 grad
+  planeNormal = {0.0, 0.38268343, 0.92387953};
+  additionalParams.push_back(planeNormal);
+
+  //45 grad
+  planeNormal = {0.0, 0.70710678, 0.70710678};
+  additionalParams.push_back(planeNormal);
+
+  //67.5 grad
+  planeNormal ={0.0, 0.92387953, 0.38268343};
+  additionalParams.push_back(planeNormal);
+
+
+  /*
   std::vector<lsDomain<double, D> *> levelSets;
+    
+  lsDomain<double,D> levelSet(0.5);
+
+  lsMakeGeometry<double, D>(levelSet, 
+    lsGeometryByFunction<NumericType, D>(std::function <NumericType (NumericType, NumericType)>(testF)) ).apply();
+
+  int a;
+
+  std::cin >> a;
+  */
+
+
+  for(auto gridDelta: gridDeltas){
+
+    int i=0;
+
+    //for(auto param: additionalParams){
+
+      std::vector<lsDomain<double, D> *> levelSets;
+
+
+      //lsDomain<double,D> levelSet = makePlane(gridDelta, param);
+
+      lsDomain<double,D> levelSet = makeSphere(gridDelta);
+
+      levelSets.push_back(&levelSet);  
+      
+
+      createPointCloudOutput(*(levelSets.back()), "Sphere_" + std::to_string(gridDelta) /*+ " " + std::to_string(i)*/);
+
+      i++;
+    //}
+
+  }
+
+  std::cout << "Finished" << std::endl;
+ 
+
+  return 0;
+}
 
   //create trench/plane
 
@@ -96,104 +314,8 @@ int main() {
         .apply();
   }*/
 
-
-  //create sphere
-  
-  lsDomain<double,D> levelSet(gridDelta);
-
-  std::cout << "creating sphere..." << std::endl;
-  double origin[3] = {5., 0., 0.};
-  double radius = 7.0;
-
-  lsMakeGeometry<double, D>(levelSet, lsSphere<double, D>(origin, radius)).apply();
-
-  levelSets.push_back(&levelSet);  
-  
-
-
-  std::cout << "Number of points: " << levelSets.back()->getDomain().getNumberOfPoints() << std::endl;
-
-
-
-
-
-  std::chrono::time_point<std::chrono::system_clock> start, end;
-
-  //test
-
-
-
-  //expand level set so that all points exist
-  //test_curvature.prepareLS(*(levelSets.back()));
-
-  
-  //TODO: this is shit the ls has to be extended here so that the sparsebox iterator is defined
-  lsCalculateCurvatures<double, D>::prepareLS(*(levelSets.back()));
-
-  lsCalculateCurvatures<double, D> test_curvature(*(levelSets.back()));
-
-
-
-  lsCalculateNormalVectors<double, D> test_normals(*(levelSets.back()));
-
-  start = std::chrono::system_clock::now();
  
-  test_normals.apply();
-
-  end = std::chrono::system_clock::now();
-
-  std::cout << "Time for normals: "<< std::endl << std::chrono::duration_cast<std::chrono::microseconds>(end-start).count() << std::endl;
-
-
-
-  start = std::chrono::system_clock::now();
- 
-  test_curvature.apply();
-
-  end = std::chrono::system_clock::now();
-
-  std::cout << "Time for my iterator: "<< std::endl << std::chrono::duration_cast<std::chrono::microseconds>(end-start).count() << std::endl;
-
-
-  std::cout << "num of normals: " << levelSets.back()->getNormalVectors().size() << std::endl;
-
-
-  // prepare curvature data to write into output file
-
-
-
-  auto& gauss_curve = test_curvature.getGaussianCurvature();
-  auto& mean_curve = test_curvature.getMeanCurvature();
-  auto& my_normals = test_curvature.getNormals();
-  auto& normalVectors = levelSets.back()->getNormalVectors();
-
-  std::cout << "anz my " << my_normals.size() << std::endl;
-  std::cout << "anz ot " << normalVectors.size() << std::endl;
-
-  std::vector<double> gauss;
-  std::vector<double> mean;
-  std::vector<std::array<double, D>> my_normal;
-  std::vector<std::array<double, D>> normal;
-
-
-
-
-
-  for (hrleConstSparseIterator<lsDomain<double, D>::DomainType> it(
-           levelSets.back()->getDomain());
-       !it.isFinished(); ++it) {
-    if (!it.isDefined() || std::abs(it.getValue()) > 0.5)
-      continue;
-    normal.push_back(normalVectors[it.getPointId()]);
-    my_normal.push_back(my_normals[it.getPointId()]);
-    gauss.push_back(gauss_curve[it.getPointId()]);
-    mean.push_back(mean_curve[it.getPointId()]);
-
-
-  }
-
-  std::cout << "anz gauss after loop " << gauss.size() << std::endl;
-
+/*
   lsMesh narrowband;
   std::cout << "Extracting narrowband..." << std::endl;
   lsToMesh<double, D>(*(levelSets.back()), narrowband, true, true).apply();
@@ -213,31 +335,7 @@ int main() {
   lsToSurfaceMesh<double, D>(*(levelSets.back()), mesh).apply();
   //mesh.insertNextScalarData(gauss , "gaussian curvature");
   lsVTKWriter(mesh, lsFileFormatEnum::VTU , "sphere_mesh").apply();
-
-
-
-  lsMesh pointcloud;
-  std::cout << "Extracting point cloud..." << std::endl;
-  lsToDiskMesh<double, D>(*(levelSets.back()), pointcloud).apply();
-
-  pointcloud.insertNextScalarData(gauss , "gaussian curvature");
-  pointcloud.insertNextScalarData(mean , "mean curvature");
-
-  lsVTKWriter(pointcloud, lsFileFormatEnum::VTU , "sphere_points").apply();
-
-  //std::cout << "num of curves: " << test_curvature.getGaussianCurvature().size() << std::endl;
-
-
-
-
-  std::cout << "Finished" << std::endl;
- 
-
-  return 0;
-}
-
-
- 
+*/
 
 
   //output save for later

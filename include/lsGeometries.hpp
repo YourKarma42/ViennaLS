@@ -125,10 +125,24 @@ public:
   hrleVectorType<T, D> &operator[](std::size_t i) { return points[i]; }
 };
 
+template <class T, int D> class lsGeometryByFunction {
+public:
+  std::function< T(T,T) > mathFunction;
+
+  //TODO: write wrapper function that converts function value to grid pos
+
+  //TODO: make for 2 D
+  lsGeometryByFunction(std::function< T(T,T) > passedMathFunction)
+    : mathFunction(passedMathFunction)    {}
+
+
+};
+
 // add all template specialisations for this class
 PRECOMPILE_PRECISION_DIMENSION(lsSphere)
 PRECOMPILE_PRECISION_DIMENSION(lsPlane)
 PRECOMPILE_PRECISION_DIMENSION(lsBox)
 PRECOMPILE_PRECISION_DIMENSION(lsPointCloud)
+PRECOMPILE_PRECISION_DIMENSION(lsGeometryByFunction)
 
 #endif // LS_GEOMETRIES_HPP

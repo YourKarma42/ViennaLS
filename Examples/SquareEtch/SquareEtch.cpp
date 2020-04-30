@@ -75,7 +75,7 @@ public:
 
 int main() {
 
-  constexpr int D = 2;
+  constexpr int D = 3;
   omp_set_num_threads(1);
 
   // Change this to use the analytical velocity field

@@ -10,6 +10,10 @@
 #include <lsToSurfaceMesh.hpp>
 #include <lsVTKWriter.hpp>
 
+
+#include<lsCalculateCurvatures.hpp>
+#include <lsToDiskMesh.hpp>
+
 /**
   3D Example showing how to use the library for topography
   simulation, by creating a trench geometry. A uniform
@@ -112,6 +116,61 @@ int main() {
 
     ++counter;
   }
+
+
+  omp_set_num_threads(1);
+  //TODO: this is shit the ls has to be extended here so that the sparsebox iterator is defined
+  lsCalculateCurvatures<double, D>::prepareLS(newLayer);
+  
+
+  lsCalculateCurvatures<double, D> test_curvature(newLayer);
+ 
+  test_curvature.apply();
+
+
+  auto& gauss_curve = test_curvature.getGaussianCurvature();
+  auto& mean_curve = test_curvature.getMeanCurvature();
+  auto& my_normals = test_curvature.getNormals();
+ 
+
+
+  std::vector<double> gauss;
+  std::vector<double> mean;
+  std::vector<std::array<double, D>> my_normal;
+
+
+  // prepare curvature data to write into output file
+  for (hrleConstSparseIterator<lsDomain<double, D>::DomainType> it(
+           newLayer.getDomain());
+       !it.isFinished(); ++it) {
+    if (!it.isDefined() || std::abs(it.getValue()) > 0.5)
+      continue;
+    my_normal.push_back(my_normals[it.getPointId()]);
+    gauss.push_back(gauss_curve[it.getPointId()]);
+    mean.push_back(mean_curve[it.getPointId()]);
+
+
+  }
+
+  lsMesh pointcloud;
+  std::cout << "Extracting point cloud..." << std::endl;
+  lsToDiskMesh<double, D>(newLayer, pointcloud).apply();
+
+  pointcloud.insertNextScalarData(gauss , "gaussian curvature");
+  pointcloud.insertNextScalarData(mean , "mean curvature");
+  pointcloud.insertNextVectorData(my_normal, "my Normals");
+
+  lsVTKWriter(pointcloud, lsFileFormatEnum::VTU , "Depo_curves").apply();
+
+
+
+
+
+
+
+
+
+
 
   // double advectionSteps = advectionKernel.getNumberOfTimeSteps();
   // std::cout << "Number of Advection steps taken: " << advectionSteps

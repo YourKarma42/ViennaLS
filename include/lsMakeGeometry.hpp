@@ -25,7 +25,8 @@ template <class T, int D> class lsMakeGeometry {
     SPHERE = 0,
     PLANE = 1,
     BOX = 2,
-    CUSTOM = 3
+    CUSTOM = 3,
+    FUNCTION = 4
   };
 
   lsDomain<T, D> *levelSet;
@@ -34,6 +35,7 @@ template <class T, int D> class lsMakeGeometry {
   const lsPlane<T, D> *plane = nullptr;
   const lsBox<T, D> *box = nullptr;
   lsPointCloud<T, D> *pointCloud = nullptr;
+  lsGeometryByFunction<T, D> *geometryByFunction = nullptr;
   const double numericEps = 1e-9;
   bool ignoreBoundaryConditions = false;
 
@@ -63,6 +65,12 @@ public:
                  lsPointCloud<T, D> &passedPointCloud)
       : levelSet(&passedLevelSet), pointCloud(&passedPointCloud) {
     geometry = lsGeometryEnum::CUSTOM;
+  }
+
+  lsMakeGeometry(lsDomain<T, D> &passedLevelSet,
+                 lsGeometryByFunction<T, D> passedGeometryByFunction)
+      : levelSet(&passedLevelSet), geometryByFunction(&passedGeometryByFunction) {
+    geometry = lsGeometryEnum::FUNCTION;
   }
 
   void setLevelSet(lsDomain<T, D> &passedlsDomain) {
@@ -135,6 +143,15 @@ public:
             .print();
       }
       makeCustom(pointCloud);
+      break;
+    case lsGeometryEnum::FUNCTION:
+      if (geometryByFunction == nullptr) {
+        lsMessage::getInstance()
+            .addWarning("No lsGeometryByFunction supplied to lsMakeGeometry. Not "
+                        "creating geometry.")
+            .print();
+      }
+      makeGerometryByFunction(geometryByFunction);
       break;
     default:
       lsMessage::getInstance()
@@ -416,6 +433,12 @@ private:
 
     // read mesh from surface
     lsFromSurfaceMesh<T, D>(*levelSet, mesh, ignoreBoundaryConditions).apply();
+  }
+
+  void makeGerometryByFunction(lsGeometryByFunction<T, D> *geometryByFunction){
+    //TODO: TMP
+    geometryByFunction->mathFunction(0.,0.);
+
   }
 };
 

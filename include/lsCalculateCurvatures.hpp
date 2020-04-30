@@ -40,16 +40,19 @@ private:
 
     std::vector<T> meanCurvatures;
 
+    std::vector<T> normGrad;
+
     //TODO:remove just for testing normal vectors
 
     std::vector<std::array<T, D>> normals;
+
 
                
 
     //Calculates all partial derivates of order 2 and returns them in a vector of the form
     //(F_x, F_y, F_z, F_xx, F_yy, F_zz, F_xy, F_yz, F_zx)
     //All partial derivatives of order 2 are equivalent due to schwarzes rule (F_xy = F_yx) 
-    std::vector<T> calc_partial_derivatives(const hrleVectorType<hrleIndexType, D> &indices){
+    std::vector<T> calc_partial_derivatives_ls_coords(const hrleVectorType<hrleIndexType, D> &indices){
     //int calc_partial_derivatives(const hrleVectorType<hrleIndexType, D> &indices){
 
 
@@ -68,6 +71,8 @@ private:
 
             hrleVectorType<hrleIndexType, D> posUnit(0);
             hrleVectorType<hrleIndexType, D> negUnit(0);
+
+            hrleVectorType<hrleIndexType, D> test = neighborIterator.getIndices();
 
             posUnit[i] = 1;
             negUnit[i] = -1;
@@ -101,20 +106,20 @@ private:
 
             //derivatives[i] = ((phi_p - phi_0 ) + (phi_0 - phi_n))*0.5;
 
-            derivatives[i] = (phi_p - phi_n)*0.5;   // /(2*gridDelta);
+            derivatives[i] = (phi_p - phi_n)/(2*gridDelta); // *0.5
 
             //derivatives[i] = (phi_p - phi_n)*denTwoDelta;
 
             //Calc F_ii
 
-            derivatives[i+3] = (phi_p - 2*phi_0 + phi_n); // /(gridDelta*gridDelta);
+            derivatives[i+3] = (phi_p - 2*phi_0 + phi_n)/(gridDelta*gridDelta); //;
 
 
             //derivatives[i+3] = (phi_p - 2*phi_0 + phi_n)*denDeltaSquared;
 
             //Calc F_i(i mod D-1)
             
-            derivatives[i+6] = (phi_pp - phi_pn -phi_np + phi_nn)*0.5; // /(2*gridDelta*gridDelta);
+            derivatives[i+6] = (phi_pp - phi_pn -phi_np + phi_nn) /(2*gridDelta*gridDelta); // *0.5;
 
             //T test = (phi_pp - phi_p - phi_);
 
@@ -141,50 +146,24 @@ private:
 
         }
 
-       
-
-        //stuff für debug_________________________________________________________________________________________
-       /* int count = 0;
-
-         std::cout <<  std::endl;
-
-        std::cout << "normal iterator" << std::endl;
-
-        for(int i = 0; i < 27; i++){
-
-           // if (neighborIterator.getNeighbor(i).getValue() > 5.0){
-           //     count++;
-                std::cout << "i: " << i << "  " << neighborIterator.getNeighbor(i).getValue() << std::endl; 
-
-                //;neighborIterator.getNeighbor(i).getValue()
-           // }
-        }
-
-        //for(auto v : derivatives)
-        //    std::cout << v << " ";
-            
-        std::cout << std::endl;
-
-        std::cin >> count;*/
-
-        //stuff für debug_________________________________________________________________________________________
-
-        return derivatives;
+            return derivatives;
        
 
     }
 
 
+
     T calc_gaussian_curvature(std::vector<T> d){
 
         //TODO: write used formula and paper with reference
-
+        
 
         T norm_grad_sqared = d[0]*d[0] + d[1]*d[1] + d[2]*d[2];
         norm_grad_sqared = norm_grad_sqared*norm_grad_sqared;
 
+
         //expanded fom of the equation
-        return
+        return 
         //  - (F_x²(F_yz²-F_yyF_zz)   +     F_y²(F_zx²-F_xxF_zz)     +     F_z²(F_xy²-F_xxFyy) +
         -(d[0]*d[0]*(d[7]*d[7]-d[4]*d[5]) + d[1]*d[1]*(d[8]*d[8]-d[3]*d[5]) + d[2]*d[2]*(d[6]*d[6]-d[3]*d[4]) +
 
@@ -207,6 +186,8 @@ private:
 
 
         //TODO: write used formula and paper with reference
+        //The 2 in the denominator is important when considering the mean curvature in the context of differential geometry in books for
+        //lvl-set functions the 1/2 is often missing
 
 
         T norm_grad_pow3 = std::sqrt(d[0]*d[0] + d[1]*d[1] + d[2]*d[2]);
@@ -214,20 +195,14 @@ private:
 
         //expanded fom of the equation
         return
-        //    F_x²(f_yy + F_zz)  +    F_y²(F_xx + F_zz)    +     F_z²(F_xx - F_yy)
-        (d[0]*d[0]*(d[4] + d[5]) + d[1]*d[1]*(d[3] + d[5]) + d[2]*d[2]*(d[3] + d[4]) 
+        //    F_x²(f_yy + F_zz)  +    F_y²(F_xx + F_zz)    +     F_z²(F_xx + F_yy)
+        (d[0]*d[0]*(d[4] + d[5]) + d[1]*d[1]*(d[3] + d[5]) + d[2]*d[2]*(d[3] + d[4]) +
 
-        //-2*[F_xF_yF_xy +
-        -2*(d[0]*d[1]*d[6] +
-
-        //F_xF_zF_xz +
-        d[0]*d[2]*d[8] +
-
-        //F_yF_zF_yz
-        d[1]*d[2]*d[7]))
-        
-        // /(F_x² + F_y² + F_z²)^(3/2)
-        /norm_grad_pow3;
+        //-2*[F_xF_yF_xy   +   F_xF_zF_xz   +   F_yF_zF_yz]
+        -2*(d[0]*d[1]*d[6] + d[0]*d[2]*d[8] + d[1]*d[2]*d[7]))
+                
+        // /2*(F_x² + F_y² + F_z²)^(3/2)
+        /(2*norm_grad_pow3);
 
          //(F_x, F_y, F_z, F_xx, F_yy, F_zz, F_xy, F_yz, F_zx)
 
@@ -244,18 +219,16 @@ private:
 
         n[1] = d[1]/norm_grad;
 
-        n[2] = d[2]/norm_grad;
-
-        /*for(auto v: n){
-            std::cout << v << " ";
-        }
-        std::cout << std::endl;
-
-        int tmp;
-        std::cin >> tmp;*/
-        
+        n[2] = d[2]/norm_grad;     
 
         return n;
+
+    }
+    
+    //TODO:remove just for testing normal vectors
+    T tmp_calc_NORM_grad(std::vector<T> d){
+
+        return (std::sqrt(d[0]*d[0] + d[1]*d[1] + d[2]*d[2]));  
 
     }
 
@@ -285,6 +258,7 @@ public:
 
     //TODO: remove dont need
     static void prepareLS(lsDomain<T, D> &passedlsDomain) {
+        //Überdenken für echte koordinaten
         int order = 1;
         lsExpand<T, D>(passedlsDomain, 2 * (order + 2) + 1).apply();
     }
@@ -331,6 +305,11 @@ public:
         return normals; 
     }
 
+    std::vector<T>& getNormGrad(){ 
+        
+        return normGrad; 
+    }
+
 
 
     
@@ -354,6 +333,7 @@ public:
         gaussianCurvatures.reserve(pointsPerSegment);
         meanCurvatures.reserve(pointsPerSegment);
         normals.reserve(pointsPerSegment);
+        normGrad.reserve(pointsPerSegment);
 
         int p = 0;
 
@@ -378,6 +358,7 @@ public:
 
                 if (!it.isDefined()) {
                     continue;
+                //TODO: make 0.5 a passable parameter
                 } else if (std::abs(it.getValue()) > 0.5) {
                     // push an empty vector to keep ordering correct
                     std::array<T, D> tmp = {};
@@ -385,6 +366,7 @@ public:
                     //TODO: think of good return value maby inf?
                     gaussianCurvatures.push_back(1337.1337);
                     meanCurvatures.push_back(1337.1337);
+                    normGrad.push_back(1337.1337);
                     continue;
                 }
 
@@ -397,13 +379,19 @@ public:
                 }*/
 
                 //make method member
-                std::vector<T> derivatives = calc_partial_derivatives(it.getStartIndices());
+                std::vector<T> derivatives = calc_partial_derivatives_ls_coords(it.getStartIndices());
+
+                //std::vector<T> derivatives = calc_partial_derivatives_real_coords(it.getStartIndices());
+
+                
 
                 gaussianCurvatures.push_back(calc_gaussian_curvature(derivatives));
 
                 meanCurvatures.push_back(calc_mean_curvature(derivatives));
 
                 normals.push_back(tmp_calc_normals(derivatives));
+
+                normGrad.push_back(tmp_calc_NORM_grad(derivatives));
 
                 //TODO: REMOVE
                 if(std::isnan(gaussianCurvatures.back()))
@@ -442,6 +430,7 @@ public:
                 .print();
             
         }
+
 
 
     }
