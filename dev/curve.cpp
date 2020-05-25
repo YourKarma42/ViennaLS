@@ -209,7 +209,7 @@ int main() {
   std::vector<double> gridDeltas = {0.5/*, 0.5, 0.25, 0.1*/};
 
   std::vector<std::vector<NumericType>> additionalParams;
-
+  /*
   //90 grad
   std::vector<NumericType> planeNormal = {0. , 1. , 0.};
   additionalParams.push_back(planeNormal);
@@ -225,6 +225,7 @@ int main() {
   //67.5 grad
   planeNormal ={0.0, 0.92387953, 0.38268343};
   additionalParams.push_back(planeNormal);
+  */
 
 
   /*
@@ -257,7 +258,7 @@ int main() {
       levelSets.push_back(&levelSet);  
       
 
-      createPointCloudOutput(*(levelSets.back()), "Sphere_" + std::to_string(gridDelta) /*+ " " + std::to_string(i)*/);
+      createPointCloudOutput(*(levelSets.back()), "sphere" + std::to_string(gridDelta) + " " + std::to_string(i));
 
       i++;
     //}

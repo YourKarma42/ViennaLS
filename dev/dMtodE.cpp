@@ -110,11 +110,14 @@ void ManhattenToEuclidian(lsDomain<NumericType, D> &passedlsDomain){
     //create output vectors
     std::vector<double> oldLSValues;
     std::vector<double> newLSValues;
+    std::vector<double> angle;
+    std::vector<double> radius;
     
 
     oldLSValues.reserve(normalVectors.size());
     newLSValues.reserve(normalVectors.size());
-
+    angle.reserve(normalVectors.size());
+    radius.reserve(normalVectors.size());
     const NumericType gridDelta = passedlsDomain.getGrid().getGridDelta();
 
 
@@ -141,35 +144,119 @@ void ManhattenToEuclidian(lsDomain<NumericType, D> &passedlsDomain){
         NumericType oldLSValue = center.getValue();
 
         std::array<NumericType, D> n;
+        std::array<NumericType, D> tmp_n;
         NumericType normN = 0.;
         for (int i = 0; i < D; i++) {
           NumericType pos = neighborIt.getNeighbor(i).getValue() - center.getValue();
           NumericType neg = center.getValue() - neighborIt.getNeighbor(i + D).getValue();
           n[i] = (pos + neg) * 0.5;
+          NumericType pos1 = neighborIt.getNeighbor(i).getValue();
+          NumericType neg1 = neighborIt.getNeighbor(i + D).getValue();
+          n[i] = (pos1 - neg1) /(2*gridDelta);
+
+          tmp_n[i] = n[i]; 
+          
           normN += n[i] * n[i];
         }
 
         normN = std::sqrt(normN);
 
-        std::array<NumericType, D> xAxis = {1. , 0. , 0.};
+        std::cout << normN << " " << std::endl;
+
+        //normalize vector    
+        for (int i = 0; i < D; i++) {
+          n[i] /= normN;
+        }
+
+        //testing code!!!!      
+/*        std::array<NumericType, D> axis;
+
+        for(int i = 0; i < D; i++ ){
+
+            for(int j = 0; j < D; j++ )
+                axis[j] = 0.;
+            
+            //coordinate axis direction
+            if(n[i] < 0.){
+                axis[i] = -1.;
+            }else{
+                axis[i] = 1.;
+            }
+            
+            //inner product
+            //TODO: bad formula use different one
+            NumericType ip = 0.;
+
+            for (int j = 0; j < D; j++) {
+                ip += n[j] * axis[j];
+            }
+
+            //TODO: use different calculation ip is cos(phi)
+            NumericType alphaRad = std::acos(ip);
+
+            std::cout << i << "Angle: " << alphaRad << std::endl;
+
+            std::cout << i << "Axis: " << std::cos(alphaRad) << " " << std::sin(alphaRad) << std::endl;
+
+        }
+
+        std::cout << "gradient: "; 
+            
+        for(int j = 0; j < D; j++ )
+            std::cout << tmp_n[j] << " ";
+
+        std::cout << std::endl;
+
+        std::cout << "gradient norm: " << normN << std::endl;
+
+        std::cout << "LS value: " << oldLSValue << std::endl;
+*/
+
+
+        std::array<NumericType, D> xAxis;
+
+        for (int i = 0; i < D; i++) {
+            xAxis[i] = 0.;
+        }
+
 
         //if normal points down change direction of x axis
-        //if(n[0] < 0.)
-            //xAxis[0] = -1.;
+        if(n[0] < 0.){
+            xAxis[0] = -1.;
+        }else{
+            xAxis[0] = 1.;
+        }
+
+           
 
         //inner product
         //TODO: bad formula use different one
         NumericType ip = 0.;
 
         for (int i = 0; i < D; i++) {
-            ip = n[i] + xAxis[i];
+            ip += n[i] * xAxis[i];
         }
 
-        NumericType alphaRad = ip/normN;
+        //TODO: use different calculation ip is cos(phi)
+        NumericType alphaRad = std::acos(ip);
 
-        //std::cout << "|" << alphaRad*180/pi()<< "| ";
+        angle.push_back(alphaRad);
+        
 
-        NumericType dEuclid = center.getValue()/(std::sin(alphaRad) + std::cos(alphaRad));
+
+
+        NumericType dEuclid = oldLSValue/(std::sin(alphaRad) + std::cos(alphaRad));
+
+
+        //TODO: remove debug
+        //if(std::abs(dEuclid) > std::abs(oldLSValue)){
+
+        if(  ((dEuclid > 0) - (dEuclid < 0)) != ((oldLSValue > 0) - (oldLSValue < 0)) ){
+
+            std::cout << "error" << "  ";
+        }
+            
+        
 
 
         //std::cout << "|" << dEuclid << "  ";
@@ -192,8 +279,18 @@ void ManhattenToEuclidian(lsDomain<NumericType, D> &passedlsDomain){
         //TODO: calculate Euler distance to the point we just found
         for (unsigned i = 0; i < D; ++i) {
             node[i] = double(center.getStartIndices(i)) * gridDelta;
-            node[i] -= dEuclid * n[i];
+            //TODO: das *griddelta check ich nicht ganz
+            node[i] -= dEuclid  * gridDelta * (n[i]);
         }
+
+        //TODO:debug remove
+        double r=0.;
+        for(int i = 0; i < D; i++){
+            r += node[i]*node[i]; 
+        }
+        radius.push_back(r);
+
+        std::cout << "Radius: " << r << std::endl << std::endl;
 
         mesh.insertNextNode(node);
 
@@ -206,6 +303,8 @@ void ManhattenToEuclidian(lsDomain<NumericType, D> &passedlsDomain){
 
     mesh.insertNextScalarData(oldLSValues, "OLD LSValues");
     mesh.insertNextScalarData(newLSValues, "NEW LSValues");
+    mesh.insertNextScalarData(angle, "Angle");
+    mesh.insertNextScalarData(radius, "Radius");
 
     lsVTKWriter(mesh, lsFileFormatEnum::VTU , "SpereMtoE" ).apply();
 
@@ -232,6 +331,7 @@ int main() {
       
 
     ManhattenToEuclidian(*(levelSets.back()));
+
 
 
     std::cout << "Finished" << std::endl;

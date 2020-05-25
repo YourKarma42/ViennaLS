@@ -13,7 +13,11 @@ add_executable(${PROJECT_NAME} ${PROJECT_NAME}.cpp)
 target_include_directories(${PROJECT_NAME} PUBLIC ${VIENNALS_INCLUDE_DIRS})
 target_link_libraries(${PROJECT_NAME} PRIVATE ${VIENNALS_LIBRARIES})
 
-
+#My test calculations
 add_executable(dMtodE dMtodE.cpp)
 target_include_directories(dMtodE PUBLIC ${VIENNALS_INCLUDE_DIRS})
 target_link_libraries(dMtodE PRIVATE ${VIENNALS_LIBRARIES})
+
+add_executable(normalizeFMM normalizeFMM.cpp)
+target_include_directories(normalizeFMM PUBLIC ${VIENNALS_INCLUDE_DIRS})
+target_link_libraries(normalizeFMM PRIVATE ${VIENNALS_LIBRARIES})

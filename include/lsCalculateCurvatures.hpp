@@ -106,20 +106,20 @@ private:
 
             //derivatives[i] = ((phi_p - phi_0 ) + (phi_0 - phi_n))*0.5;
 
-            derivatives[i] = (phi_p - phi_n)/(2*gridDelta); // *0.5
+            derivatives[i] = (phi_p - phi_n)/(2*2*gridDelta); // *0.5
 
             //derivatives[i] = (phi_p - phi_n)*denTwoDelta;
 
             //Calc F_ii
 
-            derivatives[i+3] = (phi_p - 2*phi_0 + phi_n)/(gridDelta*gridDelta); //;
+            derivatives[i+3] = (phi_p - 2*phi_0 + phi_n)/(2*gridDelta*gridDelta); //;
 
 
             //derivatives[i+3] = (phi_p - 2*phi_0 + phi_n)*denDeltaSquared;
 
             //Calc F_i(i mod D-1)
             
-            derivatives[i+6] = (phi_pp - phi_pn -phi_np + phi_nn) /(2*gridDelta*gridDelta); // *0.5;
+            derivatives[i+6] = (phi_pp - phi_pn -phi_np + phi_nn) /(2*2*gridDelta*gridDelta); // *0.5;
 
             //T test = (phi_pp - phi_p - phi_);
 
