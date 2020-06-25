@@ -12,7 +12,7 @@
 #include <lsVTKWriter.hpp>
 
 
-#include <unordered_map>
+#include <unordered_set>
 //#include <hrleDomain.hpp>
 
 
@@ -21,7 +21,11 @@
 //#include <hrleSparseBoxIterator.hpp>
 //#include <hrleVectorType.hpp>
 
-#include<lsCalculateCurvatures.hpp>
+#include <lsCalculateCurvatures.hpp>
+
+#include <omp.h>
+
+#include <../dev/derivatives.hpp>
 
 
 
@@ -32,21 +36,8 @@
 
 //____________testing end___________________________
 
-constexpr int D = 2;
+constexpr int D = 3;
 typedef double NumericType;
-
-
-void createPointCloudOutput(lsDomain<NumericType, D> &passedlsDomain, std::string outputName){
-
-  std::cout << "Calculating normal vectors..." << std::endl;
-
-
-
-
-}
-
-
-
 
 
 
@@ -61,13 +52,6 @@ lsDomain<double, D> makeSphere(double gridDelta){
 
     lsMakeGeometry<double, D>(levelSet, lsSphere<double, D>(origin, radius)).apply();
 
-      lsMesh narrowband;
-      std::cout << "Extracting narrowband..." << std::endl;
-      lsToSurfaceMesh<NumericType, D>(levelSet, narrowband).apply();
-
-      lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "directly_after").apply();
-
-
 
     return levelSet;
 
@@ -78,21 +62,15 @@ lsDomain<double, D> makeSphere(double gridDelta){
 
     //TODO: write eikonal equation somwhere
 
-    //debug
-    NumericType tmp_debug[6];
 
     NumericType stencilMin[D];
 
     int numUndefined = 0;
 
 
-
-
     //find the maximum values in the stencil for the Eikonal equation
     for(int i = 0; i < D; i++){
 
-      //TODO: remove v
-      NumericType v;
 
       NumericType pos = starStencil.getNeighbor(i).getValue();
 
@@ -100,16 +78,9 @@ lsDomain<double, D> makeSphere(double gridDelta){
 
       //change the sign to make fast marching on the inside correct
       if(inside){
-
         pos = pos * -1.;
-
         neg = neg * -1.;
-
       }
-
-
-      tmp_debug[i] = pos;
-      tmp_debug[i+3] = neg;
 
       //check if the current point in the stencil is defined (not +/- inf)
       if( pos !=  lsDomain<NumericType, D>::POS_VALUE && 
@@ -118,23 +89,21 @@ lsDomain<double, D> makeSphere(double gridDelta){
         if(neg !=  lsDomain<NumericType, D>::POS_VALUE && 
            neg !=  lsDomain<NumericType, D>::NEG_VALUE){
             if(pos < neg){
-              v = pos;
+              stencilMin[i] = pos;
             }else{
-              v = neg;
+              stencilMin[i] = neg;
             }
         }else{
-          v = pos;
+          stencilMin[i] = pos;
         }
 
       }else if(neg !=  lsDomain<NumericType, D>::POS_VALUE && 
                neg !=  lsDomain<NumericType, D>::NEG_VALUE){
-        v = neg;
+        stencilMin[i] = neg;
       }else{
         numUndefined++;
-        v = 0.;
+        stencilMin[i] = 0.;
       }
-
-      stencilMin[i] = v; 
 
     }
 
@@ -142,17 +111,7 @@ lsDomain<double, D> makeSphere(double gridDelta){
     if(numUndefined == D)
       return 0.;
 
-    //if(inside)
-    //  return -1.;
-
-
     NumericType sol = 0.;
-
-  //debug
- //   for(int i = 0; i< D;i++){
- //    if(stencilMax[i]==0.)
- //       std::cout << "blbu";
- //   }
     
     for(int run = D; run > 0; run--){
       
@@ -198,20 +157,26 @@ lsDomain<double, D> makeSphere(double gridDelta){
   }
 
 
-  void testFMM(lsDomain<NumericType, D> * levelSet,
-              std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> lsPoints){
 
-          NumericType incr = 0.;
+  void testFMM(lsDomain<NumericType, D> * levelSet, 
+    std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & lsPoints){
+              //,){
+
+    std::cout << "Doing FM..." << std::endl;
+
+
+    NumericType incr = 0.;
     //TODO: DO checks of the levelset
 
     //Do FMM until the narrowband converges
     //The convergence of the narrowband depends on the width that is required
     //TODO: at the moment random static number think of better war to end the loop
-    for(int runs=0; runs < 50; runs++){
+    for(int runs=0; runs < 20; runs++){
       
       //debug
       std::vector<NumericType> prevVal;
       std::vector<NumericType> error;
+      std::vector<NumericType> radiusPoint;
       auto &grid = levelSet->getGrid();
 
       lsDomain<NumericType, D> newlsDomain(grid);
@@ -262,7 +227,16 @@ lsDomain<double, D> makeSphere(double gridDelta){
             NumericType coord = centerIt.getStartIndices(i) * grid.getGridDelta();
             radius += coord * coord;
           }
-          error.push_back(std::abs(10. - std::sqrt(radius) - centerIt.getValue()));
+
+          radius = std::sqrt(radius);
+
+          radiusPoint.push_back(radius);
+
+          if(centerIt.getValue() >= 0.){
+              error.push_back( std::abs((std::abs(centerIt.getValue())*grid.getGridDelta()) - radius) );
+          }else{
+              error.push_back( std::abs((std::abs(centerIt.getValue())*grid.getGridDelta()) + radius) );
+          }
 
           prevVal.push_back(0.);   
           //debug                                         
@@ -271,11 +245,6 @@ lsDomain<double, D> makeSphere(double gridDelta){
         }else{    
 
           NumericType old = centerIt.getValue();
-
-         /* if(std::abs(old) <= 0.5 && runs >= 8){
-            std::cout << "blub" << std::endl;
-
-          }*/
 
           //calculate distance to the interface using the iconal equation 
           NumericType dist = calcDist(neighborIt, (centerIt.getValue() < 0.));
@@ -297,10 +266,31 @@ lsDomain<double, D> makeSphere(double gridDelta){
                 NumericType coord = centerIt.getStartIndices(i) * grid.getGridDelta();
                 radius += coord * coord;
               }
-              error.push_back(std::abs(10. - std::sqrt(radius)- dist));
+
+              radius = std::sqrt(radius);
+
+              radiusPoint.push_back(radius);
+
+              if(radius >= 10.){
+                error.push_back( std::abs((std::abs(dist)*grid.getGridDelta()) - radius) );
+
+
+              }else{
+                error.push_back( std::abs((std::abs(dist)*grid.getGridDelta()) + radius) );
+
+              }
+
+
             }else{
               prevVal.push_back(0.);
-              error.push_back(10.);
+
+              if(old == lsDomain<NumericType, D>::POS_VALUE){
+                error.push_back(100.);
+              }else{
+                error.push_back( 100.);
+              }
+
+              radiusPoint.push_back(100.);
             }
           }else{
             domainSegment.insertNextUndefinedPoint(neighborIt.getIndices(), 
@@ -317,7 +307,7 @@ lsDomain<double, D> makeSphere(double gridDelta){
 
       //debug
 
-      if(D<3){
+      if(D<3 || runs==19){
         //output takes to long in 3d
         lsMesh narrowband;
         std::cout << "Extracting narrowband..." << std::endl;
@@ -326,6 +316,8 @@ lsDomain<double, D> makeSphere(double gridDelta){
         narrowband.insertNextScalarData(prevVal, "difference");
 
         narrowband.insertNextScalarData(error, "error");
+
+        narrowband.insertNextScalarData(radiusPoint, "Radius");
 
         lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "FM_norm_S" + std::to_string(runs) ).apply();
 
@@ -338,94 +330,22 @@ lsDomain<double, D> makeSphere(double gridDelta){
     } 
 
     //TODO: constant is stupid change to dynamic value e.g stop condition or fixed amount of steps
-    NumericType width = 2.;
+    NumericType width = 3.;
     levelSet->getDomain().segment();
     levelSet->finalize(width);
       
   
   }
 
-  lsDomain<NumericType, D> testConvert(lsDomain<NumericType, D> &passedlsDomain){
 
+  lsDomain<NumericType, D> ConvertLS(lsDomain<NumericType, D> &passedlsDomain, 
+    std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & lsPoints){
 
+    //TODO:remove
     std::cout << "Converting Distances..." << std::endl;
 
     //increase lvl set size
-    int order = 1;
-
-    //test!
-
-    //lsExpand<NumericType, D>(passedlsDomain, 2 * (order + 2) + 1).apply();
-
-
-    double pointsPerSegment =
-    double(2 * passedlsDomain.getDomain().getNumberOfPoints()) /
-    double(passedlsDomain.getLevelSetWidth());
-
-    auto grid = passedlsDomain.getGrid();
-
-    //! Calculate Normalvectors
-    int p = 0;
-#ifdef _OPENMP
-    p = omp_get_thread_num();
-#endif
-
-    hrleVectorType<hrleIndexType, D> startVector =
-        (p == 0) ? grid.getMinGridPoint()
-                : passedlsDomain.getDomain().getSegmentation()[p - 1];
-
-    hrleVectorType<hrleIndexType, D> endVector =
-      (p != static_cast<int>(passedlsDomain.getNumberOfSegments() - 1))
-        ? passedlsDomain.getDomain().getSegmentation()[p]
-        : grid.incrementIndices(grid.getMaxGridPoint());
-
-    //calculation of normal
-    const NumericType gridDelta = passedlsDomain.getGrid().getGridDelta();
-
-    typedef typename lsDomain<NumericType, D>::PointValueVectorType pointDataType;
-
-    std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> lsPoints;
-    
-    lsPoints.reserve(passedlsDomain.getNumberOfPoints());
-    
-
-    hrleVectorType<hrleIndexType, D> index;
-
-
-    //find aktive ls points
-    for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
-            neighborIt(passedlsDomain.getDomain(), startVector);
-           neighborIt.getIndices() < endVector; neighborIt.next()) {
-
-        auto &center = neighborIt.getCenter();
-        if (!center.isDefined()) {
-          continue;
-        } else if (std::abs(center.getValue()) > 0.5) {
-          // undefined run
-          continue;
-        }
-      
-        lsPoints.insert(center.getStartIndices());
-    }
-
-    testFMM(& passedlsDomain , lsPoints);
-
-    //lsExpand<NumericType, D>(passedlsDomain, 2 * (order + 2) + 1).apply();
-
-    return passedlsDomain;
-
-        
-}
-
-  lsDomain<NumericType, D> ConvertLS(lsDomain<NumericType, D> &passedlsDomain){
-
-
-    std::cout << "Converting Distances..." << std::endl;
-
-    //increase lvl set size
-    int order = 1;
-
-    lsExpand<NumericType, D>(passedlsDomain, 2 * (order + 2) + 1).apply();
+    lsExpand<NumericType, D>(passedlsDomain, 7).apply();
 
 
     double pointsPerSegment =
@@ -445,7 +365,7 @@ lsDomain<double, D> makeSphere(double gridDelta){
 
     typename lsDomain<NumericType, D>::DomainType &newDomain = newLS.getDomain();
 
-    newDomain.initialize();
+    newDomain.initialize(oldDomain.getNewSegmentation(), oldDomain.getAllocation());
 
 
     //! Calculate Normalvectors
@@ -458,41 +378,32 @@ lsDomain<double, D> makeSphere(double gridDelta){
 
     hrleVectorType<hrleIndexType, D> startVector =
         (p == 0) ? grid.getMinGridPoint()
-                : passedlsDomain.getDomain().getSegmentation()[p - 1];
+                : newDomain.getSegmentation()[p - 1];
 
     hrleVectorType<hrleIndexType, D> endVector =
-      (p != static_cast<int>(passedlsDomain.getNumberOfSegments() - 1))
-        ? passedlsDomain.getDomain().getSegmentation()[p]
+      (p != static_cast<int>(newDomain.getNumberOfSegments() - 1))
+        ? newDomain.getSegmentation()[p]
         : grid.incrementIndices(grid.getMaxGridPoint());
 
 
-    //TODO: probalby remove dont needed keep it for now
-    std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> lsPoints;
-    
+
+
+    //TODO: remove
     std::vector<double> oldVal;
 
     oldVal.reserve(passedlsDomain.getNumberOfPoints());
-    lsPoints.reserve(passedlsDomain.getNumberOfPoints());
+    //lsPoints.reserve(passedlsDomain.getNumberOfPoints());
     
 
     hrleVectorType<hrleIndexType, D> index;
 
-    //debug
-    lsMesh test_output;
-    test_output.clear();
-    std::vector<double> lsVals;
-
-    lsMesh test_output2;
-    test_output2.clear();
-    std::vector<double> lsVals2;
-
-
+ 
     for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
           neighborIt(passedlsDomain.getDomain(), startVector);
           neighborIt.getIndices() < endVector; neighborIt.next()) {
 
         auto &centerIt = neighborIt.getCenter();
-        if (!centerIt.isDefined() || std::abs(centerIt.getValue()) > 0.5) {
+        if (!centerIt.isDefined() || (std::abs(centerIt.getValue()) > 0.5) ) {
           //write undefined run in new level set
           newDomain.getDomainSegment(p).insertNextUndefinedPoint(neighborIt.getIndices(), 
           (centerIt.getValue()<0.) ? lsDomain<NumericType, D>::NEG_VALUE : lsDomain<NumericType, D>::POS_VALUE);
@@ -500,7 +411,7 @@ lsDomain<double, D> makeSphere(double gridDelta){
           continue;
         } 
 
-        
+        //TODO: probably remove
         lsPoints.insert(centerIt.getStartIndices());
 
 
@@ -512,12 +423,6 @@ lsDomain<double, D> makeSphere(double gridDelta){
         NumericType normN = 0.;
         for (int i = 0; i < D; i++) {
           
-          if(centerIt.getValue() == 0.){
-       //     std::cout << "p " << neighborIt.getNeighbor(i).getValue() << std::endl;
-       //     std::cout << "n " << neighborIt.getNeighbor(i + D).getValue() << std::endl;
-
-          }
-
           NumericType pos1 = neighborIt.getNeighbor(i).getValue();
           NumericType neg1 = neighborIt.getNeighbor(i + D).getValue();
           n[i] = (pos1 - neg1) * 0.5;
@@ -541,67 +446,8 @@ lsDomain<double, D> makeSphere(double gridDelta){
             max = std::abs(n[i]);
             }
         }
-
-        //development
-        NumericType normSurfPoint = 0.;
-        NumericType normGridPoint = 0.;
-
-        std::array<double, 3> node;
-        node[2] = 0.;
-        NumericType scaling = centerIt.getValue() * gridDelta * max;
-        for (unsigned i = 0; i < D; ++i) {
-          node[i] = double(centerIt.getStartIndices(i)) * gridDelta;
-
-          normGridPoint += node[i] * node[i];
-
-          //rescale vector to touch the surface
-          node[i] -= scaling * n[i];
-
-          normSurfPoint += node[i] * node[i];
-        }
-
-        normSurfPoint = std::sqrt(normSurfPoint);
-        normGridPoint = std::sqrt(normGridPoint);
-
-  //      if(centerIt.getValue()<0.0)
- //         std::cout << "blbu";
-
-        std::array<unsigned, 1> vertex;
-        vertex[0] =test_output.nodes.size();
-        test_output.insertNextVertex(vertex);
-
-       // node[2] = 0.;
-       // for (unsigned i = 0; i < D; ++i) {
-       //   node[i] -= scaling * n[i];
-       // }
-
-        test_output.insertNextNode(node);
-
-        lsVals.push_back(scaling);
-
-        NumericType test = normGridPoint-normSurfPoint;
-
-        //std::cout << "subtr:" << test << std::endl;
-        //std::cout << "scale:" << scaling << std::endl;
-
-        vertex[0] =test_output2.nodes.size();
-        test_output2.insertNextVertex(vertex);
-
-        node[2] = 0.;
-        for (unsigned i = 0; i < D; ++i) {
-          node[i] = double(centerIt.getStartIndices(i)) * gridDelta;
-        }
-
-        test_output2.insertNextNode(node);
-
-        lsVals2.push_back(oldLSValue);
-
-
-              
-        NumericType newLsValue = scaling;
-        //NumericType newLsValue = ((centerIt.getValue() < 0.) ? -1. : 1.) * test;
-
-
+   
+        NumericType newLsValue = centerIt.getValue() * max;
 
         newDomain.getDomainSegment(p).insertNextDefinedPoint(neighborIt.getIndices(), newLsValue);
 
@@ -611,31 +457,8 @@ lsDomain<double, D> makeSphere(double gridDelta){
 
     newDomain.finalize();
 
-    test_output.insertNextScalarData(lsVals, "new Vals");
-    test_output.insertNextScalarData(lsVals2, "old Vals");
 
-    lsVTKWriter(test_output, lsFileFormatEnum::VTU , "gridNew" ).apply();
-
-    test_output2.insertNextScalarData(lsVals, "new Vals"); 
-    test_output2.insertNextScalarData(lsVals2, "old Vals");
-
-    lsVTKWriter(test_output2, lsFileFormatEnum::VTU , "gridOld" ).apply();
-
-
-//  newLS  passedlsDomain
-    testFMM(& newLS , lsPoints);
-
-    
     return newLS;
-
-   
-
-       testFMM(& passedlsDomain , lsPoints);
-
-    //debug
-    //return newLS;
-    return passedlsDomain;
-
         
 }
 
@@ -686,20 +509,398 @@ lsDomain<double, D> makeSphere(double gridDelta){
     }
 
 
-//  newLS  passedlsDomain
-    testFMM(& passedlsDomain , lsPoints);
-
-      lsMesh narrowband;
-      std::cout << "Extracting narrowband..." << std::endl;
-      lsToMesh<NumericType, D>(passedlsDomain, narrowband, true, false).apply();
-
-      lsVTKWriter(narrowband, lsFileFormatEnum::VTU ,  "AfterNotConverting").apply();
-
-
     return passedlsDomain;
+        
+}
+
+  lsDomain<NumericType, D> hardConvertCircle(lsDomain<NumericType, D> &passedlsDomain,
+    std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & lsPoints){
+
+    std::cout << "Hard converting Circle..." << std::endl;
+
+    auto grid = passedlsDomain.getGrid();
+
+    NumericType gridDelta = grid.getGridDelta();
+
+    lsDomain<NumericType,D> newLS(gridDelta);
+
+    auto newGrid = newLS.getGrid();
+
+    typename lsDomain<NumericType, D>::DomainType &newDomain = newLS.getDomain();
+
+    newDomain.initialize(passedlsDomain.getDomain().getNewSegmentation(), passedlsDomain.getDomain().getAllocation());
+
+    //! Calculate Normalvectors
+    int p = 0;
+#ifdef _OPENMP
+    p = omp_get_thread_num();
+#endif
+
+    hrleVectorType<hrleIndexType, D> startVector =
+        (p == 0) ? grid.getMinGridPoint()
+                : passedlsDomain.getDomain().getSegmentation()[p - 1];
+
+    hrleVectorType<hrleIndexType, D> endVector =
+      (p != static_cast<int>(passedlsDomain.getNumberOfSegments() - 1))
+        ? passedlsDomain.getDomain().getSegmentation()[p]
+        : grid.incrementIndices(grid.getMaxGridPoint());
    
 
+    for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
+            neighborIt(passedlsDomain.getDomain(), startVector);
+           neighborIt.getIndices() < endVector; neighborIt.next()) {
+
+        auto &center = neighborIt.getCenter();
+
         
+        if (!center.isDefined() ||  std::abs(center.getValue()) > 0.5) {
+
+          newDomain.getDomainSegment(p).insertNextUndefinedPoint(neighborIt.getIndices(), 
+          (center.getValue()<0.) ? lsDomain<NumericType, D>::NEG_VALUE : lsDomain<NumericType, D>::POS_VALUE);
+          
+          // undefined run
+          continue;
+        }
+        NumericType radius = 0.;
+        for(int i = 0; i < D; i++){
+          NumericType coord = center.getStartIndices(i) * gridDelta;
+          radius += coord * coord;
+        }
+
+        if(std::sqrt(radius) >= 10){
+          newLS.getDomain().getDomainSegment(p).insertNextDefinedPoint(neighborIt.getIndices(), std::sqrt(radius) - 10.);
+        }else{
+          newLS.getDomain().getDomainSegment(p).insertNextDefinedPoint(neighborIt.getIndices(), 10. - std::sqrt(radius));
+        }
+        
+        lsPoints.insert(center.getStartIndices());
+
+    }
+
+
+    return newLS;
+        
+}
+
+NumericType convertToFuncVal(NumericType lsVal, hrleVectorType<hrleIndexType, D> gridPoint, NumericType gridDelta){
+
+  NumericType distGridPoint = 0.;
+
+  for(int i = 0; i < D; i++){
+    distGridPoint += (gridPoint[i]*gridDelta) * (gridPoint[i]*gridDelta);
+  }
+
+  distGridPoint = std::sqrt(distGridPoint);
+
+  if(lsVal > 0.){
+    return (lsVal*gridDelta) + distGridPoint;
+  }else{
+    return ((lsVal*gridDelta) + distGridPoint);
+  }
+
+
+
+}
+
+NumericType calc_mean_curvature(std::vector<NumericType> d){
+
+
+    //TODO: write used formula and paper with reference
+    //The 2 in the denominator is important when considering the mean curvature in the context of differential geometry in books for
+    //lvl-set functions the 1/2 is often missing
+
+
+    NumericType norm_grad_pow3 = std::sqrt(d[0]*d[0] + d[1]*d[1] + d[2]*d[2]);
+    norm_grad_pow3 = norm_grad_pow3*norm_grad_pow3*norm_grad_pow3;
+
+    //expanded fom of the equation
+    return
+    //    F_x²(f_yy + F_zz)  +    F_y²(F_xx + F_zz)    +     F_z²(F_xx + F_yy)
+    (d[0]*d[0]*(d[4] + d[5]) + d[1]*d[1]*(d[3] + d[5]) + d[2]*d[2]*(d[3] + d[4]) +
+
+    //-2*[F_xF_yF_xy   +   F_xF_zF_xz   +   F_yF_zF_yz]
+    -2.*(d[0]*d[1]*d[6] + d[0]*d[2]*d[8] + d[1]*d[2]*d[7]))
+            
+    // /2*(F_x² + F_y² + F_z²)^(3/2)
+    /(2.*norm_grad_pow3);
+
+      //(F_x, F_y, F_z, F_xx, F_yy, F_zz, F_xy, F_yz, F_zx)
+
+}
+
+
+void create_output(lsDomain<NumericType,D> & levelSet,
+  std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & lsPoints){
+
+    hrleSparseBoxIterator<hrleDomain<NumericType, D>> neighborIterator(levelSet.getDomain(), 2);
+
+     std::vector<std::array<NumericType, 3>> normal;
+
+    std::vector<std::array<NumericType, 3>> secondOrderDerivatives1;
+
+    std::vector<std::array<NumericType, 3>> secondOrderDerivatives2;
+
+
+
+    std::vector<NumericType> grad1;
+
+    std::vector<NumericType> meanCurvature1;
+
+    std::vector<NumericType> meanCurvatureSD1;
+
+
+    std::vector<NumericType> grad2;
+
+    std::vector<NumericType> meanCurvature2;
+
+    std::vector<NumericType> meanCurvatureSD2;
+
+    std::vector<NumericType> meanCurvature3;
+
+    NumericType gridDelta = levelSet.getGrid().getGridDelta();
+
+
+
+
+
+
+
+   
+   //     ? passedlsDomain.getDomain().getSegmentation()[p]
+   //     : grid.incrementIndices(grid.getMaxGridPoint());
+
+    for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
+          neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
+          neighborIt.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
+
+        auto &centerIt = neighborIt.getCenter();
+        if (!centerIt.isDefined() || (lsPoints.find(centerIt.getStartIndices()) == lsPoints.end())) {
+          continue;
+        } 
+
+        // move neighborIterator to current position
+        neighborIterator.goToIndicesSequential(centerIt.getStartIndices());
+
+        NumericType gridDelta = levelSet.getGrid().getGridDelta();
+
+        //calculate normal vector of defined grid point
+        std::array<NumericType, 3> n;
+        n[2] = 0.;
+        std::array<NumericType, 3> d1;
+        d1[2] = 0.;
+        std::array<NumericType, 3> d2;
+        d2[2] = 0.;
+
+        //std::cout << centerIt.getStartIndices() << std::endl;
+
+        std::vector<NumericType> derivatives1(9);
+
+        std::vector<NumericType> derivatives2(9);
+
+        std::vector<NumericType> derivatives3(9);
+
+
+
+        std::vector<NumericType> d_p(3);
+
+        std::vector<NumericType> d_n(3);
+
+        std::vector<NumericType> d_c(3);
+
+        std::vector<NumericType> a;
+
+
+
+        for (int i = 0; i < D; i++) {
+
+          hrleVectorType<hrleIndexType, D> posUnit(0);
+          hrleVectorType<hrleIndexType, D> negUnit(0);
+
+          hrleVectorType<hrleIndexType, D> test = neighborIterator.getIndices();
+
+          posUnit[i] = 1;
+          negUnit[i] = -1;
+
+          int second_pos = (i+1) % D;
+
+          if(i == 1){
+            second_pos = 0;
+          }
+
+          //get required ls values
+          NumericType phi_0 = neighborIterator.getCenter().getValue();
+
+          phi_0 = convertToFuncVal(phi_0, neighborIterator.getCenter().getStartIndices(), gridDelta);
+
+          NumericType phi_px = neighborIterator.getNeighbor(posUnit).getValue();
+          NumericType phi_nx = neighborIterator.getNeighbor(negUnit).getValue();
+
+          phi_px = convertToFuncVal(phi_px, neighborIterator.getNeighbor(posUnit).getStartIndices(), gridDelta);
+          phi_nx = convertToFuncVal(phi_nx, neighborIterator.getNeighbor(negUnit).getStartIndices(), gridDelta);
+
+          posUnit[i] = 2;
+          negUnit[i] = -2;
+
+          NumericType phi_p2x = neighborIterator.getNeighbor(posUnit).getValue();
+          NumericType phi_n2x = neighborIterator.getNeighbor(negUnit).getValue();
+
+          phi_p2x = convertToFuncVal(phi_p2x, neighborIterator.getNeighbor(posUnit).getStartIndices(), gridDelta);
+          phi_n2x = convertToFuncVal(phi_n2x, neighborIterator.getNeighbor(negUnit).getStartIndices(), gridDelta);
+
+          posUnit[i] = 1;
+          negUnit[i] = -1;
+
+          posUnit[second_pos] = 1;
+          negUnit[second_pos] = 1;
+
+          NumericType phi_pp = neighborIterator.getNeighbor(posUnit).getValue();
+          NumericType phi_np = neighborIterator.getNeighbor(negUnit).getValue();
+
+          phi_pp = convertToFuncVal(phi_pp, neighborIterator.getNeighbor(posUnit).getStartIndices(), gridDelta);
+          phi_np = convertToFuncVal(phi_np, neighborIterator.getNeighbor(negUnit).getStartIndices(), gridDelta);
+
+          posUnit[second_pos] = -1;
+          negUnit[second_pos] = -1;
+
+          NumericType phi_pn = neighborIterator.getNeighbor(posUnit).getValue();
+          NumericType phi_nn = neighborIterator.getNeighbor(negUnit).getValue();
+
+          phi_pn = convertToFuncVal(phi_pn, neighborIterator.getNeighbor(posUnit).getStartIndices(), gridDelta);
+          phi_nn = convertToFuncVal(phi_nn, neighborIterator.getNeighbor(negUnit).getStartIndices(), gridDelta);
+
+          posUnit[i] = 0;
+          negUnit[i] = 0;
+
+          posUnit[second_pos] = 1;
+          negUnit[second_pos] = -1;
+
+          NumericType phi_py = neighborIterator.getNeighbor(posUnit).getValue();
+          NumericType phi_ny = neighborIterator.getNeighbor(negUnit).getValue();
+
+          phi_py = convertToFuncVal(phi_py, neighborIterator.getNeighbor(posUnit).getStartIndices(), gridDelta);
+          phi_ny = convertToFuncVal(phi_ny, neighborIterator.getNeighbor(negUnit).getStartIndices(), gridDelta);
+
+          //test
+
+          /*d_p[i] = phi_px - phi_0;
+
+          d_n[i] = phi_0 - phi_nx;
+
+          d_c[i] = (phi_px - phi_nx)*0.5;
+
+          phi_pp - phi_np;
+
+          phi_pn - phi_nn;*/
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+          // 1 1 1
+          derivatives1[i] = (phi_px - phi_nx)/(2.*gridDelta);
+
+          derivatives1[i+3] = (phi_px - 2.*phi_0 + phi_nx)/(gridDelta*gridDelta);
+
+          derivatives1[i+6] = (phi_pp - phi_pn -phi_np + phi_nn)/(4.*gridDelta*gridDelta);
+
+
+          // 2 2 2 
+          derivatives2[i] = (phi_pp - phi_np + phi_pn - phi_nn)/(4.*gridDelta);
+
+          derivatives2[i+3] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)/(gridDelta*gridDelta*3.0);
+
+          derivatives2[i+6] = -(phi_px + phi_nx + phi_py + phi_ny - 2. * phi_0 - phi_pp - phi_nn)/(2.*gridDelta*gridDelta);
+          
+
+
+          // 2 2 1
+          derivatives3[i] = (phi_pp - phi_np + phi_pn - phi_nn)/(4.*gridDelta);
+
+          derivatives3[i+3] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)/(gridDelta*gridDelta*3.0);
+
+          derivatives3[i+6] = (phi_pp - phi_pn -phi_np + phi_nn)/(4.*gridDelta*gridDelta);
+
+
+          //second order F_xx
+          //d2[i] = (-phi_p2x + 16.*phi_px - 30.*phi_0 + 16.*phi_nx - phi_n2x)/(12.*gridDelta*gridDelta);
+          
+        }
+
+
+        NumericType normGrad1 = 0.;
+
+        NumericType mCurve1 = 0.;
+
+        NumericType normGrad2 = 0.;
+
+        NumericType mCurve2 = 0.;
+
+        for(int i = 0; i < D; i++){
+          normGrad1 += derivatives1[i]*derivatives1[i];
+          mCurve1 += derivatives1[i+3];
+
+          normGrad2 += derivatives2[i]*derivatives2[i];
+          mCurve2 += derivatives2[i+3];
+        }
+
+        grad1.push_back(std::sqrt(normGrad1));
+
+        grad2.push_back(std::sqrt(normGrad2));
+
+        meanCurvatureSD1.push_back((mCurve1 * 0.5));
+
+        meanCurvatureSD2.push_back((mCurve2 * 0.5));
+
+        meanCurvature1.push_back(calc_mean_curvature(derivatives1));
+
+        meanCurvature2.push_back(calc_mean_curvature(derivatives2));
+
+        meanCurvature3.push_back(calc_mean_curvature(derivatives3));
+              
+        //normal.push_back(n);
+        //secondOrderDerivatives1.push_back(d1);
+        //secondOrderDerivatives2.push_back(d2);
+
+    }
+
+    lsMesh narrowband;
+    std::cout << "Extracting narrowband..." << std::endl;
+    lsToMesh<NumericType, D>(levelSet, narrowband, true, true).apply(lsPoints);
+    //lsPoints
+
+
+    //narrowband.insertNextVectorData(normal, "Normals");
+    narrowband.insertNextScalarData(grad1, "norm of grad");
+    narrowband.insertNextScalarData(meanCurvatureSD1, "mean c SD");
+    narrowband.insertNextScalarData(meanCurvature1, "mean c F");
+
+    //narrowband.insertNextVectorData(normal, "Normals 2");
+    narrowband.insertNextScalarData(grad2, "norm of grad 2");
+    narrowband.insertNextScalarData(meanCurvatureSD2, "mean c SD 2");
+    narrowband.insertNextScalarData(meanCurvature2, "mean c F 2");
+
+    narrowband.insertNextScalarData(meanCurvature3, "mean c F 3");
+    //narrowband.insertNextVectorData(secondOrderDerivatives1, "F_xx_1");
+    //narrowband.insertNextVectorData(secondOrderDerivatives2, "F_xx_2");
+  
+    lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "final_output" ).apply();
+
+    lsMesh mesh;
+    std::cout << "Extracting surface mesh..." << std::endl;
+    lsToSurfaceMesh<double, D>(levelSet, mesh).apply();
+
+
+    lsVTKWriter(mesh, lsFileFormatEnum::VTU ,"final_output_mesh").apply();
+
 }
 
 
@@ -710,18 +911,14 @@ int main() {
 
     omp_set_num_threads(1);
 
-    NumericType gridDelta = 0.25;
+    NumericType gridDelta = 0.125;
+
+    std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> lsPoints;
 
 
     std::vector<lsDomain<NumericType, D> *> levelSets;
 
     lsDomain<NumericType,D> levelSet = makeSphere(gridDelta);
-
-    lsMesh narrowband1;
-
-    lsToMesh<NumericType, D>(levelSet, narrowband1, true, true).apply();
-
-    lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "OriginalSphere" ).apply();
 
     lsMesh diskmesh;
 
@@ -731,88 +928,38 @@ int main() {
 
     levelSets.push_back(&levelSet);  
 
+    test1();
+
+   /* lsExpand(*(levelSets.back()), 2);
+
+    lsCalculateNormalVectors<NumericType, D> test_normals(*(levelSets.back()));
+
+    test_normals.apply();
+
+    lsMesh narrowband1;
+    std::cout << "Extracting narrowband..." << std::endl;
+    lsToMesh<NumericType, D>(*(levelSets.back()), narrowband1, true, true).apply();
+
+    lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "standard_normals" ).apply();*/
+
     //Converts the LS from sparse manhatten normalization to Euklid normalization
-    //lsDomain<NumericType,D> newLevelSet =  ConvertLS(*(levelSets.back()));
 
-    lsDomain<NumericType,D> newLevelSet =  dontConvert(*(levelSets.back()));
+    //lsDomain<NumericType,D> newLevelSet =  hardConvertCircle(*(levelSets.back()), lsPoints);
 
-   
+    lsDomain<NumericType,D> newLevelSet =  ConvertLS(*(levelSets.back()), lsPoints);
 
-    //std::cout << newLevelSet.getNumberOfSegments() << std::endl;
+    //lsDomain<NumericType,D> newLevelSet =  dontConvert(*(levelSets.back()));
+
+
+    testFMM(& newLevelSet, lsPoints);
+
+
 
     //passes on the created sphere
     //lsDomain<NumericType,D> newLevelSet =  testConvert(*(levelSets.back()));
 
-    //perform FMM
+    create_output(newLevelSet, lsPoints);
 
-    //calculate curvatures
-
-    //write output
-
-    //lsCalculateNormalVectors<NumericType, D> test_normals(newLevelSet);
-
-    //test_normals.apply();
-
-    //auto& normalVectors = newLevelSet.getNormalVectors();
-
-    std::vector<std::array<NumericType, 3>> normal;
-
-    std::vector<NumericType> grad;
-
-
-   
-   //     ? passedlsDomain.getDomain().getSegmentation()[p]
-   //     : grid.incrementIndices(grid.getMaxGridPoint());
-
-    for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
-          neighborIt(newLevelSet.getDomain(), newLevelSet.getGrid().getMinGridPoint());
-          neighborIt.getIndices() < newLevelSet.getGrid().incrementIndices(newLevelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
-
-        auto &centerIt = neighborIt.getCenter();
-        if (!centerIt.isDefined() || std::abs(centerIt.getValue()) > 0.5) {
-          continue;
-        } 
-
-        //calculate normal vector of defined grid point
-        std::array<NumericType, 3> n;
-        n[2] = 0.;
-        for (int i = 0; i < D; i++) {
-          NumericType pos1 = neighborIt.getNeighbor(i).getValue();
-          NumericType neg1 = neighborIt.getNeighbor(i + D).getValue();
-          n[i] = (pos1 - neg1) /(2.);
-          
-        }
-
-        NumericType normGrad = 0.;
-
-        for(int i = 0; i < D; i++){
-          normGrad += n[i]*n[i];
-        }
-
-        grad.push_back(std::sqrt(normGrad));
-              
-        normal.push_back(n);
-
-
-
-    }
-
-    lsMesh narrowband;
-    std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<NumericType, D>(newLevelSet, narrowband, true, true).apply();
-
-
-    narrowband.insertNextVectorData(normal, "Normals");
-    narrowband.insertNextScalarData(grad, "norm of grad");
-
-    lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "final_output" ).apply();
-
-    lsMesh mesh;
-    std::cout << "Extracting surface mesh..." << std::endl;
-    lsToSurfaceMesh<double, D>(newLevelSet, mesh).apply();
-
-
-    lsVTKWriter(mesh, lsFileFormatEnum::VTU ,"final_output_mesh").apply();
 
     std::cout << "Finished" << std::endl;
  

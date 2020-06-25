@@ -106,20 +106,20 @@ private:
 
             //derivatives[i] = ((phi_p - phi_0 ) + (phi_0 - phi_n))*0.5;
 
-            derivatives[i] = (phi_p - phi_n)/(2*2*gridDelta); // *0.5
+            derivatives[i] = (phi_p - phi_n)* 0.5;///(2.*gridDelta); //  
 
             //derivatives[i] = (phi_p - phi_n)*denTwoDelta;
 
             //Calc F_ii
 
-            derivatives[i+3] = (phi_p - 2*phi_0 + phi_n)/(2*gridDelta*gridDelta); //;
+            derivatives[i+3] = (phi_p - 2.*phi_0 + phi_n);///(gridDelta*gridDelta); //;
 
 
             //derivatives[i+3] = (phi_p - 2*phi_0 + phi_n)*denDeltaSquared;
 
             //Calc F_i(i mod D-1)
             
-            derivatives[i+6] = (phi_pp - phi_pn -phi_np + phi_nn) /(2*2*gridDelta*gridDelta); // *0.5;
+            derivatives[i+6] = (phi_pp - phi_pn -phi_np + phi_nn) * 0.25; ///(4.*gridDelta*gridDelta); //* 0.25;
 
             //T test = (phi_pp - phi_p - phi_);
 
@@ -168,7 +168,7 @@ private:
         -(d[0]*d[0]*(d[7]*d[7]-d[4]*d[5]) + d[1]*d[1]*(d[8]*d[8]-d[3]*d[5]) + d[2]*d[2]*(d[6]*d[6]-d[3]*d[4]) +
 
         //2*[F_xF_y(2F_zzF_xy-2F_zxF_yz) +
-        2*(d[0]*d[1]*(d[5]*d[6]-d[8]*d[7]) +
+        2.*(d[0]*d[1]*(d[5]*d[6]-d[8]*d[7]) +
 
         //F_xF_z(2F_yyF_zx-2F_xyF_yz) +
         d[0]*d[2]*(d[4]*d[8]-d[6]*d[7]) +
@@ -199,10 +199,10 @@ private:
         (d[0]*d[0]*(d[4] + d[5]) + d[1]*d[1]*(d[3] + d[5]) + d[2]*d[2]*(d[3] + d[4]) +
 
         //-2*[F_xF_yF_xy   +   F_xF_zF_xz   +   F_yF_zF_yz]
-        -2*(d[0]*d[1]*d[6] + d[0]*d[2]*d[8] + d[1]*d[2]*d[7]))
+        -2.*(d[0]*d[1]*d[6] + d[0]*d[2]*d[8] + d[1]*d[2]*d[7]))
                 
         // /2*(F_x² + F_y² + F_z²)^(3/2)
-        /(2*norm_grad_pow3);
+        /(2.*norm_grad_pow3);
 
          //(F_x, F_y, F_z, F_xx, F_yy, F_zz, F_xy, F_yz, F_zx)
 

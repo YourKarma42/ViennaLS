@@ -58,7 +58,7 @@ public:
 
     //! Calculate Normalvectors
 #pragma omp parallel num_threads(levelSet->getNumberOfSegments())
-    {
+     {
       int p = 0;
 #ifdef _OPENMP
       p = omp_get_thread_num();
@@ -99,6 +99,8 @@ public:
           n[i] = (pos + neg) * 0.5;
           denominator += n[i] * n[i];
         }
+
+
 
         denominator = std::sqrt(denominator);
         if (std::abs(denominator) < 1e-12) {

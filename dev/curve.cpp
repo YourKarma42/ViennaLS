@@ -22,10 +22,15 @@
 
 #include<lsCalculateCurvatures.hpp>
 
+#include <lsConvertEuclid.hpp>
+#include <lsEiknoalExpand.hpp>
+
 
 
 //____________testing not necessary_________________
 
+
+#include <omp.h>
 #include <chrono>
 #include <lsCalculateNormalVectors.hpp>
 
@@ -42,18 +47,30 @@ void createPointCloudOutput(lsDomain<NumericType, D> &passedlsDomain, std::strin
 
   std::chrono::time_point<std::chrono::system_clock> start, end;
 
+  lsConvertEuclid<NumericType, D>  converter(passedlsDomain);
 
-  //TODO: this is shit the ls has to be extended here so that the sparsebox iterator is defined
-  lsCalculateCurvatures<double, D>::prepareLS(passedlsDomain);
+  converter.apply();
+
+  auto activePoints = converter.getActivePoints();
+
+  lsEikonalExpand<NumericType, D> expander(passedlsDomain, activePoints);
+
+  expander.apply(); 
+/*
+  lsExpand<NumericType, D> expander(passedlsDomain, 8);
+
+  expander.apply();
+*/
+
   
 
   lsCalculateCurvatures<double, D> test_curvature(passedlsDomain);
 
-  lsCalculateNormalVectors<double, D> test_normals(passedlsDomain);
+  //lsCalculateNormalVectors<double, D> test_normals(passedlsDomain);
 
   start = std::chrono::system_clock::now();
  
-  test_normals.apply();
+  //test_normals.apply();
 
   end = std::chrono::system_clock::now();
 
@@ -67,7 +84,7 @@ void createPointCloudOutput(lsDomain<NumericType, D> &passedlsDomain, std::strin
 
   end = std::chrono::system_clock::now();
 
-  std::cout << "Time for my iterator: "<< std::endl << std::chrono::duration_cast<std::chrono::microseconds>(end-start).count() << std::endl;
+  std::cout << "Time for my calculation: "<< std::endl << std::chrono::duration_cast<std::chrono::microseconds>(end-start).count() << std::endl;
 
 
 
@@ -76,9 +93,7 @@ void createPointCloudOutput(lsDomain<NumericType, D> &passedlsDomain, std::strin
   auto& mean_curve = test_curvature.getMeanCurvature();
   auto& normGrads = test_curvature.getNormGrad();
   auto& my_normals = test_curvature.getNormals();
-  auto& normalVectors = passedlsDomain.getNormalVectors();
-
-
+  //auto& normalVectors = passedlsDomain.getNormalVectors();
 
 
 
@@ -95,12 +110,24 @@ void createPointCloudOutput(lsDomain<NumericType, D> &passedlsDomain, std::strin
        !it.isFinished(); ++it) {
     if (!it.isDefined() || std::abs(it.getValue()) > 0.5)
       continue;
+
+    //TODO: think of more elegant solution
+    //if((activePoints.find(it.getStartIndices()) != activePoints.end())){
+
+      gauss.push_back(std::abs(gauss_curve[it.getPointId()]));
+      mean.push_back(std::abs(mean_curve[it.getPointId()]));
+      normGrad.push_back(normGrads[it.getPointId()]);
+      my_normal.push_back(my_normals[it.getPointId()]);      
+
+    /*}else{
+
+      gauss.push_back(0.);
+      mean.push_back(0.);
+      normGrad.push_back(0.);
+      my_normal.push_back(my_normals[it.getPointId()]);
+    }*/
     
-    gauss.push_back(std::abs(gauss_curve[it.getPointId()]));
-    mean.push_back(std::abs(mean_curve[it.getPointId()]));
-    normGrad.push_back(normGrads[it.getPointId()]);
-    normal.push_back(normalVectors[it.getPointId()]);
-    my_normal.push_back(my_normals[it.getPointId()]);
+
 
 
   }
@@ -206,7 +233,7 @@ int main() {
 
   //double gridDelta = 0.5;
 
-  std::vector<double> gridDeltas = {0.5/*, 0.5, 0.25, 0.1*/};
+  std::vector<double> gridDeltas = { 0.5, 0.25, 0.125};
 
   std::vector<std::vector<NumericType>> additionalParams;
   /*

@@ -9,6 +9,8 @@
 #include <lsDomain.hpp>
 #include <lsMesh.hpp>
 
+#include <unordered_set>
+
 /// Extract the regular grid, on which the level set values are
 /// defined, to an explicit lsMesh. The Vertices will contain
 /// the level set value stored at its location. (This is very useful
@@ -40,6 +42,70 @@ public:
   }
 
   void setOnlyActive(bool passedOnlyActive) { onlyActive = passedOnlyActive; }
+
+
+  //TODO: extracts mesh from an euclidian lvlset (talk to Xaver)
+  void apply(std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & lsPoints) {
+    if (levelSet == nullptr) {
+      lsMessage::getInstance()
+          .addWarning("No level set was passed to lsToMesh.")
+          .print();
+      return;
+    }
+    if (mesh == nullptr) {
+      lsMessage::getInstance()
+          .addWarning("No mesh was passed to lsToMesh.")
+          .print();
+      return;
+    }
+
+    mesh->clear();
+
+    // check if level set is empty
+    if (levelSet->getNumberOfPoints() == 0) {
+      return;
+    }
+
+    std::vector<double> scalarData;
+    std::vector<double> subLS;
+
+    int i = 0;
+
+    const T gridDelta = levelSet->getGrid().getGridDelta();
+
+    for (hrleConstSparseIterator<hrleDomainType> it(levelSet->getDomain());
+         !it.isFinished(); ++it) {
+      if ((onlyDefined && !it.isDefined()) ||
+          (onlyActive && (lsPoints.find(it.getStartIndices()) == lsPoints.end())))
+        continue;
+
+
+      // insert vertex
+      std::array<unsigned, 1> vertex;
+      vertex[0] = mesh->nodes.size();
+      mesh->insertNextVertex(vertex);
+
+      // insert corresponding node
+      std::array<double, 3> node;
+      if (D == 2)
+        node[2] = 0.;
+      for (unsigned i = 0; i < D; ++i) {
+        node[i] = double(it.getStartIndices(i)) * gridDelta;
+      }
+      mesh->insertNextNode(node);
+
+      // insert LS value
+      scalarData.push_back(it.getValue());
+      subLS.push_back(it.getSegmentId());
+    }
+
+    mesh->insertNextScalarData(scalarData, "LSValues");
+    mesh->insertNextScalarData(subLS, "SegmentID");
+    if (levelSet->getPointData().getScalarDataSize() > 0 ||
+        levelSet->getPointData().getVectorDataSize() > 0) {
+      mesh->lsPointData::append(levelSet->getPointData());
+    }
+  }
 
   void apply() {
     if (levelSet == nullptr) {
