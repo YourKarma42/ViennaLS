@@ -2,33 +2,50 @@
 
 #include <lsDomain.hpp>
 
+#include <hrleSparseBoxIterator.hpp>
 
-typedef double NumericType;
+
 
 
 void test1(){
     std::cout << "blubdiblala" << std::endl;
 }
 
-class curveCaluclator {
+/*
+template <class T, int D> class curveCaluclator {
 
 
-    private:
-
-    hrleSparseBoxIterator<hrleDomain<NumericType, D>> neighborIterator;
 
     public:
 
-    curveCaluclator(hrleSparseBoxIterator<hrleDomain<NumericType, D>> ni):
-    neighborIterator(ni){
+    virtual void apply() = 0;
 
+
+
+
+};*/
+
+
+
+
+template <class T, int D> class curvatur1{
+
+    private:
+
+    hrleSparseBoxIterator<hrleDomain<T, D>> neighborIterator;
+
+    void calcDerivatives(){
+
+    }
+
+    public:
+
+    curvatur1(hrleSparseBoxIterator<hrleDomain<T, D>> &ni)
+    : neighborIterator(ni){
     }
 
     void apply(){
 
     }
 
-
-
-
-}
+};
