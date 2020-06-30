@@ -32,9 +32,10 @@ template <class T, int D> class curvatur1{
 
     private:
 
-    hrleSparseBoxIterator<hrleDomain<T, D>> neighborIterator;
+    hrleSparseBoxIterator<hrleDomain<T, D>> & neighborIterator;
 
     void calcDerivatives(){
+        
 
     }
 
