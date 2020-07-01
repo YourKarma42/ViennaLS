@@ -657,7 +657,11 @@ void create_output(lsDomain<NumericType,D> & levelSet,
 
     std::vector<NumericType> meanCurvature3;
 
+    std::vector<NumericType> meanCurvatureNew;
+
     NumericType gridDelta = levelSet.getGrid().getGridDelta();
+
+    curvatur1<NumericType, D> calculatorTest(gridDelta);
 
 
 
@@ -681,7 +685,11 @@ void create_output(lsDomain<NumericType,D> & levelSet,
         // move neighborIterator to current position
         neighborIterator.goToIndicesSequential(centerIt.getStartIndices());
 
-        NumericType gridDelta = levelSet.getGrid().getGridDelta();
+        
+
+
+
+        //NumericType gridDelta = levelSet.getGrid().getGridDelta();
 
         //calculate normal vector of defined grid point
         std::array<NumericType, 3> n;
@@ -796,15 +804,6 @@ void create_output(lsDomain<NumericType,D> & levelSet,
 
 
 
-
-
-
-
-
-
-
-
-
           // 1 1 1
           derivatives1[i] = (phi_px - phi_nx)/(2.*gridDelta);
 
@@ -852,6 +851,8 @@ void create_output(lsDomain<NumericType,D> & levelSet,
           mCurve2 += derivatives2[i+3];
         }
 
+        meanCurvatureNew.push_back(calculatorTest(neighborIterator));
+
         grad1.push_back(std::sqrt(normGrad1));
 
         grad2.push_back(std::sqrt(normGrad2));
@@ -889,6 +890,8 @@ void create_output(lsDomain<NumericType,D> & levelSet,
     narrowband.insertNextScalarData(meanCurvature2, "mean c F 2");
 
     narrowband.insertNextScalarData(meanCurvature3, "mean c F 3");
+
+    narrowband.insertNextScalarData(meanCurvatureNew, "mean new");
     //narrowband.insertNextVectorData(secondOrderDerivatives1, "F_xx_1");
     //narrowband.insertNextVectorData(secondOrderDerivatives2, "F_xx_2");
   
@@ -911,7 +914,7 @@ int main() {
 
     omp_set_num_threads(1);
 
-    NumericType gridDelta = 0.125;
+    NumericType gridDelta = 0.25;
 
     std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> lsPoints;
 
