@@ -663,6 +663,10 @@ void create_output(lsDomain<NumericType,D> & levelSet,
 
     curvatur1<NumericType, D> calculatorTest(gridDelta);
 
+    curvaturShapeDerivatives1<NumericType, D> shape1(gridDelta);
+
+    curvaturShapeDerivatives2<NumericType, D> shape2(gridDelta);
+
 
 
 
@@ -853,19 +857,23 @@ void create_output(lsDomain<NumericType,D> & levelSet,
 
         meanCurvatureNew.push_back(calculatorTest(neighborIterator));
 
+        meanCurvatureSD1.push_back(shape1(neighborIterator));
+
+        meanCurvatureSD2.push_back(shape2(neighborIterator));
+
         grad1.push_back(std::sqrt(normGrad1));
 
         grad2.push_back(std::sqrt(normGrad2));
 
-        meanCurvatureSD1.push_back((mCurve1 * 0.5));
+        //meanCurvatureSD1.push_back((mCurve1 * 0.5));
 
-        meanCurvatureSD2.push_back((mCurve2 * 0.5));
+        //meanCurvatureSD2.push_back((mCurve2 * 0.5));
 
-        meanCurvature1.push_back(calc_mean_curvature(derivatives1));
+        //meanCurvature1.push_back(calc_mean_curvature(derivatives1));
 
-        meanCurvature2.push_back(calc_mean_curvature(derivatives2));
+        //meanCurvature2.push_back(calc_mean_curvature(derivatives2));
 
-        meanCurvature3.push_back(calc_mean_curvature(derivatives3));
+        //meanCurvature3.push_back(calc_mean_curvature(derivatives3));
               
         //normal.push_back(n);
         //secondOrderDerivatives1.push_back(d1);
@@ -881,15 +889,16 @@ void create_output(lsDomain<NumericType,D> & levelSet,
 
     //narrowband.insertNextVectorData(normal, "Normals");
     narrowband.insertNextScalarData(grad1, "norm of grad");
-    narrowband.insertNextScalarData(meanCurvatureSD1, "mean c SD");
-    narrowband.insertNextScalarData(meanCurvature1, "mean c F");
+    narrowband.insertNextScalarData(meanCurvatureSD1, "shape operator small stencil");
+    narrowband.insertNextScalarData(meanCurvatureSD2, "shape operator big stencil");
+    //narrowband.insertNextScalarData(meanCurvature1, "mean c F");
 
     //narrowband.insertNextVectorData(normal, "Normals 2");
-    narrowband.insertNextScalarData(grad2, "norm of grad 2");
-    narrowband.insertNextScalarData(meanCurvatureSD2, "mean c SD 2");
-    narrowband.insertNextScalarData(meanCurvature2, "mean c F 2");
+    //narrowband.insertNextScalarData(grad2, "norm of grad 2");
+    //
+    //narrowband.insertNextScalarData(meanCurvature2, "mean c F 2");
 
-    narrowband.insertNextScalarData(meanCurvature3, "mean c F 3");
+    //narrowband.insertNextScalarData(meanCurvature3, "mean c F 3");
 
     narrowband.insertNextScalarData(meanCurvatureNew, "mean new");
     //narrowband.insertNextVectorData(secondOrderDerivatives1, "F_xx_1");
@@ -931,7 +940,6 @@ int main() {
 
     levelSets.push_back(&levelSet);  
 
-    test1();
 
    /* lsExpand(*(levelSets.back()), 2);
 
