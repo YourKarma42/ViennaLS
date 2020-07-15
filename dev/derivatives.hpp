@@ -4,7 +4,9 @@
 
 #include <hrleSparseBoxIterator.hpp>
 
-template <class T, int D> class curvaturShapeDerivatives1{
+
+
+template <class T, int D> class curvaturGeneralFormula{
 
     private:
 
@@ -12,23 +14,111 @@ template <class T, int D> class curvaturShapeDerivatives1{
 
     T gridDelta;
 
-    T convertToFuncVal(T lsVal, hrleVectorType<hrleIndexType, D> gridPoint, T gridDelta){
+    public:
 
-        T distGridPoint = 0.;
+    curvaturGeneralFormula(T mGD)
+    :  gridDelta(mGD){
+    }
+    /*
 
-        for(int i = 0; i < D; i++){
-            distGridPoint += (gridPoint[i]*gridDelta) * (gridPoint[i]*gridDelta);
+    Slice of a stencil: x axis horizontal y axis vertical
+
+        phi_np | phi_py | phi_pp
+        phi_nx | phi_0  | phi px
+        phi_nn | phi_ny | phi_nn
+    */
+
+    T operator()(hrleSparseBoxIterator<hrleDomain<T, D>> & neighborIterator){
+
+        //calculate all needed derivatives in the xy yz and xz plane
+
+        std::array<T, 9> d;
+       
+   
+        //get required ls values
+
+        for (int i = 0; i < D; i++) {
+
+            hrleVectorType<hrleIndexType, D> posUnit(0);
+            hrleVectorType<hrleIndexType, D> negUnit(0);
+
+            posUnit[i] = 1;
+            negUnit[i] = -1;
+
+            int second_pos = (i+1) % D;
+
+            //if(i == 1){
+            //    second_pos = 0;
+            //}
+
+            //get required ls values
+            T phi_0 = neighborIterator.getCenter().getValue();
+
+            T phi_px = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_nx = neighborIterator.getNeighbor(negUnit).getValue();
+
+            posUnit[second_pos] = 1;
+            negUnit[second_pos] = 1;
+
+            T phi_pp = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_np = neighborIterator.getNeighbor(negUnit).getValue();
+
+            posUnit[second_pos] = -1;
+            negUnit[second_pos] = -1;
+
+            T phi_pn = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_nn = neighborIterator.getNeighbor(negUnit).getValue();
+
+            posUnit[i] = 0;
+            negUnit[i] = 0;
+
+            posUnit[second_pos] = 1;
+            negUnit[second_pos] = -1;
+
+            T phi_py = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_ny = neighborIterator.getNeighbor(negUnit).getValue();
+           
+
+            // first order derivative
+            d[i] = (phi_px - phi_nx)*0.5;
+
+            // second order derivatives in the same direction
+            d[i+3] = (phi_px - 2.*phi_0 + phi_nx);
+
+            d[i+6] = (phi_pp - phi_pn -phi_np + phi_nn)*0.25;
+
         }
 
-        distGridPoint = std::sqrt(distGridPoint);
 
-        if(lsVal > 0.){
-            return (lsVal*gridDelta) + distGridPoint;
-        }else{
-            return ((lsVal*gridDelta) + distGridPoint);
-        }
+        T norm_grad_pow3 = std::sqrt(d[0]*d[0] + d[1]*d[1] + d[2]*d[2]);
+        norm_grad_pow3 = norm_grad_pow3*norm_grad_pow3*norm_grad_pow3;
+
+        //expanded fom of the equation
+        return
+        //    F_x²(f_yy + F_zz)  +    F_y²(F_xx + F_zz)    +     F_z²(F_xx + F_yy)
+        (d[0]*d[0]*(d[4] + d[5]) + d[1]*d[1]*(d[3] + d[5]) + d[2]*d[2]*(d[3] + d[4]) +
+
+        //-2*[F_xF_yF_xy   +   F_xF_zF_xz   +   F_yF_zF_yz]
+        -2.*(d[0]*d[1]*d[6] + d[0]*d[2]*d[8] + d[1]*d[2]*d[7]))
+                
+        // /2*(F_x² + F_y² + F_z²)^(3/2)
+        /(2.*norm_grad_pow3);
+
+        //(F_x, F_y, F_z, F_xx, F_yy, F_zz, F_xy, F_yz, F_zx)
+
 
     }
+
+};
+
+
+template <class T, int D> class curvaturShapeDerivatives1{
+
+    private:
+
+    //hrleSparseBoxIterator<hrleDomain<T, D>> & neighborIterator;
+
+    T gridDelta;
 
     public:
 
@@ -69,25 +159,24 @@ template <class T, int D> class curvaturShapeDerivatives1{
             //get required ls values
             T phi_0 = neighborIterator.getCenter().getValue();
 
-            phi_0 = convertToFuncVal(phi_0, neighborIterator.getCenter().getStartIndices(), gridDelta);
-
             T phi_px = neighborIterator.getNeighbor(posUnit).getValue();
             T phi_nx = neighborIterator.getNeighbor(negUnit).getValue();
 
-            phi_px = convertToFuncVal(phi_px, neighborIterator.getNeighbor(posUnit).getStartIndices(), gridDelta);
-            phi_nx = convertToFuncVal(phi_nx, neighborIterator.getNeighbor(negUnit).getStartIndices(), gridDelta);
 
             //central
-            scondOrderDerivatives[i] = (phi_px - 2.*phi_0 + phi_nx)/(gridDelta*gridDelta);  
+            scondOrderDerivatives[i] = (phi_px - 2.*phi_0 + phi_nx);  
 
         }
 
-        return scondOrderDerivatives[0] + scondOrderDerivatives[1] + scondOrderDerivatives[2];
+
+        T result;
+
+        for(int i=0; i<D ; i++)
+            result += scondOrderDerivatives[i];
+        //mean curvature is trace devided by 2
+        return result*0.5;
 
     }
-
-
-
 
 };
 
@@ -97,27 +186,9 @@ template <class T, int D> class curvaturShapeDerivatives2{
 
     private:
 
-    //hrleSparseBoxIterator<hrleDomain<T, D>> & neighborIterator;
-
     T gridDelta;
 
-    T convertToFuncVal(T lsVal, hrleVectorType<hrleIndexType, D> gridPoint, T gridDelta){
-
-        T distGridPoint = 0.;
-
-        for(int i = 0; i < D; i++){
-            distGridPoint += (gridPoint[i]*gridDelta) * (gridPoint[i]*gridDelta);
-        }
-
-        distGridPoint = std::sqrt(distGridPoint);
-
-        if(lsVal > 0.){
-            return (lsVal*gridDelta) + distGridPoint;
-        }else{
-            return ((lsVal*gridDelta) + distGridPoint);
-        }
-
-    }
+    const T oneThird = 1./3.;
 
     public:
 
@@ -137,19 +208,18 @@ template <class T, int D> class curvaturShapeDerivatives2{
 
         //calculate all needed derivatives in the xy yz and xz plane
 
-        std::array<T, 3> scondOrderDerivatives;
-       
+        std::array<T, D> scondOrderDerivatives;
 
-        for (int i = 0; i < D; i++) {
+        for(int i = 0; i < D; i ++){
+       
 
             hrleVectorType<hrleIndexType, D> posUnit(0);
             hrleVectorType<hrleIndexType, D> negUnit(0);
 
-            hrleVectorType<hrleIndexType, D> test = neighborIterator.getIndices();
+            //hrleVectorType<hrleIndexType, D> test = neighborIterator.getIndices();
 
-            //TODO: ask people if there is a more elegant solution
-            int first_pos  = i;
-            int second_pos = (i+1) % D;
+            int first_pos = i;
+            int second_pos = (i+1)%D;
             
 
             posUnit[first_pos] = 1;
@@ -158,26 +228,8 @@ template <class T, int D> class curvaturShapeDerivatives2{
             //get required ls values
             T phi_0 = neighborIterator.getCenter().getValue();
 
-            phi_0 = convertToFuncVal(phi_0, neighborIterator.getCenter().getStartIndices(), gridDelta);
-
             T phi_px = neighborIterator.getNeighbor(posUnit).getValue();
             T phi_nx = neighborIterator.getNeighbor(negUnit).getValue();
-
-            phi_px = convertToFuncVal(phi_px, neighborIterator.getNeighbor(posUnit).getStartIndices(), gridDelta);
-            phi_nx = convertToFuncVal(phi_nx, neighborIterator.getNeighbor(negUnit).getStartIndices(), gridDelta);
-
-            //This is necessary to to keep grid axis directions consistent in each slice
-            if(i > 0){
-                // probably not evrything needed
-                posUnit[first_pos] = 0;
-                negUnit[first_pos] = 0;
-
-                first_pos  = second_pos;
-                second_pos = i;
-
-                posUnit[first_pos] = 1;
-                negUnit[first_pos] = -1;
-            }
 
             posUnit[second_pos] = 1;
             negUnit[second_pos] = 1;
@@ -185,18 +237,12 @@ template <class T, int D> class curvaturShapeDerivatives2{
             T phi_pp = neighborIterator.getNeighbor(posUnit).getValue();
             T phi_np = neighborIterator.getNeighbor(negUnit).getValue();
 
-            phi_pp = convertToFuncVal(phi_pp, neighborIterator.getNeighbor(posUnit).getStartIndices(), gridDelta);
-            phi_np = convertToFuncVal(phi_np, neighborIterator.getNeighbor(negUnit).getStartIndices(), gridDelta);
-
 
             posUnit[second_pos] = -1;
             negUnit[second_pos] = -1;
 
             T phi_pn = neighborIterator.getNeighbor(posUnit).getValue();
             T phi_nn = neighborIterator.getNeighbor(negUnit).getValue();
-
-            phi_pn = convertToFuncVal(phi_pn, neighborIterator.getNeighbor(posUnit).getStartIndices(), gridDelta);
-            phi_nn = convertToFuncVal(phi_nn, neighborIterator.getNeighbor(negUnit).getStartIndices(), gridDelta);
 
             posUnit[first_pos] = 0;
             negUnit[first_pos] = 0;
@@ -207,15 +253,175 @@ template <class T, int D> class curvaturShapeDerivatives2{
             T phi_py = neighborIterator.getNeighbor(posUnit).getValue();
             T phi_ny = neighborIterator.getNeighbor(negUnit).getValue();
 
-            phi_py = convertToFuncVal(phi_py, neighborIterator.getNeighbor(posUnit).getStartIndices(), gridDelta);
-            phi_ny = convertToFuncVal(phi_ny, neighborIterator.getNeighbor(negUnit).getStartIndices(), gridDelta);
 
             //central
-            scondOrderDerivatives[i] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)/(gridDelta*gridDelta*3.0);
+            scondOrderDerivatives[i] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)*oneThird;
+        }
+
+        T result;
+
+        for(int i=0; i<D ; i++)
+            result += scondOrderDerivatives[i];
+        //mean curvature is trace devided by 2
+        return result*0.5;
+
+    }
+
+};
+
+template <class T, int D> class curvaturShapeBias{
+
+    private:
+
+    T gridDelta;
+
+    const T oneThird = 1./3.;
+
+    public:
+
+    curvaturShapeBias(T mGD)
+    :  gridDelta(mGD){
+    }
+    /*
+
+    Slice of a stencil: x axis horizontal y axis vertical
+
+        phi_np | phi_py | phi_pp
+        phi_nx | phi_0  | phi px
+        phi_nn | phi_ny | phi_nn
+    */
+
+    T operator()(hrleSparseBoxIterator<hrleDomain<T, D>> & neighborIterator){
+
+
+        //calculate Gradient
+
+        std::array<T,D> gradient;
+        //TODO: think of using upwind normals?
+        for(int i = 0; i < D; i++){
+
+            hrleVectorType<hrleIndexType, D> posUnit(0);
+            hrleVectorType<hrleIndexType, D> negUnit(0);
+
+            posUnit[i] = 1;
+            negUnit[i] = -1;
+
+            T phi_px = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_nx = neighborIterator.getNeighbor(negUnit).getValue();
+
+            gradient[i] = std::abs((phi_px - phi_nx)*0.5);
+        }
+
+        std::array<int, D> order;
+
+        // find largest values of the normal vector
+        // (the directions where the normal vector has the smallest deviation from the grid axis)
+        if(gradient[0] > gradient[1] ){
+
+            if(gradient[1] > gradient[2]){
+
+                order[0] = 0;
+                order[1] = 1;
+                order[2] = 2;
+
+            }else{
+
+                if(gradient[0] > gradient[2]){
+
+                    order[0] = 0;
+                    order[1] = 2;
+                    order[2] = 1;
+
+                }else{
+
+                    order[0] = 2;
+                    order[1] = 0;
+                    order[2] = 1;
+                }
+            }
+        }else{
+            if(gradient[1] <= gradient[2]){
+
+                order[0] = 2;
+                order[1] = 1;
+                order[2] = 0;
+                
+            }else{
+
+                if(gradient[2] > gradient[0]){
+                    order[0] = 1;
+                    order[1] = 2;
+                    order[2] = 0;
+                }else{
+                    order[0] = 1;
+                    order[1] = 0;
+                    order[2] = 2;
+                }
+
+            }
+        }
+
+        std::array<T, D> scondOrderDerivatives;
+
+        //calculate all needed derivatives in the planes that have the smalles deviation from the grid axis
+        for(int i = 0; i < D; i++){
+
+            hrleVectorType<hrleIndexType, D> posUnit(0);
+            hrleVectorType<hrleIndexType, D> negUnit(0);
+
+            //TODO: Explain this part if it works!
+            int first_axis = order[i];
+            int second_axis;
+
+            if(i == 0){
+                second_axis = order[1];
+            }else{
+                second_axis = order[0];
+            }
+
+            posUnit[first_axis] = 1;
+            negUnit[first_axis] = -1;
+
+            //get required ls values
+            T phi_0 = neighborIterator.getCenter().getValue();
+
+            T phi_px = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_nx = neighborIterator.getNeighbor(negUnit).getValue();
+
+            posUnit[second_axis] = 1;
+            negUnit[second_axis] = 1;
+
+            T phi_pp = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_np = neighborIterator.getNeighbor(negUnit).getValue();
+
+            posUnit[second_axis] = -1;
+            negUnit[second_axis] = -1;
+
+            T phi_pn = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_nn = neighborIterator.getNeighbor(negUnit).getValue();
+
+            posUnit[first_axis] = 0;
+            negUnit[first_axis] = 0;
+
+            posUnit[second_axis] = 1;
+            negUnit[second_axis] = -1;
+
+            T phi_py = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_ny = neighborIterator.getNeighbor(negUnit).getValue();
+
+            //central
+            scondOrderDerivatives[i] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)*oneThird;
+
 
         }
 
-        return scondOrderDerivatives[0] + scondOrderDerivatives[1] + scondOrderDerivatives[2];
+        T result;
+
+        for(int i=0; i<D ; i++)
+            result += scondOrderDerivatives[i];
+
+        //mean curvature is trace devided by 2
+        return result*0.5;
 
     }
 
@@ -225,7 +431,7 @@ template <class T, int D> class curvaturShapeDerivatives2{
 };
 
 
-template <class T, int D> class curvatur1{
+template <class T, int D> class variationOfNormals{
 
     private:
 
@@ -233,32 +439,11 @@ template <class T, int D> class curvatur1{
 
     T gridDelta;
 
-    void calcDerivatives(){
-        
-
-    }
-
-    T convertToFuncVal(T lsVal, hrleVectorType<hrleIndexType, D> gridPoint, T gridDelta){
-
-        T distGridPoint = 0.;
-
-        for(int i = 0; i < D; i++){
-            distGridPoint += (gridPoint[i]*gridDelta) * (gridPoint[i]*gridDelta);
-        }
-
-        distGridPoint = std::sqrt(distGridPoint);
-
-        if(lsVal > 0.){
-            return (lsVal*gridDelta) + distGridPoint;
-        }else{
-            return ((lsVal*gridDelta) + distGridPoint);
-        }
-
-    }
+    const T oneThird = 1./3.;
 
     public:
 
-    curvatur1(T mGD)
+    variationOfNormals(T mGD)
     :  gridDelta(mGD){
     }
 
@@ -306,13 +491,8 @@ template <class T, int D> class curvatur1{
             //get required ls values
             T phi_0 = neighborIterator.getCenter().getValue();
 
-            phi_0 = convertToFuncVal(phi_0, neighborIterator.getCenter().getStartIndices(), gridDelta);
-
             T phi_px = neighborIterator.getNeighbor(posUnit).getValue();
             T phi_nx = neighborIterator.getNeighbor(negUnit).getValue();
-
-            phi_px = convertToFuncVal(phi_px, neighborIterator.getNeighbor(posUnit).getStartIndices(), gridDelta);
-            phi_nx = convertToFuncVal(phi_nx, neighborIterator.getNeighbor(negUnit).getStartIndices(), gridDelta);
 
             //This is necessary to to keep grid axis directions consistent in each slice
             if(i > 0){
@@ -333,44 +513,26 @@ template <class T, int D> class curvatur1{
             T phi_pp = neighborIterator.getNeighbor(posUnit).getValue();
             T phi_np = neighborIterator.getNeighbor(negUnit).getValue();
 
-            phi_pp = convertToFuncVal(phi_pp, neighborIterator.getNeighbor(posUnit).getStartIndices(), gridDelta);
-            phi_np = convertToFuncVal(phi_np, neighborIterator.getNeighbor(negUnit).getStartIndices(), gridDelta);
-
             posUnit[second_pos] = -1;
             negUnit[second_pos] = -1;
 
             T phi_pn = neighborIterator.getNeighbor(posUnit).getValue();
             T phi_nn = neighborIterator.getNeighbor(negUnit).getValue();
 
-            phi_pn = convertToFuncVal(phi_pn, neighborIterator.getNeighbor(posUnit).getStartIndices(), gridDelta);
-            phi_nn = convertToFuncVal(phi_nn, neighborIterator.getNeighbor(negUnit).getStartIndices(), gridDelta);
-
-            posUnit[first_pos] = 0;
-            negUnit[first_pos] = 0;
-
-            posUnit[second_pos] = 1;
-            negUnit[second_pos] = -1;
-
-            T phi_py = neighborIterator.getNeighbor(posUnit).getValue();
-            T phi_ny = neighborIterator.getNeighbor(negUnit).getValue();
-
-            phi_py = convertToFuncVal(phi_py, neighborIterator.getNeighbor(posUnit).getStartIndices(), gridDelta);
-            phi_ny = convertToFuncVal(phi_ny, neighborIterator.getNeighbor(negUnit).getStartIndices(), gridDelta);
 
             //central
-            //centralDiff[i] = (phi_px - phi_nx)*0.5;
-            centralDiff[i] = (phi_px - phi_nx)/(2*gridDelta);
+            centralDiff[i] = (phi_px - phi_nx)*0.5;
 
             //one sided
-            oneSidedeDiff[i] = phi_px - phi_0/gridDelta;
-            oneSidedeDiff[i+3] = phi_nx - phi_0/gridDelta;
+            oneSidedeDiff[i] = (phi_px - phi_0);
+            oneSidedeDiff[i+3] = (phi_0 - phi_nx);
 
             //central outer
-            derivativesPos[i]   = (phi_pp - phi_np)/(2*gridDelta); 
-            derivativesPos[i+3] = (phi_pp - phi_pn)/(2*gridDelta); 
+            derivativesPos[i]   = (phi_pp - phi_np)*0.5; 
+            derivativesPos[i+3] = (phi_pp - phi_pn)*0.5; 
 
-            derivativesNeg[i] = (phi_pn- phi_nn)/(2*gridDelta); 
-            derivativesNeg[i+3] = (phi_np - phi_nn)/(2*gridDelta); 
+            derivativesNeg[i] = (phi_pn- phi_nn)*0.5; 
+            derivativesNeg[i+3] = (phi_np - phi_nn)*0.5; 
 
         }
 
@@ -414,3 +576,190 @@ template <class T, int D> class curvatur1{
 
 
 };
+
+template <class T, int D> class curvaturTest{
+
+    private:
+
+    T gridDelta;
+
+    const T oneThird = 1./3.;
+
+    public:
+
+    curvaturTest(T mGD)
+    :  gridDelta(mGD){
+    }
+    /*
+
+    Slice of a stencil: x axis horizontal y axis vertical
+
+        phi_np | phi_py | phi_pp
+        phi_nx | phi_0  | phi px
+        phi_nn | phi_ny | phi_nn
+    */
+
+    T operator()(hrleSparseBoxIterator<hrleDomain<T, D>> & neighborIterator){
+
+        //array to store derivatives
+        std::array<T, 9> d;
+
+
+        //calculate Gradient first for biasing
+        std::array<T,D> g;
+
+        //TODO: think of using upwind normals?
+        for(int i = 0; i < D; i++){
+
+            hrleVectorType<hrleIndexType, D> posUnit(0);
+            hrleVectorType<hrleIndexType, D> negUnit(0);
+
+            posUnit[i] = 1;
+            negUnit[i] = -1;
+
+            T phi_px = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_nx = neighborIterator.getNeighbor(negUnit).getValue();
+
+            d[i] = (phi_px - phi_nx)*0.5;
+
+            g[i] = std::abs(d[i]);
+
+        }
+
+        std::array<int, D> order;
+
+        if(g[0] > g[1] ){
+
+            if(g[1] > g[2]){
+
+                order[0] = 0;
+                order[1] = 1;
+                order[2] = 2;
+
+            }else{
+
+                if(g[0] > g[2]){
+
+                    order[0] = 0;
+                    order[1] = 2;
+                    order[2] = 1;
+
+                }else{
+
+                    order[0] = 2;
+                    order[1] = 0;
+                    order[2] = 1;
+                }
+            }
+        }else{
+            if(g[1] <= g[2]){
+
+                order[0] = 2;
+                order[1] = 1;
+                order[2] = 0;
+                
+            }else{
+
+                if(g[2] > g[0]){
+                    order[0] = 1;
+                    order[1] = 2;
+                    order[2] = 0;
+                }else{
+                    order[0] = 1;
+                    order[1] = 0;
+                    order[2] = 2;
+                }
+
+            }
+        }
+
+
+        //calculate higher order derivatives
+       
+   
+        //get required ls values
+
+        for (int i = 0; i < D; i++) {
+
+            hrleVectorType<hrleIndexType, D> posUnit(0);
+            hrleVectorType<hrleIndexType, D> negUnit(0);
+
+            int first_axis = order[i]; //i;
+            int second_axis = (i+1)%D;
+
+            if(i == 0){
+                second_axis = order[1];
+            }else{
+                second_axis = order[0];
+            }
+
+            //first_axis = i;
+           // second_axis = (i+1)%D;
+
+            //if(i == 1){
+            //    second_axis = 0;
+           // }
+
+            posUnit[first_axis] = 1;
+            negUnit[first_axis] = -1;
+
+            //get required ls values
+            T phi_0 = neighborIterator.getCenter().getValue();
+
+            T phi_px = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_nx = neighborIterator.getNeighbor(negUnit).getValue();
+
+            posUnit[second_axis] = 1;
+            negUnit[second_axis] = 1;
+
+            T phi_pp = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_np = neighborIterator.getNeighbor(negUnit).getValue();
+
+            posUnit[second_axis] = -1;
+            negUnit[second_axis] = -1;
+
+            T phi_pn = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_nn = neighborIterator.getNeighbor(negUnit).getValue();
+
+            posUnit[first_axis] = 0;
+            negUnit[first_axis] = 0;
+
+            posUnit[second_axis] = 1;
+            negUnit[second_axis] = -1;
+
+            T phi_py = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_ny = neighborIterator.getNeighbor(negUnit).getValue();
+           
+
+            // second order derivatives in the same direction
+            d[i+3] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)*oneThird;
+            //d[i+3] = (phi_px - 2.*phi_0 + phi_nx);
+
+            d[i+6] = (phi_pp - phi_pn - phi_np + phi_nn)*0.25;
+
+        }
+
+
+        T norm_grad_pow3 = std::sqrt(d[0]*d[0] + d[1]*d[1] + d[2]*d[2]);
+        norm_grad_pow3 = norm_grad_pow3*norm_grad_pow3*norm_grad_pow3;
+
+        //expanded fom of the equation
+        return
+        //    F_x²(f_yy + F_zz)  +    F_y²(F_xx + F_zz)    +     F_z²(F_xx + F_yy)
+        (d[0]*d[0]*(d[4] + d[5]) + d[1]*d[1]*(d[3] + d[5]) + d[2]*d[2]*(d[3] + d[4]) +
+
+        //-2*[F_xF_yF_xy   +   F_xF_zF_xz   +   F_yF_zF_yz]
+        -2.*(d[0]*d[1]*d[6] + d[0]*d[2]*d[8] + d[1]*d[2]*d[7]))
+                
+        // /2*(F_x² + F_y² + F_z²)^(3/2)
+        /(2.*norm_grad_pow3);
+
+        //(F_x, F_y, F_z, F_xx, F_yy, F_zz, F_xy, F_yz, F_zx)
+
+    }
+
+
+
+
+};
+

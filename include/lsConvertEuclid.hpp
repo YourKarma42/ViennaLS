@@ -79,12 +79,12 @@ public:
     activePoints.reserve(levelSet->getNumberOfPoints());
 
 
-#pragma omp parallel num_threads(newDomain.getNumberOfSegments())
+//#pragma omp parallel num_threads(newDomain.getNumberOfSegments())
     {
     int p = 0;
-#ifdef _OPENMP
-    p = omp_get_thread_num();
-#endif
+//#ifdef _OPENMP
+//    p = omp_get_thread_num();
+//#endif
 
         auto &newDomainSegment = newDomain.getDomainSegment(p);
 
@@ -154,6 +154,7 @@ public:
     }
 
     newDomain.finalize();
+    levelSet->deepCopy(newLS);
 
   }
 

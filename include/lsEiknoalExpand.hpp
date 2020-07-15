@@ -26,17 +26,13 @@ template <class T, int D> class lsEikonalExpand {
   std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash>  activePoints;
 
 
-
-  //TODO: think of that value in euklidiant context 1/sqrt(2) ?
-  T maxValue = 0.5;
-
 public:
   lsEikonalExpand() {}
 
   lsEikonalExpand(lsDomain<T, D> &passedLevelSet, 
-      std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash>  passedActivePoints,
-      T passedMaxValue = 0.5)
-      : levelSet(&passedLevelSet), activePoints(passedActivePoints), maxValue(passedMaxValue) {
+      std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash>  passedActivePoints)
+      : levelSet(&passedLevelSet), activePoints(passedActivePoints) {
+        //TODO: check if level set is euler normalized and give error if not
   }
 
   void setLevelSet(lsDomain<T, D> &passedLevelSet) {
@@ -46,8 +42,6 @@ public:
   void setActivePoints(std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash>  passedActivePoints) {
     activePoints = passedActivePoints;
   }
-
-  void setMaxValue(const T passedMaxValue) { maxValue = passedMaxValue; }
 
   void apply() {
     if (levelSet == nullptr) {
@@ -63,18 +57,18 @@ public:
     //The convergence of the narrowband depends on the width that is required
     //TODO: at the moment random static number think of better way to end the loop
     for(int runs=0; runs < 10; runs++){
+
+      const int allocationFactor =
+          1 + 1.0 / static_cast<double>(runs);
+      const T limit = (runs + 1) * T(0.5);
       
       auto &grid = levelSet->getGrid();
-
       lsDomain<T, D> newlsDomain(grid);
       typename lsDomain<T, D>::DomainType &newDomain = newlsDomain.getDomain();
       typename lsDomain<T, D>::DomainType &domain = levelSet->getDomain();
 
-      //TODO: think of correct value not 2
-      //TODO: eventuell leer callen
-      //newDomain.initialize(domain.getNewSegmentation(),
-      //                      domain.getAllocation() * 4);
-      newDomain.initialize();
+      newDomain.initialize(domain.getNewSegmentation(),
+                           domain.getAllocation() * allocationFactor);
 
 #pragma omp parallel num_threads(newDomain.getNumberOfSegments())
       {
@@ -101,7 +95,6 @@ public:
           neighborIt.getIndices() < endVector; neighborIt.next()) {
 
           auto &centerIt = neighborIt.getCenter();
-
 
           //mark all active grid points as accepted
           if((activePoints.find(centerIt.getStartIndices()) != activePoints.end())){

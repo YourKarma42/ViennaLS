@@ -47,6 +47,8 @@ private:
     std::vector<std::array<T, D>> normals;
 
 
+
+
                
 
     //Calculates all partial derivates of order 2 and returns them in a vector of the form
