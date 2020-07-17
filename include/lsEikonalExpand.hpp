@@ -50,8 +50,8 @@ public:
           .print();
       return;
     }
-
-     T incr = 0.;
+    //TODO: probably remove
+    //T incr = 0.;
 
     //Do FMM until the narrowband converges
     //The convergence of the narrowband depends on the width that is required
@@ -60,7 +60,8 @@ public:
 
       const int allocationFactor =
           1 + 1.0 / static_cast<double>(runs);
-      const T limit = (runs + 1) * T(0.5);
+      //TODO:probably remove
+      //const T limit = (runs + 1) * T(0.5);
       
       auto &grid = levelSet->getGrid();
       lsDomain<T, D> newlsDomain(grid);
@@ -104,7 +105,7 @@ public:
 
           }else{    
 
-            //calculate distance at the current grid point to the interface using the iconal equation 
+            //calculate distance at the current grid point to the interface using the eikonal equation 
             T dist = calcDist(neighborIt, (centerIt.getValue() < 0.));
         
             //check if a distance could be calculated for the current point
@@ -122,10 +123,11 @@ public:
             
           }
         }
-        newDomain.finalize();
-        levelSet->deepCopy(newlsDomain);
       } 
+      newDomain.finalize();
+      levelSet->deepCopy(newlsDomain);
     }
+
 
     //TODO: constant is stupid change to dynamic value e.g stop condition or fixed amount of steps
     T width = 3.;
@@ -133,6 +135,7 @@ public:
     levelSet->finalize(width);
 
   }
+
 
   private:
 

@@ -11,7 +11,7 @@
 #include <lsCheck.hpp>
 #include <lsConvertEuclid.hpp>
 #include <lsDomain.hpp>
-#include <lsEiknoalExpand.hpp>
+#include <lsEikonalExpand.hpp>
 #include <lsExpand.hpp>
 #include <lsFastAdvect.hpp>
 #include <lsFromSurfaceMesh.hpp>

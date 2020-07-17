@@ -55,10 +55,10 @@ public:
     //increase lvl set size
     lsExpand<T, D>(*levelSet, 7).apply();
 
-
-    double pointsPerSegment =
-    double(2 * levelSet->getDomain().getNumberOfPoints()) /
-    double(levelSet->getLevelSetWidth());
+    //TODO: probably remove
+    //double pointsPerSegment =
+    //double(2 * levelSet->getDomain().getNumberOfPoints()) /
+    //double(levelSet->getLevelSetWidth());
 
     auto grid = levelSet->getGrid();
 
@@ -79,22 +79,24 @@ public:
     activePoints.reserve(levelSet->getNumberOfPoints());
 
 
-//#pragma omp parallel num_threads(newDomain.getNumberOfSegments())
+#pragma omp parallel num_threads(newDomain.getNumberOfSegments())
     {
     int p = 0;
-//#ifdef _OPENMP
-//    p = omp_get_thread_num();
-//#endif
+#ifdef _OPENMP
+    p = omp_get_thread_num();
+#endif
 
         auto &newDomainSegment = newDomain.getDomainSegment(p);
 
+
+        //create iterators for the old domain not euclidian normalized
         hrleVectorType<hrleIndexType, D> startVector =
             (p == 0) ? grid.getMinGridPoint()
-                    : newDomain.getSegmentation()[p - 1];
+                    : oldDomain.getSegmentation()[p - 1];
 
         hrleVectorType<hrleIndexType, D> endVector =
-        (p != static_cast<int>(newDomain.getNumberOfSegments() - 1))
-            ? newDomain.getSegmentation()[p]
+        (p != static_cast<int>(oldDomain.getNumberOfSegments() - 1))
+            ? oldDomain.getSegmentation()[p]
             : grid.incrementIndices(grid.getMaxGridPoint());
        
 
@@ -118,7 +120,7 @@ public:
 
 
             //TODO: debug save old LS value for comparison later
-            T oldLSValue = centerIt.getValue();
+            //T oldLSValue = centerIt.getValue();
 
             //calculate normal vector of defined grid point
             std::array<T, D> n;
@@ -148,7 +150,10 @@ public:
     
             T newLsValue = centerIt.getValue() * max;
 
-            newDomain.getDomainSegment(p).insertNextDefinedPoint(neighborIt.getIndices(), newLsValue);
+            //TODO:difference between the 2 lines?
+            //newDomain.getDomainSegment(p).insertNextDefinedPoint(neighborIt.getIndices(), newLsValue);
+            newDomainSegment.insertNextDefinedPoint(neighborIt.getIndices(), newLsValue);
+
 
         }
     }

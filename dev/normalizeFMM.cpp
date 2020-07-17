@@ -165,7 +165,7 @@ lsDomain<double, D> makeSphere(double gridDelta, double radius){
     std::cout << "Doing FM..." << std::endl;
 
 
-    NumericType incr = 0.;
+    //NumericType incr = 0.;
     //TODO: DO checks of the levelset
 
     //Do FMM until the narrowband converges
@@ -348,9 +348,9 @@ lsDomain<double, D> makeSphere(double gridDelta, double radius){
     lsExpand<NumericType, D>(passedlsDomain, 7).apply();
 
 
-    double pointsPerSegment =
-    double(2 * passedlsDomain.getDomain().getNumberOfPoints()) /
-    double(passedlsDomain.getLevelSetWidth());
+    //double pointsPerSegment =
+    //double(2 * passedlsDomain.getDomain().getNumberOfPoints()) /
+    //double(passedlsDomain.getLevelSetWidth());
 
     auto grid = passedlsDomain.getGrid();
 
@@ -361,7 +361,7 @@ lsDomain<double, D> makeSphere(double gridDelta, double radius){
     //Initialize new level set with normalized values
     lsDomain<NumericType,D> newLS(gridDelta);
 
-    auto newGrid = newLS.getGrid();
+    //auto newGrid = newLS.getGrid();
 
     typename lsDomain<NumericType, D>::DomainType &newDomain = newLS.getDomain();
 
@@ -374,7 +374,7 @@ lsDomain<double, D> makeSphere(double gridDelta, double radius){
     p = omp_get_thread_num();
 #endif
 
-    auto &newDomainSegment = newDomain.getDomainSegment(p);
+    //auto &newDomainSegment = newDomain.getDomainSegment(p);
 
     hrleVectorType<hrleIndexType, D> startVector =
         (p == 0) ? grid.getMinGridPoint()
@@ -416,7 +416,7 @@ lsDomain<double, D> makeSphere(double gridDelta, double radius){
 
 
         //TODO: debug save old LS value for comparison later
-        NumericType oldLSValue = centerIt.getValue();
+        //NumericType oldLSValue = centerIt.getValue();
 
         //calculate normal vector of defined grid point
         std::array<NumericType, D> n;
@@ -484,7 +484,7 @@ lsDomain<double, D> makeSphere(double gridDelta, double radius){
         ? passedlsDomain.getDomain().getSegmentation()[p]
         : grid.incrementIndices(grid.getMaxGridPoint());
 
-    const NumericType gridDelta = passedlsDomain.getGrid().getGridDelta();
+    //const NumericType gridDelta = passedlsDomain.getGrid().getGridDelta();
 
 
     std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> lsPoints;
@@ -524,7 +524,7 @@ lsDomain<double, D> makeSphere(double gridDelta, double radius){
 
     lsDomain<NumericType,D> newLS(gridDelta);
 
-    auto newGrid = newLS.getGrid();
+    //auto newGrid = newLS.getGrid();
 
     typename lsDomain<NumericType, D>::DomainType &newDomain = newLS.getDomain();
 
@@ -649,6 +649,10 @@ void create_output(lsDomain<NumericType,D> & levelSet,
 
     std::vector<NumericType> meanCurvatureGeneralFormula;
 
+    std::vector<NumericType> meanCurvatureGeneralFormulaBig;
+
+    std::vector<NumericType> meanCurvatureGeneralFormulaBias;
+
     std::vector<NumericType> meanCurvatureSD1;
 
     std::vector<NumericType> grad2;
@@ -681,6 +685,10 @@ void create_output(lsDomain<NumericType,D> & levelSet,
 
     curvaturShapeBias<NumericType, D> shapeBias(gridDelta);
 
+    curvaturGeneralFormulaBigStencil <NumericType, D> generalFormulaBig(gridDelta);
+
+    curvaturGeneralFormulaBigStencilBias <NumericType, D> generalFormulaBigBias(gridDelta);
+
     curvaturTest<NumericType, D> test(gridDelta);
 
 
@@ -705,7 +713,7 @@ void create_output(lsDomain<NumericType,D> & levelSet,
         
 
 
-
+/*
         //NumericType gridDelta = levelSet.getGrid().getGridDelta();
 
         //calculate normal vector of defined grid point
@@ -807,7 +815,7 @@ void create_output(lsDomain<NumericType,D> & levelSet,
 
           //test
 
-          /*d_p[i] = phi_px - phi_0;
+          d_p[i] = phi_px - phi_0;
 
           d_n[i] = phi_0 - phi_nx;
 
@@ -815,7 +823,7 @@ void create_output(lsDomain<NumericType,D> & levelSet,
 
           phi_pp - phi_np;
 
-          phi_pn - phi_nn;*/
+          phi_pn - phi_nn;
 
 
 
@@ -870,7 +878,7 @@ void create_output(lsDomain<NumericType,D> & levelSet,
           normGrad2 += derivatives2[i]*derivatives2[i];
           mCurve2 += derivatives2[i+3];
         }
-
+*/
         meanCurvatureNew.push_back(variationOfGrad(neighborIterator));
 
         meanCurvatureSD1.push_back(shape1(neighborIterator));
@@ -883,9 +891,9 @@ void create_output(lsDomain<NumericType,D> & levelSet,
 
         curveTest.push_back(test(neighborIterator));
 
-        grad1.push_back(std::sqrt(normGrad1));
+        //grad1.push_back(std::sqrt(normGrad1));
 
-        grad2.push_back(std::sqrt(normGrad2));
+        //grad2.push_back(std::sqrt(normGrad2));
 
         //meanCurvatureSD1.push_back((mCurve1 * 0.5));
 
@@ -897,7 +905,7 @@ void create_output(lsDomain<NumericType,D> & levelSet,
 
         //meanCurvature3.push_back(calc_mean_curvature(derivatives3));
               
-        normal.push_back(n);
+        //normal.push_back(n);
         //secondOrderDerivatives1.push_back(d1);
         //secondOrderDerivatives2.push_back(d2);
 
@@ -905,7 +913,7 @@ void create_output(lsDomain<NumericType,D> & levelSet,
 
     lsMesh narrowband;
     std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<NumericType, D>(levelSet, narrowband, true, true).apply(lsPoints);
+    //lsToMesh<NumericType, D>(levelSet, narrowband, true, true).apply(lsPoints);
     //lsPoints
 
 

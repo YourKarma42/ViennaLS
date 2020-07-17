@@ -23,7 +23,7 @@
 #include<lsCalculateCurvatures.hpp>
 
 #include <lsConvertEuclid.hpp>
-#include <lsEiknoalExpand.hpp>
+#include <lsEikonalExpand.hpp>
 
 
 

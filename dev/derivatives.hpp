@@ -75,8 +75,8 @@ template <class T, int D> class curvaturGeneralFormula{
             posUnit[second_pos] = 1;
             negUnit[second_pos] = -1;
 
-            T phi_py = neighborIterator.getNeighbor(posUnit).getValue();
-            T phi_ny = neighborIterator.getNeighbor(negUnit).getValue();
+            //T phi_py = neighborIterator.getNeighbor(posUnit).getValue();
+            //T phi_ny = neighborIterator.getNeighbor(negUnit).getValue();
            
 
             // first order derivative
@@ -146,11 +146,11 @@ template <class T, int D> class curvaturShapeDerivatives1{
             hrleVectorType<hrleIndexType, D> posUnit(0);
             hrleVectorType<hrleIndexType, D> negUnit(0);
 
-            hrleVectorType<hrleIndexType, D> test = neighborIterator.getIndices();
+            //hrleVectorType<hrleIndexType, D> test = neighborIterator.getIndices();
 
             //TODO: ask people if there is a more elegant solution
             int first_pos  = i;
-            int second_pos = (i+1) % D;
+            //int second_pos = (i+1) % D;
             
 
             posUnit[first_pos] = 1;
@@ -169,7 +169,7 @@ template <class T, int D> class curvaturShapeDerivatives1{
         }
 
 
-        T result;
+        T result = 0.;
 
         for(int i=0; i<D ; i++)
             result += scondOrderDerivatives[i];
@@ -258,7 +258,7 @@ template <class T, int D> class curvaturShapeDerivatives2{
             scondOrderDerivatives[i] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)*oneThird;
         }
 
-        T result;
+        T result = 0.;
 
         for(int i=0; i<D ; i++)
             result += scondOrderDerivatives[i];
@@ -415,7 +415,7 @@ template <class T, int D> class curvaturShapeBias{
 
         }
 
-        T result;
+        T result = 0.;
 
         for(int i=0; i<D ; i++)
             result += scondOrderDerivatives[i];
@@ -478,7 +478,7 @@ template <class T, int D> class variationOfNormals{
             hrleVectorType<hrleIndexType, D> posUnit(0);
             hrleVectorType<hrleIndexType, D> negUnit(0);
 
-            hrleVectorType<hrleIndexType, D> test = neighborIterator.getIndices();
+            //hrleVectorType<hrleIndexType, D> test = neighborIterator.getIndices();
 
             //TODO: ask people if there is a more elegant solution
             int first_pos  = i;
@@ -577,7 +577,7 @@ template <class T, int D> class variationOfNormals{
 
 };
 
-template <class T, int D> class curvaturTest{
+template <class T, int D> class curvaturGeneralFormulaBigStencil{
 
     private:
 
@@ -587,7 +587,107 @@ template <class T, int D> class curvaturTest{
 
     public:
 
-    curvaturTest(T mGD)
+    curvaturGeneralFormulaBigStencil(T mGD)
+    :  gridDelta(mGD){
+    }
+    /*
+
+    Slice of a stencil: x axis horizontal y axis vertical
+
+        phi_np | phi_py | phi_pp
+        phi_nx | phi_0  | phi px
+        phi_nn | phi_ny | phi_nn
+    */
+
+    T operator()(hrleSparseBoxIterator<hrleDomain<T, D>> & neighborIterator){
+
+        //array to store derivatives
+        std::array<T, 9> d;
+
+        //calculate higher order derivatives
+
+        for (int i = 0; i < D; i++) {
+
+            hrleVectorType<hrleIndexType, D> posUnit(0);
+            hrleVectorType<hrleIndexType, D> negUnit(0);
+
+            int first_axis = i;
+            int second_axis = (i+1)%D;
+
+            posUnit[first_axis] = 1;
+            negUnit[first_axis] = -1;
+
+            //get required ls values
+            T phi_0 = neighborIterator.getCenter().getValue();
+
+            T phi_px = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_nx = neighborIterator.getNeighbor(negUnit).getValue();
+
+            posUnit[second_axis] = 1;
+            negUnit[second_axis] = 1;
+
+            T phi_pp = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_np = neighborIterator.getNeighbor(negUnit).getValue();
+
+            posUnit[second_axis] = -1;
+            negUnit[second_axis] = -1;
+
+            T phi_pn = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_nn = neighborIterator.getNeighbor(negUnit).getValue();
+
+            posUnit[first_axis] = 0;
+            negUnit[first_axis] = 0;
+
+            posUnit[second_axis] = 1;
+            negUnit[second_axis] = -1;
+
+            T phi_py = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_ny = neighborIterator.getNeighbor(negUnit).getValue();
+           
+
+            // second order derivatives in the same direction
+            // order array is needed to put derivatives in the correct position in the derivatives array
+
+            d[i] = (phi_px - phi_nx)*0.5;
+
+            d[i+3] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)*oneThird;
+
+            d[i+6] = (phi_pp - phi_pn - phi_np + phi_nn)*0.25;
+
+        }
+
+        T norm_grad_pow3 = std::sqrt(d[0]*d[0] + d[1]*d[1] + d[2]*d[2]);
+        norm_grad_pow3 = norm_grad_pow3*norm_grad_pow3*norm_grad_pow3;
+
+        //expanded fom of the equation
+        return
+        //    F_x²(f_yy + F_zz)  +    F_y²(F_xx + F_zz)    +     F_z²(F_xx + F_yy)
+        (d[0]*d[0]*(d[4] + d[5]) + d[1]*d[1]*(d[3] + d[5]) + d[2]*d[2]*(d[3] + d[4]) +
+
+        //-2*[F_xF_yF_xy   +   F_xF_zF_xz   +   F_yF_zF_yz]
+        -2.*(d[0]*d[1]*d[6] + d[0]*d[2]*d[8] + d[1]*d[2]*d[7]))
+                
+        // /2*(F_x² + F_y² + F_z²)^(3/2)
+        /(2.*norm_grad_pow3);
+
+        //(F_x, F_y, F_z, F_xx, F_yy, F_zz, F_xy, F_yz, F_zx)
+
+    }
+
+
+};
+
+template <class T, int D> class curvaturGeneralFormulaBigStencilBias{
+
+    private:
+
+    T gridDelta;
+
+    const T oneThird = 1./3.;
+
+    public:
+
+    curvaturGeneralFormulaBigStencilBias(T mGD)
     :  gridDelta(mGD){
     }
     /*
@@ -673,10 +773,8 @@ template <class T, int D> class curvaturTest{
             }
         }
 
-
         //calculate higher order derivatives
        
-   
         //get required ls values
 
         for (int i = 0; i < D; i++) {
@@ -685,20 +783,13 @@ template <class T, int D> class curvaturTest{
             hrleVectorType<hrleIndexType, D> negUnit(0);
 
             int first_axis = order[i]; //i;
-            int second_axis = (i+1)%D;
+            int second_axis;
 
             if(i == 0){
                 second_axis = order[1];
             }else{
                 second_axis = order[0];
             }
-
-            //first_axis = i;
-           // second_axis = (i+1)%D;
-
-            //if(i == 1){
-            //    second_axis = 0;
-           // }
 
             posUnit[first_axis] = 1;
             negUnit[first_axis] = -1;
@@ -732,9 +823,59 @@ template <class T, int D> class curvaturTest{
            
 
             // second order derivatives in the same direction
-            d[i+3] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)*oneThird;
-            //d[i+3] = (phi_px - 2.*phi_0 + phi_nx);
+            // order array is needed to put derivatives in the correct position in the derivatives array
+            d[order[i]+3] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)*oneThird;
 
+
+        }
+
+        //TODO: check what timig results say
+        //For dxdy derivatives the biasing leads to using wrong planes
+        for (int i = 0; i < D; i++) {
+
+            hrleVectorType<hrleIndexType, D> posUnit(0);
+            hrleVectorType<hrleIndexType, D> negUnit(0);
+
+            int first_axis = i;
+            int second_axis = (i+1)%D;
+
+            posUnit[first_axis] = 1;
+            negUnit[first_axis] = -1;
+
+            //get required ls values
+            T phi_0 = neighborIterator.getCenter().getValue();
+
+            T phi_px = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_nx = neighborIterator.getNeighbor(negUnit).getValue();
+
+            posUnit[second_axis] = 1;
+            negUnit[second_axis] = 1;
+
+            T phi_pp = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_np = neighborIterator.getNeighbor(negUnit).getValue();
+
+            posUnit[second_axis] = -1;
+            negUnit[second_axis] = -1;
+
+            T phi_pn = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_nn = neighborIterator.getNeighbor(negUnit).getValue();
+
+            posUnit[first_axis] = 0;
+            negUnit[first_axis] = 0;
+
+            posUnit[second_axis] = 1;
+            negUnit[second_axis] = -1;
+
+            T phi_py = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_ny = neighborIterator.getNeighbor(negUnit).getValue();
+
+
+            //if(changeDerivatives == true){
+            //    if(i != 2){
+            //        d[i+6] = (phi_pp - phi_pn - phi_np + phi_nn)*0.25;
+            //    }else{
+            //        d[i+6] = (phi_pn - phi_nn - phi_pp + phi_np)*0.25;
+            //    }
             d[i+6] = (phi_pp - phi_pn - phi_np + phi_nn)*0.25;
 
         }
@@ -755,6 +896,107 @@ template <class T, int D> class curvaturTest{
         /(2.*norm_grad_pow3);
 
         //(F_x, F_y, F_z, F_xx, F_yy, F_zz, F_xy, F_yz, F_zx)
+
+    }
+
+};
+
+template <class T, int D> class curvaturTest{
+
+    private:
+
+    T gridDelta;
+
+    const T oneThird = 1./3.;
+
+    public:
+
+    curvaturTest(T mGD)
+    :  gridDelta(mGD){
+    }
+
+    //TODO:reference to paper
+    //only for 3D
+    T operator()(hrleSparseBoxIterator<hrleDomain<T, D>> & neighborIterator){
+
+        //Center of the stencil is needed in each sum
+        //the center also only occures times 2
+        T twoPhi_0 = 2.*neighborIterator.getCenter().getValue();
+
+        //calculate corner derivatives (diagonals) (the same for each direction)
+
+        T derivativesCorner = 0.;
+
+        derivativesCorner +=  neighborIterator.getNeighbor(hrleVectorType<hrleIndexType, D> (1,-1,1)).getValue() + 
+                                neighborIterator.getNeighbor(hrleVectorType<hrleIndexType, D> (-1,1,-1)).getValue() - twoPhi_0;
+
+        derivativesCorner +=  neighborIterator.getNeighbor(hrleVectorType<hrleIndexType, D>(1,1,1)).getValue() + 
+                                neighborIterator.getNeighbor(hrleVectorType<hrleIndexType, D>(-1,-1,-1)).getValue() - twoPhi_0;
+
+        derivativesCorner +=  neighborIterator.getNeighbor(hrleVectorType<hrleIndexType, D>(1,1,-1)).getValue() + 
+                                neighborIterator.getNeighbor(hrleVectorType<hrleIndexType, D>(-1,-1,1)).getValue() - twoPhi_0;
+
+        derivativesCorner = derivativesCorner * oneThird;
+
+        for(int i = 0; i < D; i++){
+
+        }
+
+        //array to store derivatives
+        std::array<T, D> scondOrderDerivatives;
+
+
+
+        for (int i = 0; i < D; i++) {
+
+            hrleVectorType<hrleIndexType, D> posUnit(0);
+            hrleVectorType<hrleIndexType, D> negUnit(0);
+
+            int first_axis; //i;
+            int second_axis;
+
+            posUnit[first_axis] = 1;
+            negUnit[first_axis] = -1;
+
+            //get required ls values
+            T phi_0 = neighborIterator.getCenter().getValue();
+
+            T phi_px = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_nx = neighborIterator.getNeighbor(negUnit).getValue();
+
+            posUnit[second_axis] = 1;
+            negUnit[second_axis] = 1;
+
+            T phi_pp = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_np = neighborIterator.getNeighbor(negUnit).getValue();
+
+            posUnit[second_axis] = -1;
+            negUnit[second_axis] = -1;
+
+            T phi_pn = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_nn = neighborIterator.getNeighbor(negUnit).getValue();
+
+            posUnit[first_axis] = 0;
+            negUnit[first_axis] = 0;
+
+            posUnit[second_axis] = 1;
+            negUnit[second_axis] = -1;
+
+            T phi_py = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_ny = neighborIterator.getNeighbor(negUnit).getValue();
+           
+
+
+
+        }
+
+
+        T result = 0.;
+
+        for(int i=0; i<D ; i++)
+            result += scondOrderDerivatives[i];
+        //mean curvature is trace devided by 2
+        return result*0.5;
 
     }
 
