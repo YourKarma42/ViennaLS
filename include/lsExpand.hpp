@@ -8,6 +8,11 @@
 #include <lsDomain.hpp>
 #include <lsMessage.hpp>
 
+enum metric {
+  MANHATTEN_SPARSE,
+  EULER
+};
+
 /// Expands the leveleSet to the specified number of layers.
 /// The largest value in the levelset is thus width*0.5
 /// Returns the number of added points
@@ -16,6 +21,8 @@ template <class T, int D> class lsExpand {
   lsDomain<T, D> *levelSet = nullptr;
   int width = 0;
 
+  metric usedMetric = MANHATTEN_SPARSE;
+
 public:
   lsExpand() {}
 
@@ -23,6 +30,12 @@ public:
 
   lsExpand(lsDomain<T, D> &passedlsDomain, int passedWidth)
       : levelSet(&passedlsDomain), width(passedWidth) {}
+
+  //TODO: create setter functions for Metric
+  lsExpand(lsDomain<T, D> &passedlsDomain, int passedWidth, metric passedMetric)
+    : levelSet(&passedlsDomain), width(passedWidth), usedMetric(passedMetric) {}
+
+  
 
   void setLevelSet(lsDomain<T, D> &passedlsDomain) {
     levelSet = &passedlsDomain;
@@ -41,6 +54,11 @@ public:
       lsMessage::getInstance()
           .addWarning("No level set passed to lsExpand. Not expanding.")
           .print();
+    }
+
+    if(usedMetric == EULER){
+      testFMM();
+      return;
     }
 
     const T totalLimit = width * 0.5;
@@ -79,16 +97,18 @@ public:
             (p != static_cast<int>(newDomain.getNumberOfSegments() - 1))
                 ? newDomain.getSegmentation()[p]
                 : grid.incrementIndices(grid.getMaxGridPoint());
-
+        //iterate trough the lvl set
         for (hrleSparseStarIterator<typename lsDomain<T, D>::DomainType>
                  neighborIt(domain, startVector);
              neighborIt.getIndices() < endVector; neighborIt.next()) {
 
           auto &centerIt = neighborIt.getCenter();
+          //check if the current center point already has an ls value or if it is +/- inf
           if (std::abs(centerIt.getValue()) <= totalLimit) {
             domainSegment.insertNextDefinedPoint(neighborIt.getIndices(),
                                                  centerIt.getValue());
           } else {
+            //calculate samllest manhatten distance to the undefined point
             if (centerIt.getValue() > 0.) {
               T distance = lsDomain<T, D>::POS_VALUE;
               for (int i = 0; i < 2 * D; i++) {
@@ -121,12 +141,120 @@ public:
           }
         }
       }
+      //confirm changes and push them into the lvl set
       newDomain.finalize();
       levelSet->deepCopy(newlsDomain);
     }
     levelSet->getDomain().segment();
     levelSet->finalize(width);
   }
+
+//TODO: move to private!
+  //0 frozen, 1 narrowband, 2 inf
+  void testFMM(){
+
+    std::vector<int> status;
+
+
+
+    //make the level set big enough
+    //TODO:not working yet
+
+    //const int allocationFactor =
+    //    1 + 1.0 / static_cast<double>(startWidth + currentCycle);
+    //const T limit = (startWidth + currentCycle + 1) * T(0.5);
+
+    auto &grid = levelSet->getGrid();
+    lsDomain<T, D> newlsDomain(grid);
+    typename lsDomain<T, D>::DomainType &newDomain = newlsDomain.getDomain();
+    typename lsDomain<T, D>::DomainType &domain = levelSet->getDomain();
+
+    //TODO: think of correct value not 2
+    newDomain.initialize(domain.getNewSegmentation(),
+                          domain.getAllocation() * 1);
+
+    //reserve space for status
+    status.reserve(newDomain.getNumberOfPoints());
+
+
+    int p = 0;
+
+    auto &domainSegment = newDomain.getDomainSegment(p);
+
+    hrleVectorType<hrleIndexType, D> startVector =
+        (p == 0) ? grid.getMinGridPoint()
+            : newDomain.getSegmentation()[p - 1];
+
+    hrleVectorType<hrleIndexType, D> endVector =
+        (p != static_cast<int>(newDomain.getNumberOfSegments() - 1))
+            ? newDomain.getSegmentation()[p]
+            : grid.incrementIndices(grid.getMaxGridPoint()); 
+
+    //initialize 
+
+    for (hrleSparseStarIterator<typename lsDomain<T, D>::DomainType>
+      neighborIt(domain, startVector);
+      neighborIt.getIndices() < endVector; neighborIt.next()) {
+
+
+      auto &centerIt = neighborIt.getCenter();
+
+      
+
+
+      for(int i = 0; i < 2*D; i++){
+
+        std::cout << neighborIt.getNeighbor(i).getValue() << std::endl;
+
+      }
+      std::cout << centerIt.getValue() << std::endl;
+
+    }
+
+
+
+    /*if (centerIt.getValue() > 0.) {
+      T distance = lsDomain<T, D>::POS_VALUE;
+      for (int i = 0; i < 2 * D; i++) {
+        distance = std::min(
+          distance, neighborIt.getNeighbor(i).getValue() + T(1));
+      }
+        if (distance <= limit) {
+          domainSegment.insertNextDefinedPoint(neighborIt.getIndices(),
+                                                distance);
+        }
+    } else {
+          // TODO: use insertNextUndefinedRunType
+          domainSegment.insertNextUndefinedPoint(
+              neighborIt.getIndices(), lsDomain<T, D>::POS_VALUE);
+        
+      } else {
+        T distance = lsDomain<T, D>::NEG_VALUE;
+        for (int i = 0; i < 2 * D; i++) {
+          distance = std::max(
+              distance, neighborIt.getNeighbor(i).getValue() - T(1));
+        }
+        if (distance >= -limit) {
+          domainSegment.insertNextDefinedPoint(neighborIt.getIndices(),
+                                                distance);
+        } else {
+          // TODO: use insertNextUndefinedRunType
+          domainSegment.insertNextUndefinedPoint(
+              neighborIt.getIndices(), lsDomain<T, D>::NEG_VALUE);
+        }
+      }
+    
+    }*/
+
+    //loop (needs the stop condition)
+
+
+  
+      
+  
+  }
+
+
 };
 
 // add all template specialisations for this class
