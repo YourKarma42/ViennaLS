@@ -386,7 +386,7 @@ void create_output(lsDomain<NumericType,D> & levelSet,
 
         meanCurvatureGeneralFormulaBigBias.push_back(generalFormulaBigBias(neighborIterator));
 
-        curveTest.push_back(test(neighborIterator));
+        //curveTest.push_back(test(neighborIterator));
 
         
 
@@ -404,7 +404,7 @@ void create_output(lsDomain<NumericType,D> & levelSet,
     narrowband.insertNextScalarData(meanCurvatureGeneralFormula, "general formula");
     narrowband.insertNextScalarData(meanCurvatureGeneralFormulaBig, "general formula big stencil");
     narrowband.insertNextScalarData(meanCurvatureGeneralFormulaBigBias, "general formula big stencil bias");
-    narrowband.insertNextScalarData(curveTest, "Curvature Test");
+    //narrowband.insertNextScalarData(curveTest, "Curvature Test");
     narrowband.insertNextScalarData(meanCurvatureNew, "variation of normals");
     narrowband.insertNextScalarData(meanCurveShapeBias, "shape operator Bias");
 
@@ -412,8 +412,8 @@ void create_output(lsDomain<NumericType,D> & levelSet,
     lsVTKWriter(narrowband, lsFileFormatEnum::VTU , output_name ).apply();
 
 
+  }
 
-}
 
 
 
@@ -421,7 +421,7 @@ void create_output(lsDomain<NumericType,D> & levelSet,
 int main() {
 
 
-    omp_set_num_threads(1);
+    omp_set_num_threads(4);
 
     NumericType gridDelta = 0.25;
 
@@ -460,7 +460,7 @@ int main() {
 
     create_output(*(levelSets.back()), activePoints, "final_output");
 
-    timingTests(*(levelSets.back()), activePoints);
+    //timingTests(*(levelSets.back()), activePoints);
 
 
     std::cout << "Finished" << std::endl;
