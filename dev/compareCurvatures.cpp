@@ -229,9 +229,9 @@ void timingTests(lsDomain<NumericType,D> & levelSet,
               } 
 
               // move neighborIterator to current position
-              neighborIterator.goToIndicesSequential(centerIt.getStartIndices());
+              //neighborIterator.goToIndicesSequential(centerIt.getStartIndices());
 
-              shape1(neighborIterator);             
+              shape1(neighborIt);             
 
       }
       stop = std::chrono::high_resolution_clock::now(); 
@@ -353,9 +353,7 @@ void create_output(lsDomain<NumericType,D> & levelSet,
     curvaturTest<NumericType, D> test(gridDelta);
 
 
-
-
-   
+  
    //     ? passedlsDomain.getDomain().getSegmentation()[p]
    //     : grid.incrementIndices(grid.getMaxGridPoint());
 
@@ -369,18 +367,18 @@ void create_output(lsDomain<NumericType,D> & levelSet,
         } 
 
         // move neighborIterator to current position
+
+        meanCurvatureSD1.push_back(shape1(neighborIt));
+
         neighborIterator.goToIndicesSequential(centerIt.getStartIndices());
-
-
-        meanCurvatureNew.push_back(variationOfGrad(neighborIterator));
-
-        meanCurvatureSD1.push_back(shape1(neighborIterator));
 
         meanCurvatureSD2.push_back(shape2(neighborIterator));
 
-        meanCurvatureGeneralFormula.push_back(generalFormula(neighborIterator));
-
         meanCurveShapeBias.push_back(shapeBias(neighborIterator));
+
+        meanCurvatureNew.push_back(variationOfGrad(neighborIterator));
+
+        meanCurvatureGeneralFormula.push_back(generalFormula(neighborIterator));
 
         meanCurvatureGeneralFormulaBig.push_back(generalFormulaBig(neighborIterator));
 
@@ -431,7 +429,7 @@ int main() {
 
     std::vector<lsDomain<NumericType, D> *> levelSets;
 
-    lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, 10.);
+    lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, 20.);
 
     levelSets.push_back(&levelSet);  
 

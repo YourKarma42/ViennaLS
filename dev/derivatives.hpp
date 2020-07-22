@@ -134,6 +134,42 @@ template <class T, int D> class curvaturShapeDerivatives1{
         phi_nn | phi_ny | phi_nn
     */
 
+    T operator()(hrleConstSparseStarIterator<typename lsDomain<T, D>::DomainType> & neighborIterator){
+
+        std::array<T, 3> scondOrderDerivatives;
+       
+        for (int i = 0; i < D; i++) {
+
+            hrleVectorType<hrleIndexType, D> posUnit(0);
+            hrleVectorType<hrleIndexType, D> negUnit(0);
+
+            //hrleVectorType<hrleIndexType, D> test = neighborIterator.getIndices();
+
+            //TODO: ask people if there is a more elegant solution
+            int first_pos  = i;
+            //int second_pos = (i+1) % D;
+        
+            //get required ls values
+            T phi_0 = neighborIterator.getCenter().getValue();
+
+            T phi_px = neighborIterator.getNeighbor(i).getValue();
+            T phi_nx = neighborIterator.getNeighbor(i+D).getValue();
+
+
+            //central
+            scondOrderDerivatives[i] = (phi_px - 2.*phi_0 + phi_nx);  
+        }
+
+        T result = 0.;
+
+        for(int i=0; i<D ; i++)
+            result += scondOrderDerivatives[i];
+        //mean curvature is trace devided by 2
+        return result*0.5;
+
+    }
+
+
     T operator()(hrleSparseBoxIterator<hrleDomain<T, D>> & neighborIterator){
 
         //calculate all needed derivatives in the xy yz and xz plane
@@ -903,16 +939,21 @@ template <class T, int D> class curvaturGeneralFormulaBigStencilBias{
 
 template <class T, int D> class curvaturTest{
 
+    //TODO: Clean up!
+
     private:
 
     T gridDelta;
 
     const T oneThird = 1./3.;
 
+    const T threeThirteen = 3./13.;
+
     public:
 
     curvaturTest(T mGD)
     :  gridDelta(mGD){
+        //TODO:check width of levelset! print error if not big enough
     }
 
     //TODO:reference to paper
@@ -925,41 +966,40 @@ template <class T, int D> class curvaturTest{
 
         //calculate corner derivatives (diagonals) (the same for each direction)
 
-        T derivativesCorner = 0.;
+        T cornerDerivatives = 0.;
 
-        derivativesCorner +=  neighborIterator.getNeighbor(hrleVectorType<hrleIndexType, D> (1,-1,1)).getValue() + 
-                                neighborIterator.getNeighbor(hrleVectorType<hrleIndexType, D> (-1,1,-1)).getValue() - twoPhi_0;
-
-        derivativesCorner +=  neighborIterator.getNeighbor(hrleVectorType<hrleIndexType, D>(1,1,1)).getValue() + 
+        cornerDerivatives +=  neighborIterator.getNeighbor(hrleVectorType<hrleIndexType, D>(1,1,1)).getValue() + 
                                 neighborIterator.getNeighbor(hrleVectorType<hrleIndexType, D>(-1,-1,-1)).getValue() - twoPhi_0;
 
-        derivativesCorner +=  neighborIterator.getNeighbor(hrleVectorType<hrleIndexType, D>(1,1,-1)).getValue() + 
-                                neighborIterator.getNeighbor(hrleVectorType<hrleIndexType, D>(-1,-1,1)).getValue() - twoPhi_0;
+        cornerDerivatives +=  neighborIterator.getNeighbor(hrleVectorType<hrleIndexType, D> (-1,1,1)).getValue() + 
+                                neighborIterator.getNeighbor(hrleVectorType<hrleIndexType, D> (1,-1,-1)).getValue() - twoPhi_0;
 
-        derivativesCorner = derivativesCorner * oneThird;
+        cornerDerivatives +=  neighborIterator.getNeighbor(hrleVectorType<hrleIndexType, D>(-1,-1,1)).getValue() + 
+                                neighborIterator.getNeighbor(hrleVectorType<hrleIndexType, D>(1,1,-1)).getValue() - twoPhi_0;
 
-        for(int i = 0; i < D; i++){
+        cornerDerivatives +=  neighborIterator.getNeighbor(hrleVectorType<hrleIndexType, D>(1,-1,1)).getValue() + 
+                                neighborIterator.getNeighbor(hrleVectorType<hrleIndexType, D>(-1,1,-1)).getValue() - twoPhi_0;                        
 
-        }
+        cornerDerivatives = cornerDerivatives;
 
-        //array to store derivatives
-        std::array<T, D> scondOrderDerivatives;
+        //Calculate the derivates in the plane and in center of the stencil
+        std::array<T, 2*D> planeDerivatives;
 
-
+        std::array<T, D> centerDerivatives;
 
         for (int i = 0; i < D; i++) {
 
             hrleVectorType<hrleIndexType, D> posUnit(0);
             hrleVectorType<hrleIndexType, D> negUnit(0);
 
-            int first_axis; //i;
-            int second_axis;
+            int first_axis = i;
+            int second_axis = (i+1)%D;
 
             posUnit[first_axis] = 1;
             negUnit[first_axis] = -1;
 
             //get required ls values
-            T phi_0 = neighborIterator.getCenter().getValue();
+            //T phi_0 = neighborIterator.getCenter().getValue();
 
             T phi_px = neighborIterator.getNeighbor(posUnit).getValue();
             T phi_nx = neighborIterator.getNeighbor(negUnit).getValue();
@@ -976,19 +1016,39 @@ template <class T, int D> class curvaturTest{
             T phi_pn = neighborIterator.getNeighbor(posUnit).getValue();
             T phi_nn = neighborIterator.getNeighbor(negUnit).getValue();
 
-            posUnit[first_axis] = 0;
-            negUnit[first_axis] = 0;
+            centerDerivatives[i] = (phi_px - twoPhi_0 + phi_nx);  
 
-            posUnit[second_axis] = 1;
-            negUnit[second_axis] = -1;
+            planeDerivatives[i] = (phi_pp - twoPhi_0 + phi_nn);  
 
-            T phi_py = neighborIterator.getNeighbor(posUnit).getValue();
-            T phi_ny = neighborIterator.getNeighbor(negUnit).getValue();
-           
-
-
+            planeDerivatives[i+D] = (phi_np - twoPhi_0 + phi_pn);  
 
         }
+        
+        //calculate the actual second order derivatives
+        std::array<T, D> scondOrderDerivatives;
+
+
+
+        scondOrderDerivatives[0] =  threeThirteen * (centerDerivatives[0] + 
+                                    (planeDerivatives[0] + planeDerivatives[0+D]) * 0.5 
+                                    + cornerDerivatives * oneThird);
+
+        scondOrderDerivatives[1] =  threeThirteen * (centerDerivatives[1] + 
+                                    (planeDerivatives[1] + planeDerivatives[1+D]) * 0.5 
+                                    + cornerDerivatives * oneThird);   
+
+        scondOrderDerivatives[2] =  threeThirteen * (centerDerivatives[2] + 
+                                    (planeDerivatives[2] + planeDerivatives[2+D]) * 0.5 
+                                    + cornerDerivatives * oneThird);
+
+        return (threeThirteen*((centerDerivatives[0] + centerDerivatives[1] + centerDerivatives[2])
+                + 0.5*(planeDerivatives[0] + planeDerivatives[0+D] + planeDerivatives[1] + planeDerivatives[1+D] + planeDerivatives[2] + planeDerivatives[2+D])
+                + oneThird*(cornerDerivatives) ))
+        
+        
+        *0.5;// *threeThirteen *+ 
+                //0.5*(planeDerivatives[0]+planeDerivatives[1]+planeDerivatives[2] +planeDerivatives[0+D]+planeDerivatives[1+D]+planeDerivatives[2+D]) + 
+                //cornerDerivatives * oneThird;
 
 
         T result = 0.;
