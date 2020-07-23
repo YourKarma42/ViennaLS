@@ -384,7 +384,7 @@ void create_output(lsDomain<NumericType,D> & levelSet,
 
         meanCurvatureGeneralFormulaBigBias.push_back(generalFormulaBigBias(neighborIterator));
 
-        //curveTest.push_back(test(neighborIterator));
+        curveTest.push_back(test(neighborIterator));
 
         
 
@@ -402,7 +402,7 @@ void create_output(lsDomain<NumericType,D> & levelSet,
     narrowband.insertNextScalarData(meanCurvatureGeneralFormula, "general formula");
     narrowband.insertNextScalarData(meanCurvatureGeneralFormulaBig, "general formula big stencil");
     narrowband.insertNextScalarData(meanCurvatureGeneralFormulaBigBias, "general formula big stencil bias");
-    //narrowband.insertNextScalarData(curveTest, "Curvature Test");
+    narrowband.insertNextScalarData(curveTest, "Curvature Test");
     narrowband.insertNextScalarData(meanCurvatureNew, "variation of normals");
     narrowband.insertNextScalarData(meanCurveShapeBias, "shape operator Bias");
 

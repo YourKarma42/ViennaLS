@@ -63,7 +63,7 @@ lsDomain<double, D> makeSphere(double gridDelta, double radius){
 int main() {
 
 
-    omp_set_num_threads(1);
+    omp_set_num_threads(4);
 
     NumericType gridDelta = 0.25;
 
@@ -73,7 +73,7 @@ int main() {
 
     std::vector<lsDomain<NumericType, D> *> levelSets;
 
-    lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, 100.);
+    lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, 50.);
 
     levelSets.push_back(&levelSet);  
 
@@ -85,6 +85,8 @@ int main() {
 
     //get the active grid points of the level set
     auto activePoints = converter.getActivePoints();
+
+    std::cout << "active points: " << activePoints.size() << std::endl;
 
     lsMesh narrowband;
     std::cout << "Extracting after conversion..." << std::endl;
@@ -111,6 +113,37 @@ int main() {
     auto stop = std::chrono::high_resolution_clock::now(); 
 
     std::cout << "time for FMM: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << std::endl; 
+
+
+    curvaturShapeDerivatives1<NumericType, D> curveCalc(gridDelta);
+    std::vector<NumericType> curve;
+
+
+    for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
+          neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
+          neighborIt.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
+
+        auto &centerIt = neighborIt.getCenter();
+        if (!centerIt.isDefined() || (activePoints.find(centerIt.getStartIndices()) == activePoints.end())) {
+          continue;
+        } 
+
+        // move neighborIterator to current position
+
+        curve.push_back(curveCalc(neighborIt));
+    }
+
+    lsMesh narrowband3;
+    std::cout << "Extracting narrowband..." << std::endl;
+    lsToMesh<NumericType, D>(levelSet, narrowband3, true, true).apply(activePoints);
+    //lsPoints
+
+    //narrowband.insertNextVectorData(normal, "Normal");
+    narrowband3.insertNextScalarData(curve, "curvature");
+
+
+  
+    lsVTKWriter(narrowband3, lsFileFormatEnum::VTU , "narrowband" ).apply();
 
 
     std::cout << "Finished" << std::endl;

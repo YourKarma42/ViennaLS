@@ -78,6 +78,16 @@ public:
     //reserve space for active grid points
     activePoints.reserve(levelSet->getNumberOfPoints());
 
+    //prepare data set for active points
+    int num_threads = omp_get_thread_num();
+
+    //TODO: Reserve space
+    //TODO:Talk to Xaver
+    //inserting into a unordered map during paralell region dosnt always work 
+    //collect all active points per segment and put them into the active point list afterwards
+    std::vector<std::vector<hrleVectorType<hrleIndexType, D>>> activePointsReserve;
+
+
 
 #pragma omp parallel num_threads(newDomain.getNumberOfSegments())
     {
@@ -99,7 +109,7 @@ public:
             ? oldDomain.getSegmentation()[p]
             : grid.incrementIndices(grid.getMaxGridPoint());
        
-
+        std::vector<hrleVectorType<hrleIndexType, D>> activePointsSegment;
     
         for (hrleConstSparseStarIterator<typename lsDomain<T, D>::DomainType>
             neighborIt(oldDomain, startVector);
@@ -108,15 +118,14 @@ public:
             auto &centerIt = neighborIt.getCenter();
             if (!centerIt.isDefined() || std::abs(centerIt.getValue()) > 0.5) {
             //write undefined run in new level set
-            newDomain.getDomainSegment(p).insertNextUndefinedPoint(neighborIt.getIndices(), 
+            newDomainSegment.insertNextUndefinedPoint(neighborIt.getIndices(), 
             (centerIt.getValue()<0.) ? lsDomain<T, D>::NEG_VALUE : lsDomain<T, D>::POS_VALUE);
 
             continue;
             } 
 
-            //TODO: probably remove
-            //TODO: maby there is an error here when paralell check calculate normal vectors
-            activePoints.insert(centerIt.getStartIndices());
+            //TODO: Rethink method of checking if point is on the surface
+            activePointsSegment.push_back(centerIt.getStartIndices());
 
 
             //TODO: debug save old LS value for comparison later
@@ -156,8 +165,21 @@ public:
 
 
         }
+
+        activePointsReserve.push_back(activePointsSegment);
     }
 
+    //TODO: Talk to Xaver
+    //create set of active points
+    for(auto activePointsSegment: activePointsReserve){
+
+        for(auto activePoint: activePointsSegment){
+            activePoints.insert(activePoint);
+
+        }
+    }
+
+    
     newDomain.finalize();
     levelSet->deepCopy(newLS);
 
