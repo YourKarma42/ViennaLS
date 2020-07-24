@@ -419,7 +419,7 @@ void create_output(lsDomain<NumericType,D> & levelSet,
 int main() {
 
 
-    omp_set_num_threads(4);
+    omp_set_num_threads(1);
 
     NumericType gridDelta = 0.25;
 
@@ -429,7 +429,7 @@ int main() {
 
     std::vector<lsDomain<NumericType, D> *> levelSets;
 
-    lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, 20.);
+    lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, 50.);
 
     levelSets.push_back(&levelSet);  
 
