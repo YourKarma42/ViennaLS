@@ -53,12 +53,8 @@ public:
     }
 
     //increase lvl set size
-    lsExpand<T, D>(*levelSet, 7).apply();
+    lsExpand<T, D>(*levelSet, 4).apply();
 
-    //TODO: probably remove
-    //double pointsPerSegment =
-    //double(2 * levelSet->getDomain().getNumberOfPoints()) /
-    //double(levelSet->getLevelSetWidth());
 
     auto grid = levelSet->getGrid();
 
@@ -75,8 +71,16 @@ public:
 
     newDomain.initialize(oldDomain.getNewSegmentation(), oldDomain.getAllocation());
 
-    //reserve space for active grid points
-    activePoints.reserve(levelSet->getNumberOfPoints());
+    //inserting directly into a single unordered map during paralell region dosnt work 
+    //collect all active points per segment and put them into the active point list afterwards
+    std::vector<std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash>> activePointsReserve(
+        levelSet->getNumberOfSegments());
+
+
+    double pointsPerSegment =
+        double(2 * levelSet->getDomain().getNumberOfPoints()) /
+        double(levelSet->getLevelSetWidth());
+
 
 
 #pragma omp parallel num_threads(newDomain.getNumberOfSegments())
@@ -88,6 +92,9 @@ public:
 
         auto &newDomainSegment = newDomain.getDomainSegment(p);
 
+        std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> &activePointsSegment = 
+          activePointsReserve[p];
+        activePointsSegment.reserve(pointsPerSegment);
 
         //create iterators for the old domain not euclidian normalized
         hrleVectorType<hrleIndexType, D> startVector =
@@ -98,8 +105,7 @@ public:
         (p != static_cast<int>(oldDomain.getNumberOfSegments() - 1))
             ? oldDomain.getSegmentation()[p]
             : grid.incrementIndices(grid.getMaxGridPoint());
-       
-
+              
     
         for (hrleConstSparseStarIterator<typename lsDomain<T, D>::DomainType>
             neighborIt(oldDomain, startVector);
@@ -108,37 +114,34 @@ public:
             auto &centerIt = neighborIt.getCenter();
             if (!centerIt.isDefined() || std::abs(centerIt.getValue()) > 0.5) {
             //write undefined run in new level set
-            newDomain.getDomainSegment(p).insertNextUndefinedPoint(neighborIt.getIndices(), 
+            newDomainSegment.insertNextUndefinedPoint(neighborIt.getIndices(), 
             (centerIt.getValue()<0.) ? lsDomain<T, D>::NEG_VALUE : lsDomain<T, D>::POS_VALUE);
 
             continue;
             } 
 
-            //TODO: probably remove
-            //TODO: maby there is an error here when paralell check calculate normal vectors
-            activePoints.insert(centerIt.getStartIndices());
+            //TODO: Rethink method of checking if point is on the surface
+            activePointsSegment.insert(neighborIt.getCenter().getStartIndices());
 
+            std::array<double, 3> n;
+            T normN =0.;
 
-            //TODO: debug save old LS value for comparison later
-            //T oldLSValue = centerIt.getValue();
-
-            //calculate normal vector of defined grid point
-            std::array<T, D> n;
-            T normN = 0.;
             for (int i = 0; i < D; i++) {
             
-            T pos1 = neighborIt.getNeighbor(i).getValue();
-            T neg1 = neighborIt.getNeighbor(i + D).getValue();
-            n[i] = (pos1 - neg1) * 0.5;
+              T pos1 = neighborIt.getNeighbor(i).getValue();
+
+              T neg1 = neighborIt.getNeighbor(i + D).getValue();
+
+              n[i] = (pos1 - neg1) * 0.5;
             
-            normN += n[i] * n[i];
+              normN += n[i] * n[i];
             }
+
             normN = std::sqrt(normN);
 
             for (int i = 0; i < D; i++) {
-            n[i] /= normN;
+              n[i] /= normN;
             }
-
             //renormalized ls value in direction of the normal vector
             T max = 0.;
             for (unsigned i = 0; i < D; ++i) {
@@ -147,19 +150,27 @@ public:
                     max = std::abs(n[i]);
                 }
             }
-    
             T newLsValue = centerIt.getValue() * max;
 
-            //TODO:difference between the 2 lines?
-            //newDomain.getDomainSegment(p).insertNextDefinedPoint(neighborIt.getIndices(), newLsValue);
-            newDomainSegment.insertNextDefinedPoint(neighborIt.getIndices(), newLsValue);
-
-
+            newDomainSegment.insertNextDefinedPoint(neighborIt.getIndices(), newLsValue); 
         }
+
+    }
+
+    //reserve space for active grid points
+    activePoints.reserve(levelSet->getNumberOfPoints());
+
+    for (unsigned i = 0; i < levelSet->getNumberOfSegments(); ++i) {
+
+        activePoints.insert(activePointsReserve[i].begin(), activePointsReserve[i].end());
+      
     }
 
     newDomain.finalize();
     levelSet->deepCopy(newLS);
+
+
+
 
   }
 

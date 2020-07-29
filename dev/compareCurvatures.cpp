@@ -292,7 +292,128 @@ lsDomain<double, D> makeSphere(double gridDelta, double radius){
 
 }
 
-void create_output(lsDomain<NumericType,D> & levelSet,
+void create_output_Manhatten(lsDomain<NumericType,D> & levelSet,
+  std::string output_name){
+
+    hrleSparseBoxIterator<hrleDomain<NumericType, D>> neighborIterator(levelSet.getDomain(), 2);
+
+    std::vector<std::array<NumericType, 3>> normal;
+
+    std::vector<std::array<NumericType, 3>> secondOrderDerivatives1;
+
+    std::vector<std::array<NumericType, 3>> secondOrderDerivatives2;
+
+
+
+    std::vector<NumericType> grad1;
+
+    std::vector<NumericType> meanCurvatureGeneralFormula;
+
+    std::vector<NumericType> meanCurvatureGeneralFormulaBig;
+
+    std::vector<NumericType> meanCurvatureGeneralFormulaBigBias;
+
+    std::vector<NumericType> meanCurvatureSD1;
+
+    std::vector<NumericType> grad2;
+
+    std::vector<NumericType> meanCurvature2;
+
+    std::vector<NumericType> meanCurvatureSD2;
+
+    std::vector<NumericType> meanCurvature3;
+
+    std::vector<NumericType> meanCurvatureNew;
+
+    std::vector<NumericType> curveTest;
+
+    std::vector<NumericType> meanCurveShapeBias;
+
+
+    //std::vector<std::array<NumericType, D>> normal;
+
+
+    NumericType gridDelta = 1.;//levelSet.getGrid().getGridDelta();
+
+    variationOfNormals<NumericType, D> variationOfGrad(gridDelta);
+
+    curvaturShapeDerivatives1<NumericType, D> shape1(gridDelta);
+
+    curvaturShapeDerivatives2<NumericType, D> shape2(gridDelta);
+
+    curvaturGeneralFormula<NumericType, D> generalFormula(gridDelta);
+
+    curvaturShapeBias<NumericType, D> shapeBias(gridDelta);
+
+    curvaturGeneralFormulaBigStencil <NumericType, D> generalFormulaBig(gridDelta);
+
+    curvaturGeneralFormulaBigStencilBias <NumericType, D> generalFormulaBigBias(gridDelta);
+
+    curvaturTest<NumericType, D> test(gridDelta);
+
+
+  
+   //     ? passedlsDomain.getDomain().getSegmentation()[p]
+   //     : grid.incrementIndices(grid.getMaxGridPoint());
+
+
+    //TODO: use hrleConstSparseIterator<hrleDomainType>
+    for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
+          neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
+          neighborIt.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
+
+        auto &centerIt = neighborIt.getCenter();
+        if (!centerIt.isDefined() || (std::abs(centerIt.getValue()) > 0.5)) {
+          continue;
+        } 
+
+        // move neighborIterator to current position
+
+        meanCurvatureSD1.push_back(shape1(neighborIt));
+
+        neighborIterator.goToIndicesSequential(centerIt.getStartIndices());
+
+        meanCurvatureSD2.push_back(shape2(neighborIterator));
+
+        meanCurveShapeBias.push_back(shapeBias(neighborIterator));
+
+        meanCurvatureNew.push_back(variationOfGrad(neighborIterator));
+
+        meanCurvatureGeneralFormula.push_back(generalFormula(neighborIterator));
+
+        meanCurvatureGeneralFormulaBig.push_back(generalFormulaBig(neighborIterator));
+
+        meanCurvatureGeneralFormulaBigBias.push_back(generalFormulaBigBias(neighborIterator));
+
+        curveTest.push_back(test(neighborIterator));
+
+        
+
+    }
+
+    lsMesh narrowband;
+    std::cout << "Extracting narrowband..." << std::endl;
+    lsToMesh<NumericType, D>(levelSet, narrowband, true, true).apply();
+    //lsPoints
+
+
+    //narrowband.insertNextVectorData(normal, "Normal");
+    narrowband.insertNextScalarData(meanCurvatureSD1, "shape operator small stencil");
+    narrowband.insertNextScalarData(meanCurvatureSD2, "shape operator big stencil");
+    narrowband.insertNextScalarData(meanCurvatureGeneralFormula, "general formula");
+    narrowband.insertNextScalarData(meanCurvatureGeneralFormulaBig, "general formula big stencil");
+    narrowband.insertNextScalarData(meanCurvatureGeneralFormulaBigBias, "general formula big stencil bias");
+    narrowband.insertNextScalarData(curveTest, "Curvature Test");
+    narrowband.insertNextScalarData(meanCurvatureNew, "variation of normals");
+    narrowband.insertNextScalarData(meanCurveShapeBias, "shape operator Bias");
+
+  
+    lsVTKWriter(narrowband, lsFileFormatEnum::VTU , output_name ).apply();
+
+
+  }
+
+void create_output_Euklid(lsDomain<NumericType,D> & levelSet,
   std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & lsPoints,
   std::string output_name){
 
@@ -357,6 +478,8 @@ void create_output(lsDomain<NumericType,D> & levelSet,
    //     ? passedlsDomain.getDomain().getSegmentation()[p]
    //     : grid.incrementIndices(grid.getMaxGridPoint());
 
+
+    //TODO: use hrleConstSparseIterator<hrleDomainType>
     for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
           neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
           neighborIt.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
@@ -384,7 +507,7 @@ void create_output(lsDomain<NumericType,D> & levelSet,
 
         meanCurvatureGeneralFormulaBigBias.push_back(generalFormulaBigBias(neighborIterator));
 
-        //curveTest.push_back(test(neighborIterator));
+        curveTest.push_back(test(neighborIterator));
 
         
 
@@ -402,7 +525,7 @@ void create_output(lsDomain<NumericType,D> & levelSet,
     narrowband.insertNextScalarData(meanCurvatureGeneralFormula, "general formula");
     narrowband.insertNextScalarData(meanCurvatureGeneralFormulaBig, "general formula big stencil");
     narrowband.insertNextScalarData(meanCurvatureGeneralFormulaBigBias, "general formula big stencil bias");
-    //narrowband.insertNextScalarData(curveTest, "Curvature Test");
+    narrowband.insertNextScalarData(curveTest, "Curvature Test");
     narrowband.insertNextScalarData(meanCurvatureNew, "variation of normals");
     narrowband.insertNextScalarData(meanCurveShapeBias, "shape operator Bias");
 
@@ -419,7 +542,7 @@ void create_output(lsDomain<NumericType,D> & levelSet,
 int main() {
 
 
-    omp_set_num_threads(1);
+    omp_set_num_threads(4);
 
     NumericType gridDelta = 0.25;
 
@@ -429,9 +552,18 @@ int main() {
 
     std::vector<lsDomain<NumericType, D> *> levelSets;
 
-    lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, 50.);
+    lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, 100.);
 
     levelSets.push_back(&levelSet);  
+/*
+    int order = 1;
+    lsExpand<NumericType, D>(*(levelSets.back()), 2 * (order + 2) + 1).apply();
+
+    std::cout << "Calculating Curvatures..." << std::endl;
+
+    create_output_Manhatten(*(levelSets.back()),  "final_output_Manhatten");
+*/
+
 
     std::cout << "Converting..." << std::endl;
 
@@ -456,7 +588,8 @@ int main() {
 
     std::cout << "Calculating Curvatures..." << std::endl;
 
-    create_output(*(levelSets.back()), activePoints, "final_output");
+    create_output_Euklid(*(levelSets.back()), activePoints, "final_output_Euklid");
+
 
     //timingTests(*(levelSets.back()), activePoints);
 

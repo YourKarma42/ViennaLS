@@ -56,7 +56,7 @@ public:
     //Do FMM until the narrowband converges
     //The convergence of the narrowband depends on the width that is required
     //TODO: at the moment random static number think of better way to end the loop
-    for(int runs=0; runs < 20; runs++){
+    for(int runs=0; runs < 10; runs++){
 
       const int allocationFactor =
           1 + 1.0 / static_cast<double>(runs);
