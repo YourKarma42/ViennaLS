@@ -130,8 +130,16 @@ int main() {
     std::cout << "time for FMM: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << std::endl; 
 
 
-    curvaturShapeDerivatives1<NumericType, D> curveCalc(gridDelta);
+    //curvaturShapeDerivatives1<NumericType, D> curveCalc(gridDelta);
+
+    hrleSparseBoxIterator<hrleDomain<NumericType, D>> neighborIterator(levelSet.getDomain(), 2);
+
+
+    curvaturGeneralFormula<NumericType, D> curveCalc(gridDelta);
+
     std::vector<NumericType> curve;
+
+
 
     //TODO: use different iterator
     for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
@@ -150,7 +158,10 @@ int main() {
 
         // move neighborIterator to current position
 
-        curve.push_back(curveCalc(neighborIt));
+        
+        neighborIterator.goToIndicesSequential(centerIt.getStartIndices());
+
+        curve.push_back(curveCalc(neighborIterator));
     }
 
 

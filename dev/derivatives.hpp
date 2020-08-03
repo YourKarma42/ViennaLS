@@ -90,8 +90,37 @@ template <class T, int D> class curvaturGeneralFormula{
         }
 
 
-        T norm_grad_pow3 = std::sqrt(d[0]*d[0] + d[1]*d[1] + d[2]*d[2]);
+        T norm_grad_pow3 = 0.;
+        for(int i = 0; i < D; i++){
+
+            norm_grad_pow3 += d[i]*d[i];
+        }
+        norm_grad_pow3 = std::sqrt(norm_grad_pow3);
+
+        //d[0] = d[0]/norm_grad_pow3;        
+        //d[1] = d[1]/norm_grad_pow3;
+
+        //norm_grad_pow3 = 1.;
+
+        //std::cout << norm_grad_pow3 << std::endl;
+
         norm_grad_pow3 = norm_grad_pow3*norm_grad_pow3*norm_grad_pow3;
+
+
+
+        //TODO: not a clean solution think of something different
+
+        if((d[3]*d[1]*d[1] - 2.*d[1]*d[0]*d[6] + d[4]*d[0]*d[0])/(norm_grad_pow3) < 0.024){
+            std::cout << d[3] << std::endl;
+            std::cout << d[4] << std::endl;
+            std::cout << norm_grad_pow3 << std::endl;
+            std::cout << "mist" << std::endl;
+        }
+
+        if(D == 2){
+            return (d[3]*d[1]*d[1] - 2.*d[1]*d[0]*d[6] + d[4]*d[0]*d[0])
+                    /(norm_grad_pow3);
+        }
 
         //expanded fom of the equation
         return
