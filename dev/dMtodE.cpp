@@ -264,7 +264,7 @@ void ManhattenToEuclidian(lsDomain<NumericType, D> &passedlsDomain){
         //TODO: This is tmp move somewhere else!
         //write output 
 
-        unsigned pointId = neighborIt.getCenter().getPointId();
+        //unsigned pointId = neighborIt.getCenter().getPointId();
 
         // insert vertex
         std::array<unsigned, 1> vertex;

@@ -40,13 +40,17 @@
 
 //____________testing end___________________________
 
-constexpr int D = 3;
+constexpr int D = 3 ;
 typedef double NumericType;
+
+typedef typename lsDomain<NumericType, D>::DomainType hrleDomainType;
 
 void timingTests(lsDomain<NumericType,D> & levelSet,
   std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & lsPoints){
 
-    hrleSparseBoxIterator<hrleDomain<NumericType, D>> neighborIterator(levelSet.getDomain(), 2);
+    hrleSparseBoxIterator<hrleDomain<NumericType, D>> neighborIterator(levelSet.getDomain(), 1);
+
+    hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType> neighborStarIterator(levelSet.getDomain());
        
     NumericType gridDelta = 1.;//levelSet.getGrid().getGridDelta();
 
@@ -76,11 +80,14 @@ void timingTests(lsDomain<NumericType,D> & levelSet,
     std::cout << "meanCurvatureGeneralFormula" <<std::endl;
     for(int i = 0;i < runs; i ++){
       start = std::chrono::high_resolution_clock::now(); 
-      for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
-            neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
-            neighborIt.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
+    for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet.getDomain());
+      !centerIt.isFinished(); ++centerIt){
+   // for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
+    //      neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
+     //     neighborIt.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
 
-              auto &centerIt = neighborIt.getCenter();
+        //auto &centerIt = neighborIt.getCenter();
+
               if (!centerIt.isDefined() || (lsPoints.find(centerIt.getStartIndices()) == lsPoints.end())) {
                 continue;
               } 
@@ -104,11 +111,13 @@ void timingTests(lsDomain<NumericType,D> & levelSet,
     std::cout << "meanCurvatureGeneralFormulaBigStencil" <<std::endl;
     for(int i = 0;i < runs; i ++){
       start = std::chrono::high_resolution_clock::now(); 
-      for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
-            neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
-            neighborIt.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
+      for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet.getDomain());
+        !centerIt.isFinished(); ++centerIt){
+      // for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
+      //      neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
+      //     neighborIt.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
 
-              auto &centerIt = neighborIt.getCenter();
+              //auto &centerIt = neighborIt.getCenter();
               if (!centerIt.isDefined() || (lsPoints.find(centerIt.getStartIndices()) == lsPoints.end())) {
                 continue;
               } 
@@ -132,11 +141,13 @@ void timingTests(lsDomain<NumericType,D> & levelSet,
     std::cout << "meanCurvatureGeneralFormulaBigBias" <<std::endl;
     for(int i = 0;i < runs; i ++){
       start = std::chrono::high_resolution_clock::now(); 
-      for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
-            neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
-            neighborIt.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
+      for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet.getDomain());
+        !centerIt.isFinished(); ++centerIt){
+      // for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
+      //      neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
+      //     neighborIt.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
 
-              auto &centerIt = neighborIt.getCenter();
+        //auto &centerIt = neighborIt.getCenter();
               if (!centerIt.isDefined() || (lsPoints.find(centerIt.getStartIndices()) == lsPoints.end())) {
                 continue;
               } 
@@ -161,11 +172,13 @@ void timingTests(lsDomain<NumericType,D> & levelSet,
     std::cout << "VariationOfGradient" <<std::endl;
     for(int i = 0;i < runs; i ++){
       start = std::chrono::high_resolution_clock::now(); 
-      for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
-            neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
-            neighborIt.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
+      for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet.getDomain());
+        !centerIt.isFinished(); ++centerIt){
+        // for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
+        //      neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
+        //     neighborIt.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
 
-              auto &centerIt = neighborIt.getCenter();
+        //auto &centerIt = neighborIt.getCenter();
               if (!centerIt.isDefined() || (lsPoints.find(centerIt.getStartIndices()) == lsPoints.end())) {
                 continue;
               } 
@@ -190,11 +203,13 @@ void timingTests(lsDomain<NumericType,D> & levelSet,
 
     for(int i = 0;i < runs; i ++){
       start = std::chrono::high_resolution_clock::now(); 
-      for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
-            neighborIt1(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
-            neighborIt1.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt1.next()) {
+      for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet.getDomain());
+        !centerIt.isFinished(); ++centerIt){
+    // for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
+      //      neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
+      //     neighborIt.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
 
-              auto &centerIt = neighborIt1.getCenter();
+        //auto &centerIt = neighborIt.getCenter();
               if (!centerIt.isDefined() || (lsPoints.find(centerIt.getStartIndices()) == lsPoints.end())) {
                 continue;
               } 
@@ -219,19 +234,21 @@ void timingTests(lsDomain<NumericType,D> & levelSet,
 
     for(int i = 0;i < runs; i ++){
       start = std::chrono::high_resolution_clock::now(); 
-      for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
-            neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
-            neighborIt.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
+      for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet.getDomain());
+        !centerIt.isFinished(); ++centerIt){
+        // for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
+        //      neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
+        //     neighborIt.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
 
-              auto &centerIt = neighborIt.getCenter();
+          //auto &centerIt = neighborIt.getCenter();
               if (!centerIt.isDefined() || (lsPoints.find(centerIt.getStartIndices()) == lsPoints.end())) {
                 continue;
               } 
 
-              // move neighborIterator to current position
-              //neighborIterator.goToIndicesSequential(centerIt.getStartIndices());
+              // move neighborStarIterator to current position
+              neighborStarIterator.goToIndicesSequential(centerIt.getStartIndices());
 
-              shape1(neighborIt);             
+              shape1(neighborStarIterator);             
 
       }
       stop = std::chrono::high_resolution_clock::now(); 
@@ -248,11 +265,14 @@ void timingTests(lsDomain<NumericType,D> & levelSet,
 
     for(int i = 0;i < runs; i ++){
       start = std::chrono::high_resolution_clock::now(); 
-      for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
-            neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
-            neighborIt.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
+      for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet.getDomain());
+        !centerIt.isFinished(); ++centerIt){
+      // for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
+      //      neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
+      //     neighborIt.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
 
-              auto &centerIt = neighborIt.getCenter();
+        //auto &centerIt = neighborIt.getCenter();
+             
               if (!centerIt.isDefined() || (lsPoints.find(centerIt.getStartIndices()) == lsPoints.end())) {
                 continue;
               } 
@@ -292,10 +312,101 @@ lsDomain<double, D> makeSphere(double gridDelta, double radius){
 
 }
 
+lsDomain<double, D> makePlane(double gridDelta, std::vector<NumericType>& planeNormal){
+
+      std::cout << "creating Plane..." << std::endl;
+
+    double extent = 5;
+    double bounds[2 * D] = {-extent, extent, extent, extent};
+    if (D == 3) {
+      bounds[4] = -extent;
+      bounds[5] = extent;
+    }
+
+    typename lsDomain<NumericType, D>::BoundaryType boundaryCons[D];
+    for (unsigned i = 0; i < D - 1; ++i) {
+      boundaryCons[i] =
+          lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
+
+    }
+
+    boundaryCons[D - 2] =
+        lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
+
+    lsDomain<double, D> levelSet(bounds, boundaryCons, gridDelta);
+
+
+    std::vector<NumericType> origin = {0., 0., 0.};
+
+    lsMakeGeometry<double, D>(levelSet, lsPlane<double, D>(origin, planeNormal))
+      .apply();
+
+    return levelSet;
+
+
+}
+
+lsDomain<double, D> makeTrench(double gridDelta, std::vector<NumericType>& planeNormal){
+
+    std::cout << "creating trench..." << std::endl;
+
+    double extent = 50;
+    double bounds[2 * D] = {-extent, extent, -extent, extent};
+    if (D == 3) {
+        bounds[4] = -extent;
+        bounds[5] = extent;
+    }
+
+    typename lsDomain<NumericType, D>::BoundaryType boundaryCons[D];
+    for (unsigned i = 0; i < D - 1; ++i) {
+        boundaryCons[i] =
+            lsDomain<NumericType, D>::BoundaryType::REFLECTIVE_BOUNDARY;
+    }
+    boundaryCons[D - 1] =
+        lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
+
+    lsDomain<double, D> levelSet(bounds, boundaryCons, gridDelta);
+
+    std::vector<NumericType> origin = {0., 0., 0.};
+
+    //create the plane
+    lsMakeGeometry<double, D>(levelSet, lsPlane<double, D>(origin, planeNormal))
+        .apply();
+
+    {
+        // create layer used for booling
+        std::cout << "Creating box..." << std::endl;
+        lsDomain<double, D> trench(bounds, boundaryCons, gridDelta);
+        if(D == 3){
+          double minCorner[3] = {-extent - 1, -extent / 4., -15.};
+          double maxCorner[3] = {extent + 1, extent / 4., 1.0};
+          lsMakeGeometry<double, D>(trench, lsBox<double, D>(minCorner, maxCorner))
+            .apply();
+        }else{
+          double minCorner[2] = {-extent / 4., -15.};
+          double maxCorner[2] = {extent / 4., 1.0};
+          lsMakeGeometry<double, D>(trench, lsBox<double, D>(minCorner, maxCorner))
+            .apply();
+        }
+        //lsMakeGeometry<double, D>(trench, lsBox<double, D>(minCorner, maxCorner))
+        //    .apply();
+
+
+        // Create trench geometry
+        std::cout << "Booling trench..." << std::endl;
+        lsBooleanOperation<double, D>(levelSet, trench,
+                                    lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+            .apply();
+    }
+
+    return levelSet;
+    
+}
+
 void create_output_Manhatten(lsDomain<NumericType,D> & levelSet,
   std::string output_name){
 
-    hrleSparseBoxIterator<hrleDomain<NumericType, D>> neighborIterator(levelSet.getDomain(), 2);
+    hrleSparseBoxIterator<hrleDomain<NumericType, D>> neighborIterator(levelSet.getDomain(), 1);
 
     std::vector<std::array<NumericType, 3>> normal;
 
@@ -417,14 +528,7 @@ void create_output_Euklid(lsDomain<NumericType,D> & levelSet,
   std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & lsPoints,
   std::string output_name){
 
-    hrleSparseBoxIterator<hrleDomain<NumericType, D>> neighborIterator(levelSet.getDomain(), 2);
-
-    std::vector<std::array<NumericType, 3>> normal;
-
-    std::vector<std::array<NumericType, 3>> secondOrderDerivatives1;
-
-    std::vector<std::array<NumericType, 3>> secondOrderDerivatives2;
-
+    //std::vector<NumericType> distance;
 
 
     std::vector<NumericType> grad1;
@@ -455,7 +559,7 @@ void create_output_Euklid(lsDomain<NumericType,D> & levelSet,
     //std::vector<std::array<NumericType, D>> normal;
 
 
-    NumericType gridDelta = 1.;//levelSet.getGrid().getGridDelta();
+    NumericType gridDelta = levelSet.getGrid().getGridDelta();
 
     variationOfNormals<NumericType, D> variationOfGrad(gridDelta);
 
@@ -478,22 +582,29 @@ void create_output_Euklid(lsDomain<NumericType,D> & levelSet,
    //     ? passedlsDomain.getDomain().getSegmentation()[p]
    //     : grid.incrementIndices(grid.getMaxGridPoint());
 
+    hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType> neighborStarIterator(levelSet.getDomain());
 
-    //TODO: use hrleConstSparseIterator<hrleDomainType>
-    for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
-          neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
-          neighborIt.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
+    hrleSparseBoxIterator<hrleDomain<NumericType, D>> neighborIterator(levelSet.getDomain(), 1);
 
-        auto &centerIt = neighborIt.getCenter();
+
+    for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet.getDomain());
+      !centerIt.isFinished(); ++centerIt){
+   // for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
+    //      neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
+     //     neighborIt.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
+
+        //auto &centerIt = neighborIt.getCenter();
         if (!centerIt.isDefined() || (lsPoints.find(centerIt.getStartIndices()) == lsPoints.end())) {
           continue;
         } 
 
         // move neighborIterator to current position
 
-        meanCurvatureSD1.push_back(shape1(neighborIt));
-
         neighborIterator.goToIndicesSequential(centerIt.getStartIndices());
+
+        neighborStarIterator.goToIndicesSequential(centerIt.getStartIndices());
+
+        meanCurvatureSD1.push_back(shape1(neighborStarIterator));
 
         meanCurvatureSD2.push_back(shape2(neighborIterator));
 
@@ -544,7 +655,7 @@ int main() {
 
     omp_set_num_threads(4);
 
-    NumericType gridDelta = 0.25;
+    NumericType gridDelta = 0.5;
 
     //______________________________First____________________________________________________________________
 
@@ -552,9 +663,33 @@ int main() {
 
     std::vector<lsDomain<NumericType, D> *> levelSets;
 
-    lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, 100.);
+      //90 grad
+    std::vector<NumericType> planeNormal = {0. , 1. , 0.};
+
+    //22.5 grad
+    //planeNormal = {0.0, 0.38268343, 0.92387953};
+    // additionalParams.push_back(planeNormal);
+
+    //45 grad
+    //planeNormal = {0.0, 0.70710678, 0.70710678};
+    //additionalParams.push_back(planeNormal);
+
+    //67.5 grad
+    //planeNormal ={0.0, 0.92387953, 0.38268343};
+    //additionalParams.push_back(planeNormal);
+
+    //lsDomain<NumericType,D> levelSet = makePlane(gridDelta, planeNormal);
+
+    lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, 10.);
+
+    //lsDomain<NumericType,D> levelSet = makeTrench(gridDelta, planeNormal);
+
+
+
+
 
     levelSets.push_back(&levelSet);  
+
 /*
     int order = 1;
     lsExpand<NumericType, D>(*(levelSets.back()), 2 * (order + 2) + 1).apply();
@@ -573,6 +708,14 @@ int main() {
 
     //get the active grid points of the level set
     auto activePoints = converter.getActivePoints();
+
+    std::cout << activePoints.size() << std::endl;
+
+    ///lsMesh narrowband1;
+   // std::cout << "Extracting after Marching..." << std::endl;
+    //lsToMesh<NumericType, D>(levelSet, narrowband1, true, false).apply(activePoints);
+   // lsToMesh<NumericType, D>(*(levelSets.back()), narrowband1, true, true).apply(activePoints);  
+   // lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "FMMOutput" ).apply();
 
     auto start = std::chrono::high_resolution_clock::now(); 
 

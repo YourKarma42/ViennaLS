@@ -40,7 +40,7 @@
 
 //____________testing end___________________________
 
-constexpr int D = 3;
+constexpr int D = 2;
 typedef double NumericType;
 typedef typename lsDomain<NumericType, D>::DomainType hrleDomainType;
 
@@ -66,7 +66,7 @@ int main() {
 
     omp_set_num_threads(1);
 
-    NumericType gridDelta = 0.25;
+    NumericType gridDelta = 0.5;
 
     //______________________________First____________________________________________________________________
 
@@ -77,15 +77,15 @@ int main() {
 
     std::vector<lsDomain<NumericType, D> *> levelSets;
 
-    lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, 50.);
+    lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, 10.);
 
     levelSets.push_back(&levelSet);  
 
-    //lsMesh pointcloud;
-    //std::cout << "Extracting point cloud..." << std::endl;
-    //lsToMesh<double, D>(*(levelSets.back()), pointcloud).apply();
+    lsMesh pointcloud;
+    std::cout << "Extracting point cloud..." << std::endl;
+    lsToMesh<double, D>(*(levelSets.back()), pointcloud, true, true).apply();
     //lsToDiskMesh<double, D>(*(levelSets.back()), pointcloud).apply();
-    //lsVTKWriter(pointcloud, lsFileFormatEnum::VTU ,"point_cloud").apply();
+    lsVTKWriter(pointcloud, lsFileFormatEnum::VTU ,"point_cloud").apply();
 
 /*
     int order = 1;
@@ -119,21 +119,78 @@ int main() {
 
     expander.apply(); 
 
+    std::vector<NumericType> x;
+    std::vector<NumericType> y;
+    std::vector<NumericType> z;
+
+
+    for(hrleConstSparseIterator<hrleDomainType> it(levelSets.back()->getDomain());
+        !it.isFinished(); ++it){
+
+        x.push_back(it.getStartIndices()[0]);
+        y.push_back(it.getStartIndices()[1]);
+
+    }
 
 
 
-    //lsMesh narrowband1;
-    //std::cout << "Extracting after Marching..." << std::endl;
-    //lsToMesh<NumericType, D>(levelSet, narrowband1, true, false).apply(activePoints);
+    lsMesh narrowband1;
+    std::cout << "Extracting after Marching..." << std::endl;
+    lsToMesh<NumericType, D>(*(levelSets.back()), narrowband1, true, false).apply(activePoints);
+
+    narrowband1.insertNextScalarData(x, "X");
+    narrowband1.insertNextScalarData(y, "Y");
     //lsToMesh<NumericType, D>(levelSet, narrowband1, true, false).apply();
     //lsPoints
   
-    //lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "FMMOutput" ).apply();
+    lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "FMMOutput" ).apply();
 
     stop = std::chrono::high_resolution_clock::now(); 
 
     std::cout << "time for FMM: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << std::endl; 
 
+    curvaturShapeDerivatives1<NumericType, D> curveCalc(gridDelta);
+    std::vector<NumericType> curve;
+
+
+    hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType> neighborStarIt(levelSets.back()->getDomain());
+
+    for(hrleConstSparseIterator<hrleDomainType> it(levelSets.back()->getDomain());
+        !it.isFinished(); ++it){
+
+        //if (!it.isDefined() || std::abs(it.getValue()) > 0.5) {
+        if (!it.isDefined() || (activePoints.find(it.getStartIndices()) == activePoints.end())) {
+            continue;
+        } 
+
+        neighborStarIt.goToIndices(it.getStartIndices());
+
+        curve.push_back(curveCalc(neighborStarIt));
+
+    }
+
+
+
+    lsMesh narrowband3;
+    std::cout << "Extracting narrowband..." << std::endl;
+    lsToMesh<NumericType, D>(*(levelSets.back()), narrowband3, true, true).apply(activePoints);
+    //lsToMesh<NumericType, D>(levelSet, narrowband3, true, true).apply();
+    //lsPoints
+
+    //narrowband3.insertNextVectorData(normal, "Normal");
+    narrowband3.insertNextScalarData(curve, "curvature");
+  
+    lsVTKWriter(narrowband3, lsFileFormatEnum::VTU , "narrowband" ).apply();
+
+
+    std::cout << "Finished" << std::endl;
+
+    return 0;
+}
+
+/*
+    ITERATOR TIMING TESTS
+    
     double runs = 50.;
 
     std::cout << "Number of runs: " << runs << std::endl;
@@ -254,23 +311,7 @@ int main() {
  
 
 
-
-    //lsMesh narrowband3;
-    //std::cout << "Extracting narrowband..." << std::endl;
-    //lsToMesh<NumericType, D>(levelSet, narrowband3, true, true).apply(activePoints);
-    //lsToMesh<NumericType, D>(levelSet, narrowband3, true, true).apply();
-    //lsPoints
-
-    //narrowband.insertNextVectorData(normal, "Normal");
-    //narrowband3.insertNextScalarData(curve, "curvature");
-  
-    //lsVTKWriter(narrowband3, lsFileFormatEnum::VTU , "narrowband" ).apply();
-
-
-    std::cout << "Finished" << std::endl;
-
-    return 0;
-}
+*/
 
 
 

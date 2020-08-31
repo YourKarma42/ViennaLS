@@ -22,6 +22,8 @@ template <class T, int D> class lsEikonalExpand {
 
   lsDomain<T, D> *levelSet = nullptr;
 
+  T gridDeltaSqared = 0.;
+
   //TOD: make call by reference (problem with initialization)
   std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash>  activePoints;
 
@@ -33,6 +35,7 @@ public:
       std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash>  passedActivePoints)
       : levelSet(&passedLevelSet), activePoints(passedActivePoints) {
         //TODO: check if level set is euler normalized and give error if not
+      gridDeltaSqared = levelSet->getGrid().getGridDelta() * levelSet->getGrid().getGridDelta();
   }
 
   void setLevelSet(lsDomain<T, D> &passedLevelSet) {
@@ -195,12 +198,12 @@ public:
     for(int run = D; run > 0; run--){
       
       T b = 0.;
-      T c = (T)run;
+      T c = (T)run*gridDeltaSqared;
 
       //calculate upwind difference
       for(int i = 0; i < D; i++){
         b += stencilMin[i];
-        c -= (T)run * stencilMin[i] * stencilMin[i]; 
+        c -= (T)run * (stencilMin[i] * stencilMin[i]); 
       }
 
       T discriminant = (b*b) + c;
@@ -217,6 +220,15 @@ public:
           }
         }
         stencilMin[maxIndex] = 0.;
+
+        //Test
+        if(run == 2){
+          T val = 0.;
+          for(int i = 0; i < D; i++){
+            val += stencilMin[i];
+          }
+          return (val + 1);
+        }
       }else{
 
         //the distance has to increase and most of the time be greater 0 so we only need the bigger solution

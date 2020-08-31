@@ -78,7 +78,7 @@ template <class T, int D> class curvaturGeneralFormula{
             //T phi_py = neighborIterator.getNeighbor(posUnit).getValue();
             //T phi_ny = neighborIterator.getNeighbor(negUnit).getValue();
            
-
+/*
             // first order derivative
             d[i] = (phi_px - phi_nx)*0.5;
 
@@ -86,6 +86,16 @@ template <class T, int D> class curvaturGeneralFormula{
             d[i+3] = (phi_px - 2.*phi_0 + phi_nx);
 
             d[i+6] = (phi_pp - phi_pn -phi_np + phi_nn)*0.25;
+*/
+
+
+            // first order derivative
+            d[i] = (phi_px - phi_nx)/(2.*gridDelta);
+
+            // second order derivatives in the same direction
+            d[i+3] = (phi_px - 2.*phi_0 + phi_nx)/(gridDelta*gridDelta);
+
+            d[i+6] = (phi_pp - phi_pn -phi_np + phi_nn)/(4.*gridDelta*gridDelta);
 
         }
 
@@ -109,13 +119,14 @@ template <class T, int D> class curvaturGeneralFormula{
 
 
         //TODO: not a clean solution think of something different
-
+/*
         if((d[3]*d[1]*d[1] - 2.*d[1]*d[0]*d[6] + d[4]*d[0]*d[0])/(norm_grad_pow3) < 0.024){
             std::cout << d[3] << std::endl;
             std::cout << d[4] << std::endl;
             std::cout << norm_grad_pow3 << std::endl;
             std::cout << "mist" << std::endl;
         }
+        */
 
         if(D == 2){
             return (d[3]*d[1]*d[1] - 2.*d[1]*d[0]*d[6] + d[4]*d[0]*d[0])
@@ -175,7 +186,7 @@ template <class T, int D> class curvaturShapeDerivatives1{
             //hrleVectorType<hrleIndexType, D> test = neighborIterator.getIndices();
 
             //TODO: ask people if there is a more elegant solution
-            int first_pos  = i;
+            //int first_pos  = i;
             //int second_pos = (i+1) % D;
         
             //get required ls values

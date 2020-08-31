@@ -58,14 +58,19 @@ public:
 
     auto grid = levelSet->getGrid();
 
+    const T gridDelta = grid.getGridDelta();
+
     typename lsDomain<T, D>::DomainType &oldDomain = levelSet->getDomain();
 
-    const T gridDelta = levelSet->getGrid().getGridDelta();
+    //const T gridDelta = levelSet->getGrid().getGridDelta();
 
     //Initialize new level set with normalized values
-    lsDomain<T,D> newLS(gridDelta);
+    //TODO: seems to work fine remove comments when integrating
+    //TODO: think of correct way for paralellization!
+    //TODO: We need the old grid because it hast the start indices!
+    lsDomain<T,D> newLS(levelSet->getGrid());
 
-    auto newGrid = newLS.getGrid();
+    //auto newGrid = newLS.getGrid();
 
     typename lsDomain<T, D>::DomainType &newDomain = newLS.getDomain();
 
@@ -123,7 +128,7 @@ public:
             //TODO: Rethink method of checking if point is on the surface
             activePointsSegment.insert(neighborIt.getCenter().getStartIndices());
 
-            std::array<double, 3> n;
+            std::array<double, 3> n = {0., 0., 0.};
             T normN =0.;
 
             for (int i = 0; i < D; i++) {
@@ -142,15 +147,55 @@ public:
             for (int i = 0; i < D; i++) {
               n[i] /= normN;
             }
+
             //renormalized ls value in direction of the normal vector
+            std::array<double, 3> surfacePoint = {0., 0., 0.};
+            std::array<double, 3> gridPoint = {0., 0., 0.};
+
             T max = 0.;
+
             for (unsigned i = 0; i < D; ++i) {
+
+                surfacePoint[i] = double(centerIt.getStartIndices(i)) * gridDelta;
+                gridPoint[i] = double(centerIt.getStartIndices(i)) * gridDelta;
 
                 if (std::abs(n[i]) > max) {
                     max = std::abs(n[i]);
                 }
             }
-            T newLsValue = centerIt.getValue() * max;
+
+            double scaling = centerIt.getValue() * max * gridDelta ;
+            for (unsigned i = 0; i < D; ++i) {
+              surfacePoint[i] -= scaling * n[i];
+            }
+
+            T newLsValue = 0.;
+
+            T surfDist = 0.;
+
+            T gridDist = 0.;
+
+            for (unsigned i = 0; i < D; ++i) {
+              surfDist += surfacePoint[i] * surfacePoint[i];
+
+              gridDist += gridPoint[i] * gridPoint[i];
+            }    
+
+            newLsValue = std::sqrt(gridDist) - std::sqrt(surfDist);
+
+            //if(centerIt.getValue() < 0.)
+            //  newLsValue *= -1;
+     
+
+            //std::cout << centerIt.getValue() << std::endl;
+
+            //T newLsValue1 = centerIt.getValue() * max;
+
+            //std::cout << newLsValue1 << " " << newLsValue << std::endl;
+
+
+
+            
 
             newDomainSegment.insertNextDefinedPoint(neighborIt.getIndices(), newLsValue); 
         }

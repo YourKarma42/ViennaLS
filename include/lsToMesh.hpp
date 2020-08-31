@@ -69,26 +69,10 @@ public:
     std::vector<double> scalarData;
     std::vector<double> subLS;
 
-    int i = 0;
-
     const T gridDelta = levelSet->getGrid().getGridDelta();
 
     for (hrleConstSparseIterator<hrleDomainType> it(levelSet->getDomain());
          !it.isFinished(); ++it) {
-
-         /*  if((hrleVectorType<hrleIndexType, D>(1,4,20) == it.getStartIndices())){
-             std::cout << "WTF!!!!!!!!!" << std::endl;
-             std::cout << it.isDefined() << std::endl;
-             auto test = lsPoints.find(it.getStartIndices());
-             std::cout << (lsPoints.find(it.getStartIndices())!= lsPoints.end())  << std::endl;
-           }
-
-      //std::cout << it.getStartIndices() << std::endl;
-      if(lsPoints.find(it.getStartIndices()) != lsPoints.end()){
-        std::cout << !it.isDefined() << std::endl;
-        std::cout << ((onlyDefined && !it.isDefined()) ||
-          (onlyActive && (lsPoints.find(it.getStartIndices()) == lsPoints.end()))) << std::endl;
-      }*/
 
       if ((onlyDefined && !it.isDefined()) ||
           (onlyActive && (lsPoints.find(it.getStartIndices()) == lsPoints.end())))

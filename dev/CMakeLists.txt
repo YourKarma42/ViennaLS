@@ -30,5 +30,11 @@ add_executable(generalTest generalTest.cpp)
 target_include_directories(generalTest PUBLIC ${VIENNALS_INCLUDE_DIRS})
 target_link_libraries(generalTest PRIVATE ${VIENNALS_LIBRARIES})
 
+add_executable(flaggingTest flaggingTest.cpp)
+target_include_directories(flaggingTest PUBLIC ${VIENNALS_INCLUDE_DIRS})
+target_link_libraries(flaggingTest PRIVATE ${VIENNALS_LIBRARIES})
+
+
+
 
 
