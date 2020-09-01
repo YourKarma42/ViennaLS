@@ -444,7 +444,7 @@ void create_output_Manhatten(lsDomain<NumericType,D> & levelSet,
     //std::vector<std::array<NumericType, D>> normal;
 
 
-    NumericType gridDelta = 1.;//levelSet.getGrid().getGridDelta();
+    NumericType gridDelta = levelSet.getGrid().getGridDelta();
 
     variationOfNormals<NumericType, D> variationOfGrad(gridDelta);
 
@@ -664,7 +664,7 @@ int main() {
     std::vector<lsDomain<NumericType, D> *> levelSets;
 
       //90 grad
-    std::vector<NumericType> planeNormal = {0. , 1. , 0.};
+    std::vector<NumericType> planeNormal = {0. , 0. , 1.};
 
     //22.5 grad
     //planeNormal = {0.0, 0.38268343, 0.92387953};
@@ -680,9 +680,9 @@ int main() {
 
     //lsDomain<NumericType,D> levelSet = makePlane(gridDelta, planeNormal);
 
-    lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, 10.);
+    //lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, 100.);
 
-    //lsDomain<NumericType,D> levelSet = makeTrench(gridDelta, planeNormal);
+    lsDomain<NumericType,D> levelSet = makeTrench(gridDelta, planeNormal);
 
 
 

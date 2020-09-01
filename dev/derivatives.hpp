@@ -4,6 +4,8 @@
 
 #include <hrleSparseBoxIterator.hpp>
 
+//TODO: calculate grid delta values in consturctor
+
 
 
 template <class T, int D> class curvaturGeneralFormula{
@@ -197,7 +199,9 @@ template <class T, int D> class curvaturShapeDerivatives1{
 
 
             //central
-            scondOrderDerivatives[i] = (phi_px - 2.*phi_0 + phi_nx);  
+            //scondOrderDerivatives[i] = (phi_px - 2.*phi_0 + phi_nx);  
+
+            scondOrderDerivatives[i] = (phi_px - 2.*phi_0 + phi_nx)/(gridDelta*gridDelta);  
         }
 
         T result = 0.;
@@ -331,7 +335,7 @@ template <class T, int D> class curvaturShapeDerivatives2{
 
 
             //central
-            scondOrderDerivatives[i] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)*oneThird;
+            scondOrderDerivatives[i] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)/(3*gridDelta*gridDelta);
         }
 
         T result = 0.;
@@ -385,7 +389,7 @@ template <class T, int D> class curvaturShapeBias{
             T phi_px = neighborIterator.getNeighbor(posUnit).getValue();
             T phi_nx = neighborIterator.getNeighbor(negUnit).getValue();
 
-            gradient[i] = std::abs((phi_px - phi_nx)*0.5);
+            gradient[i] = std::abs((phi_px - phi_nx)/(2*gridDelta));
         }
 
         std::array<int, D> order;
@@ -486,7 +490,7 @@ template <class T, int D> class curvaturShapeBias{
             T phi_ny = neighborIterator.getNeighbor(negUnit).getValue();
 
             //central
-            scondOrderDerivatives[i] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)*oneThird;
+            scondOrderDerivatives[i] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)/(3.*gridDelta*gridDelta);
 
 
         }
@@ -724,11 +728,18 @@ template <class T, int D> class curvaturGeneralFormulaBigStencil{
             // second order derivatives in the same direction
             // order array is needed to put derivatives in the correct position in the derivatives array
 
-            d[i] = (phi_px - phi_nx)*0.5;
+            //d[i] = (phi_px - phi_nx)*0.5;
 
-            d[i+3] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)*oneThird;
+            //d[i+3] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)*oneThird;
 
-            d[i+6] = (phi_pp - phi_pn - phi_np + phi_nn)*0.25;
+            //d[i+6] = (phi_pp - phi_pn - phi_np + phi_nn)*0.25;
+
+
+            d[i] = (phi_px - phi_nx)/(2.*gridDelta);
+
+            d[i+3] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)/(3.*gridDelta*gridDelta);
+
+            d[i+6] = (phi_pp - phi_pn - phi_np + phi_nn)/(4.*gridDelta*gridDelta);
 
         }
 
@@ -796,12 +807,15 @@ template <class T, int D> class curvaturGeneralFormulaBigStencilBias{
             T phi_px = neighborIterator.getNeighbor(posUnit).getValue();
             T phi_nx = neighborIterator.getNeighbor(negUnit).getValue();
 
-            d[i] = (phi_px - phi_nx)*0.5;
+            //d[i] = (phi_px - phi_nx)*0.5;
+
+            d[i] = (phi_px - phi_nx)/(2.*gridDelta);
 
             g[i] = std::abs(d[i]);
 
         }
 
+                    
         std::array<int, D> order;
 
         if(g[0] > g[1] ){
@@ -900,8 +914,9 @@ template <class T, int D> class curvaturGeneralFormulaBigStencilBias{
 
             // second order derivatives in the same direction
             // order array is needed to put derivatives in the correct position in the derivatives array
-            d[order[i]+3] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)*oneThird;
+            //d[order[i]+3] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)*oneThird;
 
+            d[order[i]+3] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)/(3.*gridDelta*gridDelta);
 
         }
 
@@ -952,7 +967,10 @@ template <class T, int D> class curvaturGeneralFormulaBigStencilBias{
             //    }else{
             //        d[i+6] = (phi_pn - phi_nn - phi_pp + phi_np)*0.25;
             //    }
-            d[i+6] = (phi_pp - phi_pn - phi_np + phi_nn)*0.25;
+            //d[i+6] = (phi_pp - phi_pn - phi_np + phi_nn)*0.25;
+
+
+            d[i+6] = (phi_pp - phi_pn - phi_np + phi_nn)/(4.*gridDelta*gridDelta);
 
         }
 
