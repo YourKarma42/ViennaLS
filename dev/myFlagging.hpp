@@ -63,15 +63,16 @@ template <class T, int D> class myFlagging{
 
     void apply(std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & activePoints){
 
-        hrleSparseBoxIterator<hrleDomain<T, D>> boxIterator(levelSet->getDomain(), 1);
+        //hrleSparseBoxIterator<hrleDomain<T, D>> boxIterator(levelSet->getDomain(), 1);
 
         
 
-        curvaturGeneralFormula<T, D> curvatureCalculator(1.0);
+        //curvaturGeneralFormula<T, D> curvatureCalculator(1.0);
 
         //curvaturGeneralFormulaBigStencilBias <T, D> curvatureCalculator(1.0);
 
-        //curvaturShapeDerivatives1<T, D> curvatureCalculator(1.0);
+        
+        curvaturShapeDerivatives1<T, D> curvatureCalculator(levelSet->getGrid().getGridDelta());
 
 
 
@@ -129,13 +130,13 @@ template <class T, int D> class myFlagging{
                     continue;
                 } 
 
-                neighborIt.goToIndices(it.getStartIndices());
+                //neighborIt.goToIndices(it.getStartIndices());
 
-                //T curve = curvatureCalculator(neighborIt);
+                T curve = curvatureCalculator(neighborIt);
 
-                boxIterator.goToIndicesSequential(it.getStartIndices());
+                //boxIterator.goToIndicesSequential(it.getStartIndices());
 
-                T curve = curvatureCalculator(boxIterator);
+                //T curve = curvatureCalculator(boxIterator);
 
                 //curveOutput.push_back(curve);
 

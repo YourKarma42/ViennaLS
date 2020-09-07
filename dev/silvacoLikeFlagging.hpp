@@ -105,7 +105,7 @@ template <class T, int D> class silvacoLikeFlagging{
       //TODO: remove
       std::vector<std::array<T,D>> outputNormals;
       
-      hrleConstSparseStarIterator<typename lsDomain<T, D>::DomainType> neighborIt(levelSet->getDomain());
+      //hrleConstSparseStarIterator<typename lsDomain<T, D>::DomainType> neighborIt(levelSet->getDomain());
 
       std::unordered_map<hrleVectorType<hrleIndexType,D>, std::array<T, D>, typename hrleVectorType<hrleIndexType, D>::hash> normals;
 

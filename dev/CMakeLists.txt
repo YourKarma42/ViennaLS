@@ -34,6 +34,10 @@ add_executable(flaggingTest flaggingTest.cpp)
 target_include_directories(flaggingTest PUBLIC ${VIENNALS_INCLUDE_DIRS})
 target_link_libraries(flaggingTest PRIVATE ${VIENNALS_LIBRARIES})
 
+add_executable(iteratorTests iteratorTests.cpp)
+target_include_directories(iteratorTests PUBLIC ${VIENNALS_INCLUDE_DIRS})
+target_link_libraries(iteratorTests PRIVATE ${VIENNALS_LIBRARIES})
+
 
 
 

@@ -680,9 +680,9 @@ int main() {
 
     //lsDomain<NumericType,D> levelSet = makePlane(gridDelta, planeNormal);
 
-    //lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, 100.);
+    lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, 100.);
 
-    lsDomain<NumericType,D> levelSet = makeTrench(gridDelta, planeNormal);
+    //lsDomain<NumericType,D> levelSet = makeTrench(gridDelta, planeNormal);
 
 
 
@@ -690,16 +690,16 @@ int main() {
 
     levelSets.push_back(&levelSet);  
 
-/*
+
     int order = 1;
     lsExpand<NumericType, D>(*(levelSets.back()), 2 * (order + 2) + 1).apply();
 
     std::cout << "Calculating Curvatures..." << std::endl;
 
     create_output_Manhatten(*(levelSets.back()),  "final_output_Manhatten");
-*/
 
 
+/*
     std::cout << "Converting..." << std::endl;
 
     lsConvertEuclid<NumericType, D>  converter(*(levelSets.back()));
@@ -735,7 +735,7 @@ int main() {
 
 
     //timingTests(*(levelSets.back()), activePoints);
-
+*/
 
     std::cout << "Finished" << std::endl;
 
