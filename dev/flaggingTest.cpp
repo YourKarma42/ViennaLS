@@ -201,7 +201,7 @@ int main(int argc, char* argv[]) {
 
     lsMesh narrowband3;
     std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<NumericType, D>(levelSet, narrowband3, true, true).apply(activePoints);
+    lsToMesh<NumericType, D>(levelSet, narrowband3).apply(activePoints);
 
     //TODO: create output function!
 

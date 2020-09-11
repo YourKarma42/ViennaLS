@@ -62,27 +62,7 @@ template <class T, int D> class myFlagging{
 
 
     void apply(std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & activePoints){
-
-        //hrleSparseBoxIterator<hrleDomain<T, D>> boxIterator(levelSet->getDomain(), 1);
-
         
-
-        //curvaturGeneralFormula<T, D> curvatureCalculator(1.0);
-
-        //curvaturGeneralFormulaBigStencilBias <T, D> curvatureCalculator(1.0);
-
-        
-        curvaturShapeDerivatives1<T, D> curvatureCalculator(levelSet->getGrid().getGridDelta());
-
-
-
-        //variationOfNormals<T, D> variationOfGrad(gridDelta);
-
-        //curvaturShapeDerivatives2<T, D> shape2(gridDelta);
-
-        //curvaturShapeBias<T, D> shapeBias(gridDelta);
-
-        //curvaturGeneralFormulaBigStencil <T, D> generalFormulaBig(gridDelta);
 
         auto grid = levelSet->getGrid();
 
@@ -104,7 +84,17 @@ template <class T, int D> class myFlagging{
             p = omp_get_thread_num();
 #endif
 
-            hrleConstSparseStarIterator<typename lsDomain<T, D>::DomainType> neighborIt(domain);
+
+            curvaturGeneralFormula<T, D> curvatureCalculator(levelSet->getGrid().getGridDelta());
+
+            hrleSparseBoxIterator<hrleDomain<T, D>> boxIterator(levelSet->getDomain(), 1);
+
+            //curvaturGeneralFormulaBigStencilBias <T, D> curvatureCalculator(1.0);
+
+            //hrleConstSparseStarIterator<typename lsDomain<T, D>::DomainType> neighborIt(domain);
+
+            //curvaturShapeDerivatives1<T, D> curvatureCalculator(levelSet->getGrid().getGridDelta());
+
 
             std::unordered_map<hrleVectorType<hrleIndexType, D>, T, typename hrleVectorType<hrleIndexType, D>::hash> &flagsSegment = 
             flagsReserve[p];
@@ -132,11 +122,11 @@ template <class T, int D> class myFlagging{
 
                 //neighborIt.goToIndices(it.getStartIndices());
 
-                T curve = curvatureCalculator(neighborIt);
+                //T curve = curvatureCalculator(neighborIt);
 
-                //boxIterator.goToIndicesSequential(it.getStartIndices());
+                boxIterator.goToIndicesSequential(it.getStartIndices());
 
-                //T curve = curvatureCalculator(boxIterator);
+                T curve = curvatureCalculator(boxIterator);
 
                 //curveOutput.push_back(curve);
 

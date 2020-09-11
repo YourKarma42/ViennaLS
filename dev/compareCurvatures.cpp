@@ -603,6 +603,7 @@ void create_output_Euklid(lsDomain<NumericType,D> & levelSet,
         neighborIterator.goToIndicesSequential(centerIt.getStartIndices());
 
         neighborStarIterator.goToIndicesSequential(centerIt.getStartIndices());
+        
 
         meanCurvatureSD1.push_back(shape1(neighborStarIterator));
 
@@ -655,7 +656,7 @@ int main() {
 
     omp_set_num_threads(4);
 
-    NumericType gridDelta = 0.5;
+    NumericType gridDelta = 0.25;
 
     //______________________________First____________________________________________________________________
 
@@ -699,6 +700,7 @@ int main() {
     create_output_Manhatten(*(levelSets.back()),  "final_output_Manhatten");
 
 
+
 /*
     std::cout << "Converting..." << std::endl;
 
@@ -733,9 +735,9 @@ int main() {
 
     create_output_Euklid(*(levelSets.back()), activePoints, "final_output_Euklid");
 
-
-    //timingTests(*(levelSets.back()), activePoints);
 */
+    //timingTests(*(levelSets.back()), activePoints);
+
 
     std::cout << "Finished" << std::endl;
 

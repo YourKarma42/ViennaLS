@@ -4,6 +4,8 @@
 
 #include <hrleSparseBoxIterator.hpp>
 
+#include "hrleTestIterator.hpp"
+
 //TODO: calculate grid delta values in consturctor
 
 
@@ -29,8 +31,130 @@ template <class T, int D> class curvaturGeneralFormula{
         phi_nx | phi_0  | phi px
         phi_nn | phi_ny | phi_nn
     */
-
     T operator()(hrleSparseBoxIterator<hrleDomain<T, D>> & neighborIterator){
+    //T operator()(hrleCartesianPlaneIterator<hrleDomain<T, D>> & neighborIterator){
+
+        //calculate all needed derivatives in the xy yz and xz plane
+
+        std::array<T, 9> d;
+       
+   
+        //get required ls values
+
+        for (int i = 0; i < D; i++) {
+
+            hrleVectorType<hrleIndexType, D> posUnit(0);
+            hrleVectorType<hrleIndexType, D> negUnit(0);
+
+            posUnit[i] = 1;
+            negUnit[i] = -1;
+
+            int second_pos = (i+1) % D;
+
+            //if(i == 1){
+            //    second_pos = 0;
+            //}
+
+            //get required ls values
+            T phi_0 = neighborIterator.getCenter().getValue();
+
+            T phi_px = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_nx = neighborIterator.getNeighbor(negUnit).getValue();
+
+            posUnit[second_pos] = 1;
+            negUnit[second_pos] = 1;
+
+            T phi_pp = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_np = neighborIterator.getNeighbor(negUnit).getValue();
+
+            posUnit[second_pos] = -1;
+            negUnit[second_pos] = -1;
+
+            T phi_pn = neighborIterator.getNeighbor(posUnit).getValue();
+            T phi_nn = neighborIterator.getNeighbor(negUnit).getValue();
+
+            posUnit[i] = 0;
+            negUnit[i] = 0;
+
+            posUnit[second_pos] = 1;
+            negUnit[second_pos] = -1;
+
+            //T phi_py = neighborIterator.getNeighbor(posUnit).getValue();
+            //T phi_ny = neighborIterator.getNeighbor(negUnit).getValue();
+           
+/*
+            // first order derivative
+            d[i] = (phi_px - phi_nx)*0.5;
+
+            // second order derivatives in the same direction
+            d[i+3] = (phi_px - 2.*phi_0 + phi_nx);
+
+            d[i+6] = (phi_pp - phi_pn -phi_np + phi_nn)*0.25;
+*/
+
+
+            // first order derivative
+            d[i] = (phi_px - phi_nx)/(2.*gridDelta);
+
+            // second order derivatives in the same direction
+            d[i+3] = (phi_px - 2.*phi_0 + phi_nx)/(gridDelta*gridDelta);
+
+            d[i+6] = (phi_pp - phi_pn -phi_np + phi_nn)/(4.*gridDelta*gridDelta);
+
+        }
+
+
+        T norm_grad_pow3 = 0.;
+        for(int i = 0; i < D; i++){
+
+            norm_grad_pow3 += d[i]*d[i];
+        }
+        norm_grad_pow3 = std::sqrt(norm_grad_pow3);
+
+        //d[0] = d[0]/norm_grad_pow3;        
+        //d[1] = d[1]/norm_grad_pow3;
+
+        //norm_grad_pow3 = 1.;
+
+        //std::cout << norm_grad_pow3 << std::endl;
+
+        norm_grad_pow3 = norm_grad_pow3*norm_grad_pow3*norm_grad_pow3;
+
+
+
+        //TODO: not a clean solution think of something different
+/*
+        if((d[3]*d[1]*d[1] - 2.*d[1]*d[0]*d[6] + d[4]*d[0]*d[0])/(norm_grad_pow3) < 0.024){
+            std::cout << d[3] << std::endl;
+            std::cout << d[4] << std::endl;
+            std::cout << norm_grad_pow3 << std::endl;
+            std::cout << "mist" << std::endl;
+        }
+        */
+
+        if(D == 2){
+            return (d[3]*d[1]*d[1] - 2.*d[1]*d[0]*d[6] + d[4]*d[0]*d[0])
+                    /(norm_grad_pow3);
+        }
+
+        //expanded fom of the equation
+        return
+        //    F_x²(f_yy + F_zz)  +    F_y²(F_xx + F_zz)    +     F_z²(F_xx + F_yy)
+        (d[0]*d[0]*(d[4] + d[5]) + d[1]*d[1]*(d[3] + d[5]) + d[2]*d[2]*(d[3] + d[4]) +
+
+        //-2*[F_xF_yF_xy   +   F_xF_zF_xz   +   F_yF_zF_yz]
+        -2.*(d[0]*d[1]*d[6] + d[0]*d[2]*d[8] + d[1]*d[2]*d[7]))
+                
+        // /2*(F_x² + F_y² + F_z²)^(3/2)
+        /(2.*norm_grad_pow3);
+
+        //(F_x, F_y, F_z, F_xx, F_yy, F_zz, F_xy, F_yz, F_zx)
+
+
+    }
+
+    //T operator()(hrleSparseBoxIterator<hrleDomain<T, D>> & neighborIterator){
+    T operator()(hrleCartesianPlaneIterator<hrleDomain<T, D>> & neighborIterator){
 
         //calculate all needed derivatives in the xy yz and xz plane
 
@@ -818,9 +942,12 @@ template <class T, int D> class curvaturGeneralFormulaBigStencilBias{
                     
         std::array<int, D> order;
 
+        //TODO: konstant die ebenen hinschreiben hinschreiben
+
         if(g[0] > g[1] ){
 
             if(g[1] > g[2]){
+                //0,1,2
 
                 order[0] = 0;
                 order[1] = 1;
@@ -829,12 +956,14 @@ template <class T, int D> class curvaturGeneralFormulaBigStencilBias{
             }else{
 
                 if(g[0] > g[2]){
-
+                    //0,2,1
+                    
                     order[0] = 0;
                     order[1] = 2;
                     order[2] = 1;
 
                 }else{
+                    //2,0,1
 
                     order[0] = 2;
                     order[1] = 0;
@@ -843,6 +972,7 @@ template <class T, int D> class curvaturGeneralFormulaBigStencilBias{
             }
         }else{
             if(g[1] <= g[2]){
+                //2,1,0
 
                 order[0] = 2;
                 order[1] = 1;
@@ -851,10 +981,12 @@ template <class T, int D> class curvaturGeneralFormulaBigStencilBias{
             }else{
 
                 if(g[2] > g[0]){
+                    //1,2,0
                     order[0] = 1;
                     order[1] = 2;
                     order[2] = 0;
                 }else{
+                    //1,0,2
                     order[0] = 1;
                     order[1] = 0;
                     order[2] = 2;
@@ -918,17 +1050,21 @@ template <class T, int D> class curvaturGeneralFormulaBigStencilBias{
 
             d[order[i]+3] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)/(3.*gridDelta*gridDelta);
 
+            //d[order[i]+]
+
         }
 
         //TODO: check what timig results say
         //For dxdy derivatives the biasing leads to using wrong planes
+        //For dxdy derivatives all 3 planes are required
         for (int i = 0; i < D; i++) {
 
             hrleVectorType<hrleIndexType, D> posUnit(0);
             hrleVectorType<hrleIndexType, D> negUnit(0);
 
-            int first_axis = i;
+            int first_axis = i; //i;
             int second_axis = (i+1)%D;
+
 
             posUnit[first_axis] = 1;
             negUnit[first_axis] = -1;
@@ -959,18 +1095,11 @@ template <class T, int D> class curvaturGeneralFormulaBigStencilBias{
 
             T phi_py = neighborIterator.getNeighbor(posUnit).getValue();
             T phi_ny = neighborIterator.getNeighbor(negUnit).getValue();
-
-
-            //if(changeDerivatives == true){
-            //    if(i != 2){
-            //        d[i+6] = (phi_pp - phi_pn - phi_np + phi_nn)*0.25;
-            //    }else{
-            //        d[i+6] = (phi_pn - phi_nn - phi_pp + phi_np)*0.25;
-            //    }
-            //d[i+6] = (phi_pp - phi_pn - phi_np + phi_nn)*0.25;
-
+           
 
             d[i+6] = (phi_pp - phi_pn - phi_np + phi_nn)/(4.*gridDelta*gridDelta);
+
+
 
         }
 
