@@ -1050,6 +1050,9 @@ template <class T, int D> class curvaturGeneralFormulaBigStencilBias{
 
             d[order[i]+3] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)/(3.*gridDelta*gridDelta);
 
+            // does not improve qulity significantly
+            d[order[i]] = (phi_pp - phi_np + phi_pn - phi_nn)/(4.*gridDelta);
+
             //d[order[i]+]
 
         }

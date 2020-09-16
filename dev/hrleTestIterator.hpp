@@ -2,16 +2,18 @@
 #define HRLE_TEST_ITERATOR_HPP
 
 //TODO: change location into HRLE
-#include "../../../ViennaHRLE/viennahrle/include/hrleSparseIterator.hpp"
-#include "../../../ViennaHRLE/viennahrle/include/hrleSparseOffsetIterator.hpp"
+//#include "../../../ViennaHRLE/viennahrle/include/hrleSparseIterator.hpp"
+//#include "../../../ViennaHRLE/viennahrle/include/hrleSparseOffsetIterator.hpp"
 
+#include "../../ViennaHRLE/include/hrleSparseIterator.hpp"
+#include "../../ViennaHRLE/include/hrleSparseOffsetIterator.hpp"
 
 /// This neighbor iterator consists of (2*order+1)^dimension
 /// hrleSparseOffsetIterator s for the cartesian neighbors and the center.
 /// Whenever one of these iterators reach a defined grid point, the square
 /// iterator stops.
 /// Neighbors are indexed lexicographically from negative cartesian directions:
-/// order 1:            order 2:
+/// order 1:            order 2:d
 ///                     20 21 22 23 24
 /// 6 7 8               15 16 17 18 19
 /// 3 4 5               10 11 12 13 14
@@ -38,9 +40,10 @@ template <class hrleDomain> class hrleCartesianPlaneIterator {
   std::vector<hrleSparseOffsetIterator<hrleDomain>> neighborIterators;
 
   bool isDefined() const {
-    if (neighborIterators[centerIndex].isDefined())
+    if (centerIterator.isDefined())
       return true;
-    for (int i = 0; i < 2 * D; i++) {
+    //TODO: rethink!
+    for (int i = 0; i <  D; i++) {
       if (neighborIterators[i].isDefined())
         return true;
     }
@@ -126,7 +129,7 @@ template <class hrleDomain> class hrleCartesianPlaneIterator {
     std::vector<int> pos(0);
     int anz = 0;
 
-    unsigned index;
+    unsigned index = 0;
 
     unsigned zeroPos = 0;
 
@@ -169,6 +172,7 @@ template <class hrleDomain> class hrleCartesianPlaneIterator {
       }
 
     }
+
 
     return index;
   }
@@ -318,11 +322,11 @@ hrleSparseIterator<hrleDomain> &getCenter() { return centerIterator; }
   template <class V> void goToIndices(V &v) {
     const unsigned numNeighbors = neighborIterators.size();
     getCenter().goToIndices(v);
-    for (int i = 0; i < int(order); ++i) {
-      for (int j = 0; j < numNeighbors; ++j) {
-        neighborIterators[j].goToIndices(v);
-      }
+    //for (int i = 0; i < int(order); ++i) {
+    for (int j = 0; j < numNeighbors; ++j) {
+      neighborIterators[j].goToIndices(v);
     }
+    //}
   }
 
   /// Advances the iterator to position v.

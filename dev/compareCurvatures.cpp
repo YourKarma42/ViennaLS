@@ -301,7 +301,7 @@ lsDomain<double, D> makeSphere(double gridDelta, double radius){
 
     std::cout << "creating sphere..." << std::endl;
 
-    double origin[3] = {0., 0., 0.};
+    double origin[3] = {0.7, 0.3, 0.9};
     
     lsDomain<double,D> levelSet(gridDelta);
 
@@ -665,7 +665,7 @@ int main() {
     std::vector<lsDomain<NumericType, D> *> levelSets;
 
       //90 grad
-    std::vector<NumericType> planeNormal = {0. , 0. , 1.};
+    //std::vector<NumericType> planeNormal = {0. , 0. , 1.};
 
     //22.5 grad
     //planeNormal = {0.0, 0.38268343, 0.92387953};
@@ -691,17 +691,17 @@ int main() {
 
     levelSets.push_back(&levelSet);  
 
-
+/*
     int order = 1;
     lsExpand<NumericType, D>(*(levelSets.back()), 2 * (order + 2) + 1).apply();
 
     std::cout << "Calculating Curvatures..." << std::endl;
 
     create_output_Manhatten(*(levelSets.back()),  "final_output_Manhatten");
+*/
 
 
 
-/*
     std::cout << "Converting..." << std::endl;
 
     lsConvertEuclid<NumericType, D>  converter(*(levelSets.back()));
@@ -735,7 +735,7 @@ int main() {
 
     create_output_Euklid(*(levelSets.back()), activePoints, "final_output_Euklid");
 
-*/
+
     //timingTests(*(levelSets.back()), activePoints);
 
 

@@ -13,6 +13,8 @@
 #include <unordered_set>
 
 //TODO: expand!
+//Important: This implementation uses a BRUTE FORCE approach to calculate the signed distance field.
+//To achive better performance a fast sweeping approach should be used.
 /// This class expands the level set to a certain numeber of layers by using the Eikonal equation.
 /// This expansion is more accurate than using Manhatten expansion, however it has alonger Calculation time.
 /// This form of expansion keeps the signed distance porperty of the level set |grad(f)| = 1.
@@ -23,6 +25,7 @@ template <class T, int D> class lsEikonalExpand {
   lsDomain<T, D> *levelSet = nullptr;
 
   T gridDeltaSqared = 0.;
+  T gridDelta = 0.;
 
   //TOD: make call by reference (problem with initialization)
   std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash>  activePoints;
@@ -36,6 +39,7 @@ public:
       : levelSet(&passedLevelSet), activePoints(passedActivePoints) {
         //TODO: check if level set is euler normalized and give error if not
       gridDeltaSqared = levelSet->getGrid().getGridDelta() * levelSet->getGrid().getGridDelta();
+      gridDelta = levelSet->getGrid().getGridDelta();
   }
 
   void setLevelSet(lsDomain<T, D> &passedLevelSet) {
@@ -59,7 +63,7 @@ public:
     //Do FMM until the narrowband converges
     //The convergence of the narrowband depends on the width that is required
     //TODO: at the moment random static number think of better way to end the loop
-    for(int runs=0; runs < 10; runs++){
+    for(int runs=0; runs < 6; runs++){
 
       const int allocationFactor =
           1 + 1.0 / static_cast<double>(runs);
@@ -133,14 +137,77 @@ public:
 
 
     //TODO: constant is stupid change to dynamic value e.g stop condition or fixed amount of steps
-    T width = 3.;
-    levelSet->getDomain().segment();
-    levelSet->finalize(width);
+    //T width = 3.;
+    //levelSet->getDomain().segment();
+    //levelSet->finalize(width);
+
+    prune();
 
   }
 
 
   private:
+
+  //The brute force apprach calculates a distance value for too many grid points. 
+  void prune(){
+    //make this a parameter!
+    int order = 2;
+
+    T maxDistance = std::sqrt(gridDeltaSqared+gridDeltaSqared) * order;
+
+   
+    auto &grid = levelSet->getGrid();
+    lsDomain<T, D> newlsDomain(grid);
+    typename lsDomain<T, D>::DomainType &newDomain = newlsDomain.getDomain();
+    typename lsDomain<T, D>::DomainType &domain = levelSet->getDomain();
+
+    newDomain.initialize(domain.getNewSegmentation(),
+                          domain.getAllocation());
+
+#pragma omp parallel num_threads(newDomain.getNumberOfSegments())
+      {
+        int p = 0;
+#ifdef _OPENMP
+        p = omp_get_thread_num();
+#endif
+
+      auto &domainSegment = newDomain.getDomainSegment(p);
+
+      hrleVectorType<hrleIndexType, D> startVector =
+          (p == 0) ? grid.getMinGridPoint()
+              : newDomain.getSegmentation()[p - 1];
+
+      hrleVectorType<hrleIndexType, D> endVector =
+          (p != static_cast<int>(newDomain.getNumberOfSegments() - 1))
+              ? newDomain.getSegmentation()[p]
+              : grid.incrementIndices(grid.getMaxGridPoint()); 
+
+
+      //Fast Marching
+      for (hrleSparseIterator<typename lsDomain<T, D>::DomainType>
+        it(domain, startVector);
+        it.getStartIndices() < endVector; it.next()) {
+
+        if(std::abs(it.getValue()) <= maxDistance){
+          //add them to the new lvl set
+          domainSegment.insertNextDefinedPoint(it.getStartIndices(),
+                                              it.getValue()); 
+        }else{
+            domainSegment.insertNextUndefinedPoint(it.getStartIndices(), 
+              (it.getValue()<0.) ? lsDomain<T, D>::NEG_VALUE : lsDomain<T, D>::POS_VALUE);
+        }
+      }  
+      newDomain.finalize();
+      levelSet->deepCopy(newlsDomain);
+
+    }
+
+        //TODO: constant is stupid change to dynamic value e.g stop condition or fixed amount of steps
+    T width = 2.;
+    levelSet->finalize(width);
+    levelSet->getDomain().segment();
+
+  }
 
   T calcDist(hrleSparseStarIterator<typename lsDomain<T, D>::DomainType>& starStencil, bool inside){
 

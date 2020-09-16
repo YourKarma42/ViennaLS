@@ -121,7 +121,7 @@ int main(int argc, char* argv[]) {
 
     omp_set_num_threads(numThreads);
 
-    NumericType gridDelta = 0.5;
+    NumericType gridDelta = 0.25;
 
     auto start = std::chrono::high_resolution_clock::now(); 
 
@@ -159,23 +159,25 @@ int main(int argc, char* argv[]) {
 
     expander.apply(); 
 
+        
+
        // NumericType gridDelta = levelSet.getGrid().getGridDelta();
 
         curvaturGeneralFormula<NumericType, D> generalFormula(gridDelta);
-
-        std::vector<NumericType> meanCurvatureGeneralFormula;
 
         auto grid = levelSets.back()->getGrid();
 
         typename lsDomain<NumericType, D>::DomainType &domain = levelSets.back()->getDomain();
 
-        std::vector<std::unordered_map<hrleVectorType<hrleIndexType, D>, NumericType, typename hrleVectorType<hrleIndexType, D>::hash>> flagsReserve(
-        levelSets.back()->getNumberOfSegments());
-
 
         double pointsPerSegment =
         double(2 * levelSets.back()->getDomain().getNumberOfPoints()) /
         double(levelSets.back()->getLevelSetWidth());
+
+        std::vector<std::vector<NumericType>> meanCurvatureGeneralFormulaReserve(levelSets.back()->getNumberOfSegments());
+
+
+        start = std::chrono::high_resolution_clock::now(); 
 
 
 #pragma omp parallel num_threads((levelSets.back())->getNumberOfSegments())
@@ -184,6 +186,9 @@ int main(int argc, char* argv[]) {
 #ifdef _OPENMP
             p = omp_get_thread_num();
 #endif
+
+            std::vector<NumericType> &meanCurveSegment = meanCurvatureGeneralFormulaReserve[p];
+            meanCurveSegment.reserve(pointsPerSegment);
             hrleCartesianPlaneIterator<typename lsDomain<NumericType, D>::DomainType> neighborIt(domain, 1);
 
             hrleVectorType<hrleIndexType, D> startVector =
@@ -200,17 +205,33 @@ int main(int argc, char* argv[]) {
                 domain, startVector);
                 it.getStartIndices() < endVector; ++it){
 
-            if (!it.isDefined() || (activePoints.find(it.getStartIndices()) == activePoints.end())) {
-                continue;
-            }
+                if (!it.isDefined() || (activePoints.find(it.getStartIndices()) == activePoints.end())) {
+                    continue;
+                }
+                
+                neighborIt.goToIndices(it.getStartIndices());
+                //std::cout << "TÜ" << std::endl;
 
-            neighborIt.goToIndices(it.getStartIndices());
-
-            meanCurvatureGeneralFormula.push_back(generalFormula(neighborIt));
+                meanCurveSegment.push_back(generalFormula(neighborIt));
 
             
             }
+
+
         }
+
+        stop = std::chrono::high_resolution_clock::now(); 
+
+        std::vector<NumericType> meanCurvatureGeneralFormula;
+
+        meanCurvatureGeneralFormula.reserve(levelSets.back()->getNumberOfPoints()); 
+
+        for (unsigned i = 0; i < levelSets.back()->getNumberOfSegments(); ++i){ 
+            meanCurvatureGeneralFormula.insert(meanCurvatureGeneralFormula.end(), meanCurvatureGeneralFormulaReserve[i].begin(),
+             meanCurvatureGeneralFormulaReserve[i].end());
+        }
+
+        std::cout << "time plane: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << " "; 
 
             lsMesh narrowband;
     std::cout << "Extracting narrowband..." << std::endl;
@@ -220,6 +241,56 @@ int main(int argc, char* argv[]) {
     narrowband.insertNextScalarData(meanCurvatureGeneralFormula, "general formula");
   
     lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "PlaneIteratorTest" ).apply();
+
+    std::cout << std::endl;
+
+        start = std::chrono::high_resolution_clock::now(); 
+
+#pragma omp parallel num_threads((levelSets.back())->getNumberOfSegments())
+        {
+            int p = 0;
+#ifdef _OPENMP
+            p = omp_get_thread_num();
+#endif
+            hrleSparseBoxIterator<typename lsDomain<NumericType, D>::DomainType> neighborIt(domain, 1);
+
+            std::vector<NumericType> &meanCurveSegment = meanCurvatureGeneralFormulaReserve[p];
+            meanCurveSegment.reserve(pointsPerSegment);
+
+            hrleVectorType<hrleIndexType, D> startVector =
+            (p == 0) ? grid.getMinGridPoint()
+                : domain.getSegmentation()[p - 1];
+
+            hrleVectorType<hrleIndexType, D> endVector =
+            (p != static_cast<int>(domain.getNumberOfSegments() - 1))
+                ? domain.getSegmentation()[p]
+                : grid.incrementIndices(grid.getMaxGridPoint());
+
+
+            for(hrleSparseIterator<typename lsDomain<NumericType, D>::DomainType> it(
+                domain, startVector);
+                it.getStartIndices() < endVector; ++it){
+
+                if (!it.isDefined() || (activePoints.find(it.getStartIndices()) == activePoints.end())) {
+                    continue;
+                }
+
+                neighborIt.goToIndices(it.getStartIndices());
+
+                meanCurveSegment.push_back(generalFormula(neighborIt));
+
+            
+            }
+        }
+
+        stop = std::chrono::high_resolution_clock::now(); 
+
+        for (unsigned i = 0; i < levelSets.back()->getNumberOfSegments(); ++i){ 
+            meanCurvatureGeneralFormula.insert(meanCurvatureGeneralFormula.end(), meanCurvatureGeneralFormulaReserve[i].begin(),
+            meanCurvatureGeneralFormulaReserve[i].end());
+        }
+
+        std::cout << "time plane: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << " "; 
 
     
 
