@@ -3,7 +3,7 @@
 
 #include <lsPreCompileMacros.hpp>
 
-#include <iostream>
+#include <vector>
 
 #include <hrleSparseIterator.hpp>
 #include <lsDomain.hpp>
@@ -16,24 +16,26 @@
 template <class T, int D> class lsToMesh {
   typedef typename lsDomain<T, D>::DomainType hrleDomainType;
 
-  const lsDomain<T, D> *levelSet = nullptr;
-  lsMesh *mesh = nullptr;
+  lsSmartPointer<lsDomain<T, D>> levelSet = nullptr;
+  lsSmartPointer<lsMesh> mesh = nullptr;
   bool onlyDefined;
   bool onlyActive;
+  static constexpr long long maxDomainExtent = 1e6;
 
 public:
   lsToMesh(){};
 
-  lsToMesh(const lsDomain<T, D> &passedLevelSet, lsMesh &passedMesh,
-           bool passedOnlyDefined = true, bool passedOnlyActive = false)
-      : levelSet(&passedLevelSet), mesh(&passedMesh),
+  lsToMesh(const lsSmartPointer<lsDomain<T, D>> passedLevelSet,
+           lsSmartPointer<lsMesh> passedMesh, bool passedOnlyDefined = true,
+           bool passedOnlyActive = false)
+      : levelSet(passedLevelSet), mesh(passedMesh),
         onlyDefined(passedOnlyDefined), onlyActive(passedOnlyActive) {}
 
-  void setLevelSet(lsDomain<T, D> &passedlsDomain) {
-    levelSet = &passedlsDomain;
+  void setLevelSet(lsSmartPointer<lsDomain<T, D>> passedlsDomain) {
+    levelSet = passedlsDomain;
   }
 
-  void setMesh(lsMesh &passedMesh) { mesh = &passedMesh; }
+  void setMesh(lsSmartPointer<lsMesh> passedMesh) { mesh = passedMesh; }
 
   void setOnlyDefined(bool passedOnlyDefined) {
     onlyDefined = passedOnlyDefined;
@@ -73,6 +75,18 @@ public:
           (onlyActive && std::abs(it.getValue()) > 0.5))
         continue;
 
+      if (!onlyDefined && !it.isDefined()) {
+        bool skipPoint = false;
+        for (unsigned i = 0; i < D; ++i) {
+          if (std::abs(it.getStartIndices(i)) > maxDomainExtent) {
+            skipPoint = true;
+          }
+        }
+        if (skipPoint) {
+          continue;
+        }
+      }
+
       // insert vertex
       std::array<unsigned, 1> vertex;
       vertex[0] = mesh->nodes.size();
@@ -88,7 +102,11 @@ public:
       mesh->insertNextNode(node);
 
       // insert LS value
-      scalarData.push_back(it.getValue());
+      if (it.isDefined()) {
+        scalarData.push_back(it.getDefinedValue());
+      } else {
+        scalarData.push_back((it.getValue() < 0) ? -1000 : 1000);
+      }
       subLS.push_back(it.getSegmentId());
     }
 

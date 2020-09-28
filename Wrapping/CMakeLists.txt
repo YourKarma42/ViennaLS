@@ -1,7 +1,8 @@
 cmake_minimum_required(VERSION 3.4)
 
 # lowercase viennaLS is the python export
-project(ViennaLSPython)
+project("ViennaLSPython"
+        VERSION ${CMAKE_PROJECT_VERSION})
 
 # include viennals
 set(ViennaHRLE_DIR $ENV{VIENNAHRLE_DIR})
@@ -46,7 +47,7 @@ if(VIENNALS_BUILD_PYTHON_3_6)
   target_compile_definitions(${VIENNALS_PYTHON_MODULE_NAME_3D} PRIVATE -DVIENNALS_PYTHON_DIMENSION=3)
 endif()
 
-if(VIENNALS_BUILD_PYTHON_2_7 AND NOT EXAMPLE_BUILD_PYTHON_3_6)
+if(VIENNALS_BUILD_PYTHON_2_7 AND NOT VIENNALS_BUILD_PYTHON_3_6)
   set(PYBIND11_PYTHON_VERSION 2.7 CACHE STRING "Python version")
 
   find_package(pybind11)

@@ -10,15 +10,15 @@ var hierarchy =
     [ "lsDomain< T, D >", "classlsDomain.html", null ],
     [ "lsInternal::lsEnquistOsher< T, D, order >", "classlsInternal_1_1lsEnquistOsher.html", null ],
     [ "lsExpand< T, D >", "classlsExpand.html", null ],
-    [ "lsFastAdvect< T, D >", "classlsFastAdvect.html", null ],
-    [ "lsFastAdvectDistribution< T, D >", "classlsFastAdvectDistribution.html", [
+    [ "lsInternal::lsFiniteDifferences< T, scheme >", "classlsInternal_1_1lsFiniteDifferences.html", null ],
+    [ "lsFromMesh< T, D >", "classlsFromMesh.html", null ],
+    [ "lsFromSurfaceMesh< T, D >", "classlsFromSurfaceMesh.html", null ],
+    [ "lsFromVolumeMesh< T, D >", "classlsFromVolumeMesh.html", null ],
+    [ "lsGeometricAdvect< T, D >", "classlsGeometricAdvect.html", null ],
+    [ "lsGeometricAdvectDistribution< T, D >", "classlsGeometricAdvectDistribution.html", [
       [ "lsBoxDistribution< T, D >", "classlsBoxDistribution.html", null ],
       [ "lsSphereDistribution< T, D >", "classlsSphereDistribution.html", null ]
     ] ],
-    [ "lsFastAdvectDistribution< hrleCoordType, D >", "classlsFastAdvectDistribution.html", null ],
-    [ "lsInternal::lsFiniteDifferences< T, scheme >", "classlsInternal_1_1lsFiniteDifferences.html", null ],
-    [ "lsFromSurfaceMesh< T, D >", "classlsFromSurfaceMesh.html", null ],
-    [ "lsFromVolumeMesh< T, D >", "classlsFromVolumeMesh.html", null ],
     [ "lsInternal::lsGraph", "classlsInternal_1_1lsGraph.html", null ],
     [ "lsInternal::lsLaxFriedrichs< T, D, order >", "classlsInternal_1_1lsLaxFriedrichs.html", null ],
     [ "lsInternal::lsLocalLaxFriedrichs< T, D, order >", "classlsInternal_1_1lsLocalLaxFriedrichs.html", null ],
@@ -42,13 +42,24 @@ var hierarchy =
     [ "lsToMesh< T, D >", "classlsToMesh.html", null ],
     [ "lsToSurfaceMesh< T, D >", "classlsToSurfaceMesh.html", null ],
     [ "lsToVoxelMesh< T, D >", "classlsToVoxelMesh.html", null ],
-    [ "lsVelocityField< T >", "classlsVelocityField.html", null ],
     [ "lsVelocityField", null, [
       [ "AirGapDeposition.velocityField", "classAirGapDeposition_1_1velocityField.html", null ],
       [ "Deposition.velocityField", "classDeposition_1_1velocityField.html", null ]
     ] ],
+    [ "lsVelocityField< T >", "classlsVelocityField.html", null ],
     [ "lsVelocityField< double >", "classlsVelocityField.html", null ],
     [ "lsVTKReader", "classlsVTKReader.html", null ],
     [ "lsVTKWriter", "classlsVTKWriter.html", null ],
-    [ "lsWriter< T, D >", "classlsWriter.html", null ]
+    [ "lsWriter< T, D >", "classlsWriter.html", null ],
+    [ "shared_ptr", null, [
+      [ "lsSmartPointer< T >", "classlsSmartPointer.html", null ],
+      [ "lsSmartPointer< const lsGeometricAdvectDistribution< hrleCoordType, D > >", "classlsSmartPointer.html", null ],
+      [ "lsSmartPointer< lsBox< T, D > >", "classlsSmartPointer.html", null ],
+      [ "lsSmartPointer< lsDomain< T, D > >", "classlsSmartPointer.html", null ],
+      [ "lsSmartPointer< lsMesh >", "classlsSmartPointer.html", null ],
+      [ "lsSmartPointer< lsPlane< T, D > >", "classlsSmartPointer.html", null ],
+      [ "lsSmartPointer< lsPointCloud< T, D > >", "classlsSmartPointer.html", null ],
+      [ "lsSmartPointer< lsSphere< T, D > >", "classlsSmartPointer.html", null ],
+      [ "lsSmartPointer< lsVelocityField< T > >", "classlsSmartPointer.html", null ]
+    ] ]
 ];
