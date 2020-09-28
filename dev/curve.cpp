@@ -22,7 +22,7 @@ int main() {
 
 
   double gridDelta = 0.5;
-
+/*
 
   //create sphere
   std::cout << "creating sphere..." << std::endl;
@@ -65,7 +65,7 @@ int main() {
   pointcloud.insertNextScalarData(test, "test_data");
 
   lsVTKWriter(pointcloud, lsFileFormatEnum::VTU ,"sphere_points").apply();
-
+*/
 
   std::cout << "Finished" << std::endl;
 

@@ -66,8 +66,6 @@ public:
     std::vector<double> gridSpacing;
     std::vector<std::array<double, 3>> normals;
 
-<<<<<<< HEAD
-=======
     // save the extent of the resulting mesh
     std::array<double, 3> minimumExtent = {};
     std::array<double, 3> maximumExtent = {};
@@ -76,7 +74,6 @@ public:
       maximumExtent[i] = std::numeric_limits<double>::lowest();
     }
 
->>>>>>> upstream/master
     values.reserve(normalVectors.size());
     gridSpacing.reserve(normalVectors.size());
     normals.reserve(normalVectors.size());
