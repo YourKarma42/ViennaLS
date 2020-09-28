@@ -19,7 +19,8 @@
 template <class T, int D> class lsConvertEuclid {
   //typedef typename lsDomain<T, D>::DomainType hrleDomainType;
 
-  lsDomain<T, D> *levelSet = nullptr;
+  lsSmartPointer<lsDomain<T, D>> levelSet = nullptr;
+
 
   std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> activePoints;
 
@@ -29,12 +30,12 @@ template <class T, int D> class lsConvertEuclid {
 public:
   lsConvertEuclid() {}
 
-  lsConvertEuclid(lsDomain<T, D> &passedLevelSet, T passedMaxValue = 0.5)
-      : levelSet(&passedLevelSet), maxValue(passedMaxValue) {
+  lsConvertEuclid(lsSmartPointer<lsDomain<T, D>> passedLevelSet, T passedMaxValue = 0.5)
+      : levelSet(passedLevelSet), maxValue(passedMaxValue) {
   }
 
-  void setLevelSet(lsDomain<T, D> &passedLevelSet) {
-    levelSet = &passedLevelSet;
+  void setLevelSet(lsSmartPointer<lsDomain<T, D>> passedLevelSet) {
+    levelSet = passedLevelSet;
   }
 
   void setMaxValue(const T passedMaxValue) { maxValue = passedMaxValue; }
@@ -53,26 +54,20 @@ public:
     }
 
     //increase lvl set size
-    lsExpand<T, D>(*levelSet, 4).apply();
+    lsExpand<T, D>(levelSet, 4).apply();
 
 
     auto grid = levelSet->getGrid();
 
     const T gridDelta = grid.getGridDelta();
 
-    typename lsDomain<T, D>::DomainType &oldDomain = levelSet->getDomain();
-
-    //const T gridDelta = levelSet->getGrid().getGridDelta();
-
-    //Initialize new level set with normalized values
-    //TODO: seems to work fine remove comments when integrating
-    //TODO: think of correct way for paralellization!
-    //TODO: We need the old grid because it hast the start indices!
     lsDomain<T,D> newLS(levelSet->getGrid());
 
-    //auto newGrid = newLS.getGrid();
+    //auto &grid = levelSet->getGrid();
 
-    typename lsDomain<T, D>::DomainType &newDomain = newLS.getDomain();
+    auto newlsDomain = lsSmartPointer<lsDomain<T, D>>::New(grid);
+    typename lsDomain<T, D>::DomainType &newDomain = newlsDomain->getDomain();
+    typename lsDomain<T, D>::DomainType &oldDomain = levelSet->getDomain();
 
     newDomain.initialize(oldDomain.getNewSegmentation(), oldDomain.getAllocation());
 
@@ -212,12 +207,12 @@ public:
     }
 
     newDomain.finalize();
-    levelSet->deepCopy(newLS);
-
-
-
+    levelSet->deepCopy(newlsDomain);
+    levelSet->getDomain().segment();
 
   }
+
+
 
 
 };

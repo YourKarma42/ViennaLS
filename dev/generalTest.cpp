@@ -45,15 +45,18 @@ constexpr int D = 2;
 typedef double NumericType;
 typedef typename lsDomain<NumericType, D>::DomainType hrleDomainType;
 
-lsDomain<double, D> makeSphere(double gridDelta, double radius){
+lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius){
 
     std::cout << "creating sphere..." << std::endl;
 
     double origin[3] = {0., 0., 0.};
-    
-    lsDomain<double,D> levelSet(gridDelta);
 
-    lsMakeGeometry<double, D>(levelSet, lsSphere<double, D>(origin, radius)).apply();
+    auto levelSet =
+        lsSmartPointer<lsDomain<double, D>>::New(gridDelta);
+
+    lsMakeGeometry<double, D>(
+      levelSet, lsSmartPointer<lsSphere<double, D>>::New(origin, radius))
+      .apply();
 
 
     return levelSet;
@@ -76,29 +79,30 @@ int main() {
     auto start = std::chrono::high_resolution_clock::now(); 
     auto stop = std::chrono::high_resolution_clock::now(); 
 
-    std::vector<lsDomain<NumericType, D> *> levelSets;
+    std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets;
 
     NumericType radius = 10.;
 
-    lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, radius);
+    lsSmartPointer<lsDomain<double, D>> levelSet = makeSphere(gridDelta, radius);
 
-    levelSets.push_back(&levelSet);  
+    levelSets.push_back(levelSet);  
 
-    lsMesh pointcloud;
+    auto pointcloud = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting point cloud..." << std::endl;
-    lsToMesh<double, D>(*(levelSets.back()), pointcloud, true, true).apply();
-    //lsToDiskMesh<double, D>(*(levelSets.back()), pointcloud).apply();
+    
+    lsToMesh<double, D>(levelSets.back(), pointcloud, true, true).apply();
+
     lsVTKWriter(pointcloud, lsFileFormatEnum::VTU ,"point_cloud").apply();
 
 /*
     int order = 1;
-    lsExpand<NumericType, D>(*(levelSets.back()), 2 * (order + 2) + 1).apply();
+    lsExpand<NumericType, D>(levelSets.back(), 2 * (order + 2) + 1).apply();
 */
 
 
     std::cout << "Converting..." << std::endl;
 
-    lsConvertEuclid<NumericType, D>  converter(*(levelSets.back()));
+    lsConvertEuclid<NumericType, D>  converter(levelSets.back());
 
     converter.apply();
 
@@ -118,37 +122,17 @@ int main() {
 
     std::cout << "Fast Marching..." << std::endl;
 
-    //lsEikonalExpand<NumericType, D> expander(*(levelSets.back()), activePoints);
+    lsEikonalExpand<NumericType, D> expander(levelSets.back(), activePoints);
 
-    lsExpandSphere<NumericType, D> expander(*(levelSets.back()), activePoints, radius);
+    //lsExpandSphere<NumericType, D> expander(*(levelSets.back()), activePoints, radius);
 
 
     expander.apply(); 
 
-    std::vector<NumericType> x;
-    std::vector<NumericType> y;
-    std::vector<NumericType> z;
-
-
-    for(hrleConstSparseIterator<hrleDomainType> it(levelSets.back()->getDomain());
-        !it.isFinished(); ++it){
-
-        x.push_back(it.getStartIndices()[0]);
-        y.push_back(it.getStartIndices()[1]);
-
-    }
-
-
-
-    lsMesh narrowband1;
+    auto narrowband1 = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting after Marching..." << std::endl;
-    lsToMesh<NumericType, D>(*(levelSets.back()), narrowband1, true, false).apply(activePoints);
-
-    narrowband1.insertNextScalarData(x, "X");
-    narrowband1.insertNextScalarData(y, "Y");
-    //lsToMesh<NumericType, D>(levelSet, narrowband1, true, false).apply();
-    //lsPoints
-  
+    lsToMesh<NumericType, D>(levelSets.back(), narrowband1, true, false).apply(activePoints);
+ 
     lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "FMMOutput" ).apply();
 
     stop = std::chrono::high_resolution_clock::now(); 
@@ -177,14 +161,14 @@ int main() {
 
 
 
-    lsMesh narrowband3;
+    auto narrowband3 = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<NumericType, D>(*(levelSets.back()), narrowband3, true, true).apply(activePoints);
+    lsToMesh<NumericType, D>(levelSets.back(), narrowband3, true, true).apply(activePoints);
     //lsToMesh<NumericType, D>(levelSet, narrowband3, true, true).apply();
     //lsPoints
 
     //narrowband3.insertNextVectorData(normal, "Normal");
-    narrowband3.insertNextScalarData(curve, "curvature");
+    narrowband3->insertNextScalarData(curve, "curvature");
   
     lsVTKWriter(narrowband3, lsFileFormatEnum::VTU , "narrowband" ).apply();
 

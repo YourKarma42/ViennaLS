@@ -16,7 +16,7 @@ template <class T, int D> class myFlagging{
 
     typedef typename lsDomain<T, D>::DomainType hrleDomainType;
 
-    lsDomain<T, D> *levelSet = nullptr;
+    lsSmartPointer<lsDomain<double, D>> levelSet = nullptr;
 
     T flatBoundary = 0.;
 
@@ -26,8 +26,8 @@ template <class T, int D> class myFlagging{
 
     public:
 
-    myFlagging(lsDomain<T, D> &passedLevelSet, T passedBoundary)
-      : levelSet(&passedLevelSet), flatBoundary(passedBoundary){
+    myFlagging(lsSmartPointer<lsDomain<double, D>> passedLevelSet, T passedBoundary)
+      : levelSet(passedLevelSet), flatBoundary(passedBoundary){
         //flags.reserve(levelSet->getNumberOfPoints());
 
         curveOutput.reserve(levelSet->getNumberOfPoints());

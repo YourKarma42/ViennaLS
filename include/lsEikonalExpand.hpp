@@ -21,7 +21,7 @@
 template <class T, int D> class lsEikonalExpand {
   typedef typename lsDomain<T, D>::DomainType hrleDomainType;
 
-  lsDomain<T, D> *levelSet = nullptr;
+  lsSmartPointer<lsDomain<T, D>> levelSet = nullptr;
 
   T gridDeltaSqared = 0.;
   T gridDelta = 0.;
@@ -33,16 +33,16 @@ template <class T, int D> class lsEikonalExpand {
 public:
   lsEikonalExpand() {}
 
-  lsEikonalExpand(lsDomain<T, D> &passedLevelSet, 
+  lsEikonalExpand(lsSmartPointer<lsDomain<T, D>> passedLevelSet, 
       std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash>  passedActivePoints)
-      : levelSet(&passedLevelSet), activePoints(passedActivePoints) {
+      : levelSet(passedLevelSet), activePoints(passedActivePoints) {
         //TODO: check if level set is euler normalized and give error if not
       gridDeltaSqared = levelSet->getGrid().getGridDelta() * levelSet->getGrid().getGridDelta();
       gridDelta = levelSet->getGrid().getGridDelta();
   }
 
-  void setLevelSet(lsDomain<T, D> &passedLevelSet) {
-    levelSet = &passedLevelSet;
+  void setLevelSet(lsSmartPointer<lsDomain<T, D>> passedLevelSet) {
+    levelSet = passedLevelSet;
   }
 
   void setActivePoints(std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash>  passedActivePoints) {
@@ -70,9 +70,11 @@ public:
       //const T limit = (runs + 1) * T(0.5);
       
       auto &grid = levelSet->getGrid();
-      lsDomain<T, D> newlsDomain(grid);
-      typename lsDomain<T, D>::DomainType &newDomain = newlsDomain.getDomain();
+
+      auto newlsDomain = lsSmartPointer<lsDomain<T, D>>::New(grid);
+      typename lsDomain<T, D>::DomainType &newDomain = newlsDomain->getDomain();
       typename lsDomain<T, D>::DomainType &domain = levelSet->getDomain();
+
 
       newDomain.initialize(domain.getNewSegmentation(),
                            domain.getAllocation() * allocationFactor);
@@ -156,8 +158,8 @@ public:
 
    
     auto &grid = levelSet->getGrid();
-    lsDomain<T, D> newlsDomain(grid);
-    typename lsDomain<T, D>::DomainType &newDomain = newlsDomain.getDomain();
+    auto newlsDomain = lsSmartPointer<lsDomain<T, D>>::New(grid);
+    typename lsDomain<T, D>::DomainType &newDomain = newlsDomain->getDomain();
     typename lsDomain<T, D>::DomainType &domain = levelSet->getDomain();
 
     newDomain.initialize(domain.getNewSegmentation(),

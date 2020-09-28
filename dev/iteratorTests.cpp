@@ -11,6 +11,8 @@
 #include <lsToSurfaceMesh.hpp>
 #include <lsVTKWriter.hpp>
 
+//#include <lsSmartPointer.hpp>
+
 
 #include <unordered_set>
 
@@ -39,7 +41,7 @@
 constexpr int D = 3;
 typedef double NumericType;
 
-lsDomain<double, D> makeTrench(double gridDelta){
+lsSmartPointer<lsDomain<double, D>> makeTrench(double gridDelta, std::vector<NumericType>& planeNormal){
 
     std::cout << "creating trench..." << std::endl;
 
@@ -58,45 +60,60 @@ lsDomain<double, D> makeTrench(double gridDelta){
     boundaryCons[D - 1] =
         lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
 
-    lsDomain<double, D> levelSet(bounds, boundaryCons, gridDelta);
+    auto levelSet =
+      lsSmartPointer<lsDomain<double, D>>::New(bounds, boundaryCons, gridDelta);
 
-    double origin[3] = {0., 0., 0.};
-    double planeNormal[3] = {0., D == 2, D == 3};
+    std::vector<NumericType> origin = {0., 0., 0.};
 
-    //create the plane
-    lsMakeGeometry<double, D>(levelSet, lsPlane<double, D>(origin, planeNormal))
-        .apply();
+    {
+      auto plane = lsSmartPointer<lsPlane<double, D>>::New(origin, planeNormal);
+      lsMakeGeometry<double, D>(levelSet, plane).apply();
+    }
 
     {
         // create layer used for booling
         std::cout << "Creating box..." << std::endl;
-        lsDomain<double, D> trench(bounds, boundaryCons, gridDelta);
-        double minCorner[3] = {-extent - 1, -extent / 4., -15.};
-        double maxCorner[3] = {extent + 1, extent / 4., 1.0};
-        lsMakeGeometry<double, D>(trench, lsBox<double, D>(minCorner, maxCorner))
-            .apply();
+
+        auto trench = lsSmartPointer<lsDomain<double, D>>::New(bounds, boundaryCons, gridDelta);
+
+        if(D == 3){
+          double minCorner[3] = {-extent - 1, -extent / 4., -15.};
+          double maxCorner[3] = {extent + 1, extent / 4., 1.0};
+          auto box = lsSmartPointer<lsBox<double, D>>::New(minCorner, maxCorner);
+          lsMakeGeometry<double, D>(trench, box).apply();
+        }else{
+          double minCorner[2] = {-extent / 4., -15.};
+          double maxCorner[2] = {extent / 4., 1.0};
+          auto box = lsSmartPointer<lsBox<double, D>>::New(minCorner, maxCorner);
+          lsMakeGeometry<double, D>(trench, box).apply();
+        }
+        //lsMakeGeometry<double, D>(trench, lsBox<double, D>(minCorner, maxCorner))
+        //    .apply();
 
 
         // Create trench geometry
         std::cout << "Booling trench..." << std::endl;
         lsBooleanOperation<double, D>(levelSet, trench,
-                                    lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
-            .apply();
+                                      lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+        .apply();
     }
 
     return levelSet;
     
 }
 
-lsDomain<double, D> makeSphere(double gridDelta, double radius){
+lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius){
 
     std::cout << "creating sphere..." << std::endl;
 
-    double origin[3] = {0., 0., 0.};
+    double origin[3] = {0.0, 0.0, 0.0};
     
-    lsDomain<double,D> levelSet(gridDelta);
+    auto levelSet =
+        lsSmartPointer<lsDomain<double, D>>::New(gridDelta);
 
-    lsMakeGeometry<double, D>(levelSet, lsSphere<double, D>(origin, radius)).apply();
+    lsMakeGeometry<double, D>(
+      levelSet, lsSmartPointer<lsSphere<double, D>>::New(origin, radius))
+      .apply();
 
 
     return levelSet;
@@ -127,13 +144,13 @@ int main(int argc, char* argv[]) {
 
     auto stop = std::chrono::high_resolution_clock::now(); 
 
-    std::vector<lsDomain<NumericType, D> *> levelSets;
+    std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets;
 
-    lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, 10.);
+    lsSmartPointer<lsDomain<double, D>> levelSet = makeSphere(gridDelta, 10.);
 
     //lsDomain<NumericType,D> levelSet = makeTrench(gridDelta);
 
-    levelSets.push_back(&levelSet);  
+    levelSets.push_back(levelSet);  
 
     //lsMesh mesh;
     //std::cout << "Extracting surface mesh..." << std::endl;
@@ -146,7 +163,7 @@ int main(int argc, char* argv[]) {
     //convert level set
     std::cout << "Converting..." << std::endl;
 
-    lsConvertEuclid<NumericType, D>  converter(*(levelSets.back()));
+    lsConvertEuclid<NumericType, D>  converter(levelSets.back());
 
     converter.apply();
 
@@ -155,7 +172,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "FMM..." << std::endl;
 
-    lsEikonalExpand<NumericType, D> expander(*(levelSets.back()), activePoints);
+    lsEikonalExpand<NumericType, D> expander(levelSets.back(), activePoints);
 
     expander.apply(); 
 
@@ -235,12 +252,12 @@ int main(int argc, char* argv[]) {
 
         std::cout << std::endl;
 
-            lsMesh narrowband;
+    auto narrowband = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
     lsToMesh<NumericType, D>(levelSet, narrowband, true, true).apply(activePoints);
     //lsPoints
 
-    narrowband.insertNextScalarData(meanCurvatureGeneralFormula, "general formula");
+    narrowband->insertNextScalarData(meanCurvatureGeneralFormula, "general formula");
   
     lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "PlaneIteratorTest" ).apply();
 

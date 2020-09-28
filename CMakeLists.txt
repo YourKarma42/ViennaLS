@@ -2,7 +2,9 @@ cmake_minimum_required(VERSION 3.4)
 
 project(
   "ViennaLS"
-  VERSION 1.0.0)
+  VERSION 1.2.0)
+
+add_definitions(-DVIENNALS_VERSION=${PROJECT_VERSION})
 
 include(GNUInstallDirs)
 
@@ -10,6 +12,17 @@ include(GNUInstallDirs)
 # workaround for passing references
 if("${CMAKE_CXX_COMPILER_ID}" STREQUAL "GNU")
   SET(CMAKE_CXX_STANDARD "17")
+endif()
+
+# set default build type
+SET(DEFAULT_BUILD_TYPE "Release")
+if(NOT CMAKE_BUILD_TYPE AND NOT CMAKE_CONFIGURATION_TYPES)
+  message(STATUS "Setting build type to '${DEFAULT_BUILD_TYPE}' as none was specified.")
+  set(CMAKE_BUILD_TYPE "${DEFAULT_BUILD_TYPE}" CACHE
+      STRING "Choose the type of build." FORCE)
+  # Set the possible values of build type for cmake-gui
+  set_property(CACHE CMAKE_BUILD_TYPE PROPERTY STRINGS
+    "Debug" "Release" "MinSizeRel" "RelWithDebInfo")
 endif()
 
 # tell VS to export all symbols to its dll files
@@ -35,8 +48,10 @@ if(VIENNALS_USE_VTK)
     message(STATUS "Found VTK")
     add_definitions(-DVIENNALS_USE_VTK)
     include(${VTK_USE_FILE})
-    # only link needed vtk libraries
-    #set(VTK_LIBRARIES vtksys;vtkIOCore;vtkexpat;vtklz4;vtkzlib;vtklzma;vtkdoubleconversion;vtkCommonMisc;vtkCommonSystem;vtkIOXML)
+    # only link needed vtk libraries for static builds
+    if(VIENNALS_STATIC_BUILD)
+      set(VTK_LIBRARIES vtksys;vtkIOCore;vtkexpat;vtklz4;vtkzlib;vtklzma;vtkdoubleconversion;vtkCommonMisc;vtkCommonSystem;vtkIOXML)
+    endif(VIENNALS_STATIC_BUILD)
     list(APPEND VIENNALS_LIBRARIES ${VTK_LIBRARIES})
     list(APPEND VIENNALS_PYTHON_LIBRARIES ${VTK_LIBRARIES})
   else(VTK_FOUND)
@@ -50,12 +65,13 @@ endif(VIENNALS_USE_VTK)
 #################################################
 option(VIENNALS_BUILD_SHARED_LIBS "Build template specialisations for shorter compile times." OFF)
 if(VIENNALS_BUILD_SHARED_LIBS)
-  # add all specialisation source files
   if(NOT ViennaHRLE_DIR)
     set(ViennaHRLE_DIR $ENV{VIENNAHRLE_DIR})
   endif(NOT ViennaHRLE_DIR)
   list(APPEND VIENNALS_LIBRARIES ViennaHRLE)
   find_package(ViennaHRLE REQUIRED)
+  
+  # add all specialisation source files
   file(GLOB SPECIALISATION_CPPS "lib/*.cpp")
 
   # build static or shared object for library
