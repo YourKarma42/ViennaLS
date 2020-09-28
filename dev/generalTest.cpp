@@ -18,6 +18,7 @@
 
 #include <lsConvertEuclid.hpp>
 #include <lsEikonalExpand.hpp>
+#include <../dev/expandSphere.hpp>
 
 //#include <hrleSparseBoxIterator.hpp>
 //#include <hrleVectorType.hpp>
@@ -77,7 +78,9 @@ int main() {
 
     std::vector<lsDomain<NumericType, D> *> levelSets;
 
-    lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, 10.);
+    NumericType radius = 10.;
+
+    lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, radius);
 
     levelSets.push_back(&levelSet);  
 
@@ -115,7 +118,10 @@ int main() {
 
     std::cout << "Fast Marching..." << std::endl;
 
-    lsEikonalExpand<NumericType, D> expander(*(levelSets.back()), activePoints);
+    //lsEikonalExpand<NumericType, D> expander(*(levelSets.back()), activePoints);
+
+    lsExpandSphere<NumericType, D> expander(*(levelSets.back()), activePoints, radius);
+
 
     expander.apply(); 
 

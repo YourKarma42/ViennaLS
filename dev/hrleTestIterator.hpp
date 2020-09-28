@@ -2,11 +2,11 @@
 #define HRLE_TEST_ITERATOR_HPP
 
 //TODO: change location into HRLE
-//#include "../../../ViennaHRLE/viennahrle/include/hrleSparseIterator.hpp"
-//#include "../../../ViennaHRLE/viennahrle/include/hrleSparseOffsetIterator.hpp"
+#include "../../../ViennaHRLE/viennahrle/include/hrleSparseIterator.hpp"
+#include "../../../ViennaHRLE/viennahrle/include/hrleSparseOffsetIterator.hpp"
 
-#include "../../ViennaHRLE/include/hrleSparseIterator.hpp"
-#include "../../ViennaHRLE/include/hrleSparseOffsetIterator.hpp"
+//#include "../../ViennaHRLE/include/hrleSparseIterator.hpp"
+//#include "../../ViennaHRLE/include/hrleSparseOffsetIterator.hpp"
 
 /// This neighbor iterator consists of (2*order+1)^dimension
 /// hrleSparseOffsetIterator s for the cartesian neighbors and the center.
@@ -34,145 +34,50 @@ template <class hrleDomain> class hrleCartesianPlaneIterator {
   const hrleIndexType sideLength;
   const hrleIndexType sliceArea;
   const hrleIndexType centerIndex;
-  hrleSparseIterator<hrleDomain> centerIterator;
-
   hrleVectorType<hrleIndexType, D> currentCoords;
   std::vector<hrleSparseOffsetIterator<hrleDomain>> neighborIterators;
+  std::vector<unsigned> planeCoords;
 
   bool isDefined() const {
-    if (centerIterator.isDefined())
+    if (neighborIterators[centerIndex].isDefined())
       return true;
-    //TODO: rethink!
-    for (int i = 0; i <  D; i++) {
+    for (int i = 0; i < 2 * D; i++) {
       if (neighborIterators[i].isDefined())
         return true;
     }
     return false;
   }
 
-  unsigned axisEnd = (D * 2 * order);
-  unsigned planeEnd = 4 * order * order;
-
-  // | Star Iterator |  YZ plane  |  XZ plane  |  XY plane  |
-  // | D * 2 * order |  4*order^2 |  4*order^2 |  4*order^2 |
-
   hrleVectorType<hrleIndexType, D>
   indexToCoordinate(hrleIndexType index) const {
+    hrleVectorType<hrleIndexType, D> coordinate;
 
-    hrleVectorType<hrleIndexType, D> coordinate(hrleIndexType(0));
-
-    //TESTING
-    //std::cout << index << std::endl;
-
-    if(index < axisEnd){
-      //The index is part of the star iterator    
-
-      unsigned plane = index / (2*order);
-
-      unsigned axisPos = index % (2*order);
-
-      if(axisPos/order == 0){
-        coordinate[plane] = -(axisPos/order + order); 
-      }else{
-        //TODO:only order 1
-        coordinate[plane] = (axisPos/order); 
-      }
-
-    }else{
-      //shift coordinates to planes
-
-      index -= axisEnd;
-
-      unsigned zeroCoordinate = index / planeEnd;
-
-      index = index % planeEnd;
-
-      unsigned depthAxis = index / (2*order);
-
-      unsigned sideAxis = index % (2*order);
-
-
-      unsigned pos1 = (zeroCoordinate + 1) % D;
-      unsigned pos2 = (zeroCoordinate + 2) % D;
-      //flip axis for the last 2 indices so that we always look at the plane from the lower dimesnion
-      if((zeroCoordinate + 2) % D == 0){
-        unsigned tmp = pos1;
-        pos1 = pos2;
-        pos2 = tmp;
-      }
-
-
-      if(depthAxis >= order){
-        coordinate[pos1] = order; 
-      }else{
-        coordinate[pos1] = -order; 
-      }
-
-      if(sideAxis >= order){
-        coordinate[pos2] = order; 
-      }else{
-        coordinate[pos2] = -order; 
-      }
-
+    if (D > 2) {
+      coordinate[2] = index / sliceArea;
+      index = index % sliceArea;
     }
 
-    //TESTING
-    //std::cout << coordinate << "  " << coordinateToIndex(coordinate) << std::endl;
- 
+    coordinate[1] = index / sideLength;
+    coordinate[0] = index % sideLength;
+
+    // shift to the middle
+    for (unsigned i = 0; i < D; ++i)
+      coordinate[i] -= order;
+
     return coordinate;
   }
 
   template <class V> hrleIndexType coordinateToIndex(V coordinate) const {
+    // shift to the middle
+    for (unsigned i = 0; i < D; ++i)
+      coordinate[i] += order;
 
-    //TODO:consider (0,0,0) vector
-
-    std::vector<int> pos(0);
-    int anz = 0;
-
-    unsigned index = 0;
-
-    unsigned zeroPos = 0;
-
-    for(int i = 0; i<D; i++){
-
-      if(coordinate[i] != 0){      
-        pos.push_back(i);
-        anz++;
-      }else{
-        zeroPos = i;
-      }
-
+    hrleIndexType index = 0;
+    if (D > 2) {
+      index += coordinate[2] * sliceArea;
     }
-
-    if(anz == 1){
-      if(coordinate[pos[0]] > 0){
-        return (pos[0]*2*order)+1;
-      }else{
-        return (pos[0]*2*order);
-      }
-    }else{
-
-      index = axisEnd + (zeroPos * planeEnd);
-
-      if(coordinate[pos[0]] > 0){
-        index += 2*order * (order + coordinate[pos[0]] - 1);
-      }else{
-        index += 2*order * (order + coordinate[pos[0]]);
-      }
-
-      if(order == 1){
-        if(coordinate[pos[1]] > 0){
-          index += coordinate[pos[1]];
-        }else{
-          index += order + coordinate[pos[1]];
-        }
-      }else{
-        //TODO test for order = 2
-
-      }
-
-    }
-
+    index += coordinate[1] * sideLength;
+    index += coordinate[0];
 
     return index;
   }
@@ -180,16 +85,27 @@ template <class hrleDomain> class hrleCartesianPlaneIterator {
   /// push offset iterators lexicographically into std::vector from -order to
   /// +order
   template <class V> void initializeNeigbors(const V &v) {
+    const unsigned numNeighbors = unsigned(std::pow((1 + 2 * order), D));
 
-    //TODO for D = 2 this is equivalent to a box iterator star iterator!
-    const unsigned numNeighbors = unsigned(std::pow((1 + 2 * order), D)-(8*std::pow(order,D)));
+    const unsigned numPlaneCoords =  unsigned(std::pow((1 + 2 * order), D) - (8*std::pow(order, D)));
 
-    neighborIterators.reserve(numNeighbors - 1);
+    neighborIterators.reserve(numNeighbors);
 
-    for (unsigned i = 0; i < numNeighbors - 1; ++i) {
+    planeCoords.reserve(numPlaneCoords);
+
+    for (unsigned i = 0; i < numNeighbors; ++i) {
       hrleVectorType<hrleIndexType, D> offset = indexToCoordinate(i);
       neighborIterators.push_back(
           hrleSparseOffsetIterator<hrleDomain>(domain, offset, v));
+      //get coordinates that only lie in planes    
+      int coords = 0;
+      for(int j = 0; j < D; j++){
+        if(offset[j] != 0)
+          coords++;
+      }
+      if(coords < 3)
+        planeCoords.push_back(i);
+
     }
   }
 
@@ -210,9 +126,8 @@ public:
                         const unsigned passedOrder = 1)
       : domain(passedDomain), order(passedOrder),
         sideLength(1 + 2 * passedOrder), sliceArea(sideLength * sideLength),
-        centerIndex(1),
-        currentCoords(v),
-        centerIterator(passedDomain, v) {
+        centerIndex(coordinateToIndex(hrleVectorType<hrleIndexType, D>(0))),
+        currentCoords(v) {
 
     initializeNeigbors(v);
   }
@@ -221,9 +136,8 @@ public:
                         const unsigned passedOrder = 1)
       : domain(passedDomain), order(passedOrder),
         sideLength(1 + 2 * passedOrder), sliceArea(sideLength * sideLength),
-        centerIndex(1),
-        currentCoords(domain.getGrid().getMinGridPoint()),
-        centerIterator(passedDomain) {
+        centerIndex(coordinateToIndex(hrleVectorType<hrleIndexType, D>(0))),
+        currentCoords(domain.getGrid().getMinGridPoint()) {
 
     initializeNeigbors(passedDomain.getGrid().getMinIndex());
   }
@@ -308,11 +222,13 @@ public:
     return neighborIterators[coordinateToIndex(relativeCoordinate)];
   }
 
-hrleSparseIterator<hrleDomain> &getCenter() { return centerIterator; }
+  hrleSparseOffsetIterator<hrleDomain> &getCenter() {
+    return neighborIterators[centerIndex];
+  }
 
   const hrleVectorType<hrleIndexType, D> &getIndices() { return currentCoords; }
 
-  unsigned getSize() { return neighborIterators.size(); }
+  unsigned getSize() { return planeCoords.size(); }
 
   bool isFinished() const { return getCenter().isFinished(); }
 
@@ -320,13 +236,13 @@ hrleSparseIterator<hrleDomain> &getCenter() { return centerIterator; }
   /// Uses random access to move, so it is be slower
   /// than goToIndicesSequential for repeated serial calls.
   template <class V> void goToIndices(V &v) {
-    const unsigned numNeighbors = neighborIterators.size();
+    const unsigned numPlaneNeighbours = planeCoords.size();
     getCenter().goToIndices(v);
-    //for (int i = 0; i < int(order); ++i) {
-    for (int j = 0; j < numNeighbors; ++j) {
-      neighborIterators[j].goToIndices(v);
+    for (int i = 0; i < int(order); ++i) {
+      for (int j = 0; j < numPlaneNeighbours; ++j) {
+        neighborIterators[planeCoords[j]].goToIndices(v);
+      }
     }
-    //}
   }
 
   /// Advances the iterator to position v.

@@ -301,7 +301,7 @@ lsDomain<double, D> makeSphere(double gridDelta, double radius){
 
     std::cout << "creating sphere..." << std::endl;
 
-    double origin[3] = {0.7, 0.3, 0.9};
+    double origin[3] = {0.0, 0.0, 0.0};
     
     lsDomain<double,D> levelSet(gridDelta);
 
@@ -736,7 +736,7 @@ int main() {
     create_output_Euklid(*(levelSets.back()), activePoints, "final_output_Euklid");
 
 
-    //timingTests(*(levelSets.back()), activePoints);
+    timingTests(*(levelSets.back()), activePoints);
 
 
     std::cout << "Finished" << std::endl;

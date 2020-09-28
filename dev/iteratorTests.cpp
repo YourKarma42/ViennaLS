@@ -129,7 +129,7 @@ int main(int argc, char* argv[]) {
 
     std::vector<lsDomain<NumericType, D> *> levelSets;
 
-    lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, 100.);
+    lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, 10.);
 
     //lsDomain<NumericType,D> levelSet = makeTrench(gridDelta);
 
@@ -233,6 +233,8 @@ int main(int argc, char* argv[]) {
 
         std::cout << "time plane: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << " "; 
 
+        std::cout << std::endl;
+
             lsMesh narrowband;
     std::cout << "Extracting narrowband..." << std::endl;
     lsToMesh<NumericType, D>(levelSet, narrowband, true, true).apply(activePoints);
@@ -242,9 +244,9 @@ int main(int argc, char* argv[]) {
   
     lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "PlaneIteratorTest" ).apply();
 
-    std::cout << std::endl;
 
-        start = std::chrono::high_resolution_clock::now(); 
+
+    start = std::chrono::high_resolution_clock::now(); 
 
 #pragma omp parallel num_threads((levelSets.back())->getNumberOfSegments())
         {
@@ -290,7 +292,7 @@ int main(int argc, char* argv[]) {
             meanCurvatureGeneralFormulaReserve[i].end());
         }
 
-        std::cout << "time plane: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << " "; 
+        std::cout << "time Box: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << " "; 
 
     
 

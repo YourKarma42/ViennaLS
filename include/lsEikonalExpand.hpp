@@ -1,7 +1,6 @@
 #ifndef LS_EIKONAL_EXPAND_HPP
 #define LS_EIKONAL_EXPAND_HPP
 
-//TODO: paralellization
 
 #include <lsPreCompileMacros.hpp>
 
@@ -137,11 +136,11 @@ public:
 
 
     //TODO: constant is stupid change to dynamic value e.g stop condition or fixed amount of steps
-    //T width = 3.;
-    //levelSet->getDomain().segment();
-    //levelSet->finalize(width);
+    T width = 3.;
+    levelSet->getDomain().segment();
+    levelSet->finalize(width);
 
-    prune();
+    //prune();
 
   }
 
