@@ -38,6 +38,10 @@ add_executable(iteratorTests iteratorTests.cpp)
 target_include_directories(iteratorTests PUBLIC ${VIENNALS_INCLUDE_DIRS})
 target_link_libraries(iteratorTests PRIVATE ${VIENNALS_LIBRARIES})
 
+#add_executable(StackedNanowire StackedNanowire.cpp)
+#target_include_directories(StackedNanowire PUBLIC ${VIENNALS_INCLUDE_DIRS})
+#target_link_libraries(StackedNanowire PRIVATE ${VIENNALS_LIBRARIES})
+
 
 
 
