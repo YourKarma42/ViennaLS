@@ -2,11 +2,11 @@
 #define HRLE_TEST_ITERATOR_HPP
 
 //TODO: change location into HRLE
-#include "../../../ViennaHRLE/viennahrle/include/hrleSparseIterator.hpp"
-#include "../../../ViennaHRLE/viennahrle/include/hrleSparseOffsetIterator.hpp"
+//#include "../../../ViennaHRLE/viennahrle/include/hrleSparseIterator.hpp"
+//#include "../../../ViennaHRLE/viennahrle/include/hrleSparseOffsetIterator.hpp"
 
-//#include "../../ViennaHRLE/include/hrleSparseIterator.hpp"
-//#include "../../ViennaHRLE/include/hrleSparseOffsetIterator.hpp"
+#include "../../ViennaHRLE/include/hrleSparseIterator.hpp"
+#include "../../ViennaHRLE/include/hrleSparseOffsetIterator.hpp"
 
 /// This neighbor iterator consists of (2*order+1)^dimension
 /// hrleSparseOffsetIterator s for the cartesian neighbors and the center.
