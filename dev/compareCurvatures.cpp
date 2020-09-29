@@ -45,12 +45,12 @@ typedef double NumericType;
 
 typedef typename lsDomain<NumericType, D>::DomainType hrleDomainType;
 
-void timingTests(lsDomain<NumericType,D> & levelSet,
+void timingTests(lsSmartPointer<lsDomain<double, D>> levelSet,
   std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & lsPoints){
 
-    hrleSparseBoxIterator<hrleDomain<NumericType, D>> neighborIterator(levelSet.getDomain(), 1);
+    hrleSparseBoxIterator<hrleDomain<NumericType, D>> neighborIterator(levelSet->getDomain(), 1);
 
-    hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType> neighborStarIterator(levelSet.getDomain());
+    hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType> neighborStarIterator(levelSet->getDomain());
        
     NumericType gridDelta = 1.;//levelSet.getGrid().getGridDelta();
 
@@ -80,7 +80,7 @@ void timingTests(lsDomain<NumericType,D> & levelSet,
     std::cout << "meanCurvatureGeneralFormula" <<std::endl;
     for(int i = 0;i < runs; i ++){
       start = std::chrono::high_resolution_clock::now(); 
-    for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet.getDomain());
+    for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet->getDomain());
       !centerIt.isFinished(); ++centerIt){
    // for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
     //      neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
@@ -111,7 +111,7 @@ void timingTests(lsDomain<NumericType,D> & levelSet,
     std::cout << "meanCurvatureGeneralFormulaBigStencil" <<std::endl;
     for(int i = 0;i < runs; i ++){
       start = std::chrono::high_resolution_clock::now(); 
-      for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet.getDomain());
+      for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet->getDomain());
         !centerIt.isFinished(); ++centerIt){
       // for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
       //      neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
@@ -141,7 +141,7 @@ void timingTests(lsDomain<NumericType,D> & levelSet,
     std::cout << "meanCurvatureGeneralFormulaBigBias" <<std::endl;
     for(int i = 0;i < runs; i ++){
       start = std::chrono::high_resolution_clock::now(); 
-      for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet.getDomain());
+      for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet->getDomain());
         !centerIt.isFinished(); ++centerIt){
       // for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
       //      neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
@@ -172,7 +172,7 @@ void timingTests(lsDomain<NumericType,D> & levelSet,
     std::cout << "VariationOfGradient" <<std::endl;
     for(int i = 0;i < runs; i ++){
       start = std::chrono::high_resolution_clock::now(); 
-      for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet.getDomain());
+      for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet->getDomain());
         !centerIt.isFinished(); ++centerIt){
         // for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
         //      neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
@@ -203,7 +203,7 @@ void timingTests(lsDomain<NumericType,D> & levelSet,
 
     for(int i = 0;i < runs; i ++){
       start = std::chrono::high_resolution_clock::now(); 
-      for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet.getDomain());
+      for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet->getDomain());
         !centerIt.isFinished(); ++centerIt){
     // for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
       //      neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
@@ -234,7 +234,7 @@ void timingTests(lsDomain<NumericType,D> & levelSet,
 
     for(int i = 0;i < runs; i ++){
       start = std::chrono::high_resolution_clock::now(); 
-      for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet.getDomain());
+      for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet->getDomain());
         !centerIt.isFinished(); ++centerIt){
         // for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
         //      neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
@@ -265,7 +265,7 @@ void timingTests(lsDomain<NumericType,D> & levelSet,
 
     for(int i = 0;i < runs; i ++){
       start = std::chrono::high_resolution_clock::now(); 
-      for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet.getDomain());
+      for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet->getDomain());
         !centerIt.isFinished(); ++centerIt){
       // for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
       //      neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
@@ -297,15 +297,18 @@ void timingTests(lsDomain<NumericType,D> & levelSet,
 
 
 
-lsDomain<double, D> makeSphere(double gridDelta, double radius){
+lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius){
 
     std::cout << "creating sphere..." << std::endl;
 
-    double origin[3] = {0.7, 0.3, 0.9};
+    double origin[3] = {0.0, 0.0, 0.0};
     
-    lsDomain<double,D> levelSet(gridDelta);
+    auto levelSet =
+        lsSmartPointer<lsDomain<double, D>>::New(gridDelta);
 
-    lsMakeGeometry<double, D>(levelSet, lsSphere<double, D>(origin, radius)).apply();
+    lsMakeGeometry<double, D>(
+      levelSet, lsSmartPointer<lsSphere<double, D>>::New(origin, radius))
+      .apply();
 
 
     return levelSet;
@@ -333,13 +336,17 @@ lsDomain<double, D> makePlane(double gridDelta, std::vector<NumericType>& planeN
     boundaryCons[D - 2] =
         lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
 
-    lsDomain<double, D> levelSet(bounds, boundaryCons, gridDelta);
+    auto levelSet =
+      lsSmartPointer<lsDomain<double, D>>::New(bounds, boundaryCons, gridDelta);
 
 
     std::vector<NumericType> origin = {0., 0., 0.};
 
-    lsMakeGeometry<double, D>(levelSet, lsPlane<double, D>(origin, planeNormal))
-      .apply();
+
+    {
+      auto plane = lsSmartPointer<lsPlane<double, D>>::New(origin, planeNormal);
+      lsMakeGeometry<double, D>(levelSet, plane).apply();
+    }
 
     return levelSet;
 
@@ -365,28 +372,32 @@ lsDomain<double, D> makeTrench(double gridDelta, std::vector<NumericType>& plane
     boundaryCons[D - 1] =
         lsDomain<NumericType, D>::BoundaryType::INFINITE_BOUNDARY;
 
-    lsDomain<double, D> levelSet(bounds, boundaryCons, gridDelta);
+    auto levelSet =
+      lsSmartPointer<lsDomain<double, D>>::New(bounds, boundaryCons, gridDelta);
 
     std::vector<NumericType> origin = {0., 0., 0.};
 
-    //create the plane
-    lsMakeGeometry<double, D>(levelSet, lsPlane<double, D>(origin, planeNormal))
-        .apply();
+    {
+      auto plane = lsSmartPointer<lsPlane<double, D>>::New(origin, planeNormal);
+      lsMakeGeometry<double, D>(levelSet, plane).apply();
+    }
 
     {
         // create layer used for booling
         std::cout << "Creating box..." << std::endl;
-        lsDomain<double, D> trench(bounds, boundaryCons, gridDelta);
+
+        auto trench = lsSmartPointer<lsDomain<double, D>>::New(bounds, boundaryCons, gridDelta);
+
         if(D == 3){
           double minCorner[3] = {-extent - 1, -extent / 4., -15.};
           double maxCorner[3] = {extent + 1, extent / 4., 1.0};
-          lsMakeGeometry<double, D>(trench, lsBox<double, D>(minCorner, maxCorner))
-            .apply();
+          auto box = lsSmartPointer<lsBox<double, D>>::New(minCorner, maxCorner);
+          lsMakeGeometry<double, D>(trench, box).apply();
         }else{
           double minCorner[2] = {-extent / 4., -15.};
           double maxCorner[2] = {extent / 4., 1.0};
-          lsMakeGeometry<double, D>(trench, lsBox<double, D>(minCorner, maxCorner))
-            .apply();
+          auto box = lsSmartPointer<lsBox<double, D>>::New(minCorner, maxCorner);
+          lsMakeGeometry<double, D>(trench, box).apply();
         }
         //lsMakeGeometry<double, D>(trench, lsBox<double, D>(minCorner, maxCorner))
         //    .apply();
@@ -395,18 +406,18 @@ lsDomain<double, D> makeTrench(double gridDelta, std::vector<NumericType>& plane
         // Create trench geometry
         std::cout << "Booling trench..." << std::endl;
         lsBooleanOperation<double, D>(levelSet, trench,
-                                    lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
-            .apply();
+                                      lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+        .apply();
     }
 
     return levelSet;
     
 }
 
-void create_output_Manhatten(lsDomain<NumericType,D> & levelSet,
+void create_output_Manhatten(lsSmartPointer<lsDomain<double, D>> levelSet,
   std::string output_name){
 
-    hrleSparseBoxIterator<hrleDomain<NumericType, D>> neighborIterator(levelSet.getDomain(), 1);
+    hrleSparseBoxIterator<hrleDomain<NumericType, D>> neighborIterator(levelSet->getDomain(), 1);
 
     std::vector<std::array<NumericType, 3>> normal;
 
@@ -444,7 +455,7 @@ void create_output_Manhatten(lsDomain<NumericType,D> & levelSet,
     //std::vector<std::array<NumericType, D>> normal;
 
 
-    NumericType gridDelta = levelSet.getGrid().getGridDelta();
+    NumericType gridDelta = levelSet->getGrid().getGridDelta();
 
     variationOfNormals<NumericType, D> variationOfGrad(gridDelta);
 
@@ -470,8 +481,8 @@ void create_output_Manhatten(lsDomain<NumericType,D> & levelSet,
 
     //TODO: use hrleConstSparseIterator<hrleDomainType>
     for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
-          neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
-          neighborIt.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
+          neighborIt(levelSet->getDomain(), levelSet->getGrid().getMinGridPoint());
+          neighborIt.getIndices() < levelSet->getGrid().incrementIndices(levelSet->getGrid().getMaxGridPoint()); neighborIt.next()) {
 
         auto &centerIt = neighborIt.getCenter();
         if (!centerIt.isDefined() || (std::abs(centerIt.getValue()) > 0.5)) {
@@ -502,21 +513,21 @@ void create_output_Manhatten(lsDomain<NumericType,D> & levelSet,
 
     }
 
-    lsMesh narrowband;
+    auto narrowband = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
     lsToMesh<NumericType, D>(levelSet, narrowband, true, true).apply();
     //lsPoints
 
 
     //narrowband.insertNextVectorData(normal, "Normal");
-    narrowband.insertNextScalarData(meanCurvatureSD1, "shape operator small stencil");
-    narrowband.insertNextScalarData(meanCurvatureSD2, "shape operator big stencil");
-    narrowband.insertNextScalarData(meanCurvatureGeneralFormula, "general formula");
-    narrowband.insertNextScalarData(meanCurvatureGeneralFormulaBig, "general formula big stencil");
-    narrowband.insertNextScalarData(meanCurvatureGeneralFormulaBigBias, "general formula big stencil bias");
-    narrowband.insertNextScalarData(curveTest, "Curvature Test");
-    narrowband.insertNextScalarData(meanCurvatureNew, "variation of normals");
-    narrowband.insertNextScalarData(meanCurveShapeBias, "shape operator Bias");
+    narrowband->insertNextScalarData(meanCurvatureSD1, "shape operator small stencil");
+    narrowband->insertNextScalarData(meanCurvatureSD2, "shape operator big stencil");
+    narrowband->insertNextScalarData(meanCurvatureGeneralFormula, "general formula");
+    narrowband->insertNextScalarData(meanCurvatureGeneralFormulaBig, "general formula big stencil");
+    narrowband->insertNextScalarData(meanCurvatureGeneralFormulaBigBias, "general formula big stencil bias");
+    narrowband->insertNextScalarData(curveTest, "Curvature Test");
+    narrowband->insertNextScalarData(meanCurvatureNew, "variation of normals");
+    narrowband->insertNextScalarData(meanCurveShapeBias, "shape operator Bias");
 
   
     lsVTKWriter(narrowband, lsFileFormatEnum::VTU , output_name ).apply();
@@ -524,7 +535,7 @@ void create_output_Manhatten(lsDomain<NumericType,D> & levelSet,
 
   }
 
-void create_output_Euklid(lsDomain<NumericType,D> & levelSet,
+void create_output_Euklid(lsSmartPointer<lsDomain<double, D>> levelSet,
   std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & lsPoints,
   std::string output_name){
 
@@ -559,7 +570,7 @@ void create_output_Euklid(lsDomain<NumericType,D> & levelSet,
     //std::vector<std::array<NumericType, D>> normal;
 
 
-    NumericType gridDelta = levelSet.getGrid().getGridDelta();
+    NumericType gridDelta = levelSet->getGrid().getGridDelta();
 
     variationOfNormals<NumericType, D> variationOfGrad(gridDelta);
 
@@ -582,12 +593,12 @@ void create_output_Euklid(lsDomain<NumericType,D> & levelSet,
    //     ? passedlsDomain.getDomain().getSegmentation()[p]
    //     : grid.incrementIndices(grid.getMaxGridPoint());
 
-    hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType> neighborStarIterator(levelSet.getDomain());
+    hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType> neighborStarIterator(levelSet->getDomain());
 
-    hrleSparseBoxIterator<hrleDomain<NumericType, D>> neighborIterator(levelSet.getDomain(), 1);
+    hrleSparseBoxIterator<hrleDomain<NumericType, D>> neighborIterator(levelSet->getDomain(), 1);
 
 
-    for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet.getDomain());
+    for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSet->getDomain());
       !centerIt.isFinished(); ++centerIt){
    // for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
     //      neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
@@ -625,21 +636,21 @@ void create_output_Euklid(lsDomain<NumericType,D> & levelSet,
 
     }
 
-    lsMesh narrowband;
+    auto narrowband = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
     lsToMesh<NumericType, D>(levelSet, narrowband, true, true).apply(lsPoints);
     //lsPoints
 
 
     //narrowband.insertNextVectorData(normal, "Normal");
-    narrowband.insertNextScalarData(meanCurvatureSD1, "shape operator small stencil");
-    narrowband.insertNextScalarData(meanCurvatureSD2, "shape operator big stencil");
-    narrowband.insertNextScalarData(meanCurvatureGeneralFormula, "general formula");
-    narrowband.insertNextScalarData(meanCurvatureGeneralFormulaBig, "general formula big stencil");
-    narrowband.insertNextScalarData(meanCurvatureGeneralFormulaBigBias, "general formula big stencil bias");
-    narrowband.insertNextScalarData(curveTest, "Curvature Test");
-    narrowband.insertNextScalarData(meanCurvatureNew, "variation of normals");
-    narrowband.insertNextScalarData(meanCurveShapeBias, "shape operator Bias");
+    narrowband->insertNextScalarData(meanCurvatureSD1, "shape operator small stencil");
+    narrowband->insertNextScalarData(meanCurvatureSD2, "shape operator big stencil");
+    narrowband->insertNextScalarData(meanCurvatureGeneralFormula, "general formula");
+    narrowband->insertNextScalarData(meanCurvatureGeneralFormulaBig, "general formula big stencil");
+    narrowband->insertNextScalarData(meanCurvatureGeneralFormulaBigBias, "general formula big stencil bias");
+    narrowband->insertNextScalarData(curveTest, "Curvature Test");
+    narrowband->insertNextScalarData(meanCurvatureNew, "variation of normals");
+    narrowband->insertNextScalarData(meanCurveShapeBias, "shape operator Bias");
 
   
     lsVTKWriter(narrowband, lsFileFormatEnum::VTU , output_name ).apply();
@@ -662,7 +673,7 @@ int main() {
 
     //std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> lsPoints;
 
-    std::vector<lsDomain<NumericType, D> *> levelSets;
+    std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets;
 
       //90 grad
     //std::vector<NumericType> planeNormal = {0. , 0. , 1.};
@@ -681,7 +692,7 @@ int main() {
 
     //lsDomain<NumericType,D> levelSet = makePlane(gridDelta, planeNormal);
 
-    lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, 100.);
+    lsSmartPointer<lsDomain<double, D>> levelSet = makeSphere(gridDelta, 100.);
 
     //lsDomain<NumericType,D> levelSet = makeTrench(gridDelta, planeNormal);
 
@@ -689,7 +700,7 @@ int main() {
 
 
 
-    levelSets.push_back(&levelSet);  
+    levelSets.push_back(levelSet);  
 
 /*
     int order = 1;
@@ -704,7 +715,7 @@ int main() {
 
     std::cout << "Converting..." << std::endl;
 
-    lsConvertEuclid<NumericType, D>  converter(*(levelSets.back()));
+    lsConvertEuclid<NumericType, D>  converter(levelSets.back());
 
     converter.apply();
 
@@ -723,7 +734,7 @@ int main() {
 
     std::cout << "Fast Marching..." << std::endl;
 
-    lsEikonalExpand<NumericType, D> expander(*(levelSets.back()), activePoints);
+    lsEikonalExpand<NumericType, D> expander(levelSets.back(), activePoints);
 
     expander.apply(); 
 
@@ -733,10 +744,10 @@ int main() {
 
     std::cout << "Calculating Curvatures..." << std::endl;
 
-    create_output_Euklid(*(levelSets.back()), activePoints, "final_output_Euklid");
+    create_output_Euklid(levelSets.back(), activePoints, "final_output_Euklid");
 
 
-    //timingTests(*(levelSets.back()), activePoints);
+    timingTests(levelSets.back(), activePoints);
 
 
     std::cout << "Finished" << std::endl;

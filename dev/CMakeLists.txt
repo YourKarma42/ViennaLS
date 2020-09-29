@@ -9,18 +9,18 @@ set(ViennaLS_COMMON_TARGET ${PROJECT_NAME})
 find_package(ViennaHRLE REQUIRED)
 find_package(ViennaLS REQUIRED)
 
-add_executable(${PROJECT_NAME} ${PROJECT_NAME}.cpp)
-target_include_directories(${PROJECT_NAME} PUBLIC ${VIENNALS_INCLUDE_DIRS})
-target_link_libraries(${PROJECT_NAME} PRIVATE ${VIENNALS_LIBRARIES})
+#add_executable(${PROJECT_NAME} ${PROJECT_NAME}.cpp)
+#target_include_directories(${PROJECT_NAME} PUBLIC ${VIENNALS_INCLUDE_DIRS})
+#target_link_libraries(${PROJECT_NAME} PRIVATE ${VIENNALS_LIBRARIES})
 
 #My test calculations
-add_executable(dMtodE dMtodE.cpp)
-target_include_directories(dMtodE PUBLIC ${VIENNALS_INCLUDE_DIRS})
-target_link_libraries(dMtodE PRIVATE ${VIENNALS_LIBRARIES})
+# add_executable(dMtodE dMtodE.cpp)
+# target_include_directories(dMtodE PUBLIC ${VIENNALS_INCLUDE_DIRS})
+# target_link_libraries(dMtodE PRIVATE ${VIENNALS_LIBRARIES})
 
-add_executable(normalizeFMM normalizeFMM.cpp)
-target_include_directories(normalizeFMM PUBLIC ${VIENNALS_INCLUDE_DIRS})
-target_link_libraries(normalizeFMM PRIVATE ${VIENNALS_LIBRARIES})
+# add_executable(normalizeFMM normalizeFMM.cpp)
+# target_include_directories(normalizeFMM PUBLIC ${VIENNALS_INCLUDE_DIRS})
+# target_link_libraries(normalizeFMM PRIVATE ${VIENNALS_LIBRARIES})
 
 add_executable(compareCurvatures compareCurvatures.cpp)
 target_include_directories(compareCurvatures PUBLIC ${VIENNALS_INCLUDE_DIRS})
@@ -37,6 +37,10 @@ target_link_libraries(flaggingTest PRIVATE ${VIENNALS_LIBRARIES})
 add_executable(iteratorTests iteratorTests.cpp)
 target_include_directories(iteratorTests PUBLIC ${VIENNALS_INCLUDE_DIRS})
 target_link_libraries(iteratorTests PRIVATE ${VIENNALS_LIBRARIES})
+
+add_executable(StackedNanowire StackedNanowire.cpp)
+target_include_directories(StackedNanowire PUBLIC ${VIENNALS_INCLUDE_DIRS})
+target_link_libraries(StackedNanowire PRIVATE ${VIENNALS_LIBRARIES})
 
 
 

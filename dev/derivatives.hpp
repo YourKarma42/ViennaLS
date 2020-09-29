@@ -137,6 +137,19 @@ template <class T, int D> class curvaturGeneralFormula{
                     /(norm_grad_pow3);
         }
 
+        for(int i =0; i<3; i++){
+
+            T  test =    //    F_x²(f_yy + F_zz)  +    F_y²(F_xx + F_zz)    +     F_z²(F_xx + F_yy)
+            (d[0]*d[0]*(d[4] + d[5]) + d[1]*d[1]*(d[3] + d[5]) + d[2]*d[2]*(d[3] + d[4]) +
+
+            //-2*[F_xF_yF_xy   +   F_xF_zF_xz   +   F_yF_zF_yz]
+            -2.*(d[0]*d[1]*d[6] + d[0]*d[2]*d[8] + d[1]*d[2]*d[7]) + i)
+                    
+            // /2*(F_x² + F_y² + F_z²)^(3/2)
+            /(2.*norm_grad_pow3+i);
+        }
+
+
         //expanded fom of the equation
         return
         //    F_x²(f_yy + F_zz)  +    F_y²(F_xx + F_zz)    +     F_z²(F_xx + F_yy)
@@ -257,6 +270,18 @@ template <class T, int D> class curvaturGeneralFormula{
         if(D == 2){
             return (d[3]*d[1]*d[1] - 2.*d[1]*d[0]*d[6] + d[4]*d[0]*d[0])
                     /(norm_grad_pow3);
+        }
+
+        for(int i =0; i<3; i++){
+
+            T  test =    //    F_x²(f_yy + F_zz)  +    F_y²(F_xx + F_zz)    +     F_z²(F_xx + F_yy)
+            (d[0]*d[0]*(d[4] + d[5]) + d[1]*d[1]*(d[3] + d[5]) + d[2]*d[2]*(d[3] + d[4]) +
+
+            //-2*[F_xF_yF_xy   +   F_xF_zF_xz   +   F_yF_zF_yz]
+            -2.*(d[0]*d[1]*d[6] + d[0]*d[2]*d[8] + d[1]*d[2]*d[7]) + i)
+                    
+            // /2*(F_x² + F_y² + F_z²)^(3/2)
+            /(2.*norm_grad_pow3+i);
         }
 
         //expanded fom of the equation
@@ -870,6 +895,19 @@ template <class T, int D> class curvaturGeneralFormulaBigStencil{
         T norm_grad_pow3 = std::sqrt(d[0]*d[0] + d[1]*d[1] + d[2]*d[2]);
         norm_grad_pow3 = norm_grad_pow3*norm_grad_pow3*norm_grad_pow3;
 
+
+        for(int i =0; i<3; i++){
+
+            T  test =    //    F_x²(f_yy + F_zz)  +    F_y²(F_xx + F_zz)    +     F_z²(F_xx + F_yy)
+            (d[0]*d[0]*(d[4] + d[5]) + d[1]*d[1]*(d[3] + d[5]) + d[2]*d[2]*(d[3] + d[4]) +
+
+            //-2*[F_xF_yF_xy   +   F_xF_zF_xz   +   F_yF_zF_yz]
+            -2.*(d[0]*d[1]*d[6] + d[0]*d[2]*d[8] + d[1]*d[2]*d[7]) + i)
+                    
+            // /2*(F_x² + F_y² + F_z²)^(3/2)
+            /(2.*norm_grad_pow3+i);
+        }
+
         //expanded fom of the equation
         return
         //    F_x²(f_yy + F_zz)  +    F_y²(F_xx + F_zz)    +     F_z²(F_xx + F_yy)
@@ -1098,17 +1136,27 @@ template <class T, int D> class curvaturGeneralFormulaBigStencilBias{
 
             T phi_py = neighborIterator.getNeighbor(posUnit).getValue();
             T phi_ny = neighborIterator.getNeighbor(negUnit).getValue();
-           
+          
 
             d[i+6] = (phi_pp - phi_pn - phi_np + phi_nn)/(4.*gridDelta*gridDelta);
-
-
 
         }
 
 
         T norm_grad_pow3 = std::sqrt(d[0]*d[0] + d[1]*d[1] + d[2]*d[2]);
         norm_grad_pow3 = norm_grad_pow3*norm_grad_pow3*norm_grad_pow3;
+
+        for(int i =0; i<3; i++){
+
+            T  test =    //    F_x²(f_yy + F_zz)  +    F_y²(F_xx + F_zz)    +     F_z²(F_xx + F_yy)
+            (d[0]*d[0]*(d[4] + d[5]) + d[1]*d[1]*(d[3] + d[5]) + d[2]*d[2]*(d[3] + d[4]) +
+
+            //-2*[F_xF_yF_xy   +   F_xF_zF_xz   +   F_yF_zF_yz]
+            -2.*(d[0]*d[1]*d[6] + d[0]*d[2]*d[8] + d[1]*d[2]*d[7]) + i)
+                    
+            // /2*(F_x² + F_y² + F_z²)^(3/2)
+            /(2.*norm_grad_pow3+i);
+        }
 
         //expanded fom of the equation
         return

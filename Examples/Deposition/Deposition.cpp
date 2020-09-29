@@ -10,10 +10,6 @@
 #include <lsToSurfaceMesh.hpp>
 #include <lsVTKWriter.hpp>
 
-
-#include<lsCalculateCurvatures.hpp>
-#include <lsToDiskMesh.hpp>
-
 /**
   3D Example showing how to use the library for topography
   simulation, by creating a trench geometry. A uniform
@@ -58,29 +54,35 @@ int main() {
     boundaryCons[i] = lsDomain<double, D>::BoundaryType::REFLECTIVE_BOUNDARY;
   boundaryCons[2] = lsDomain<double, D>::BoundaryType::INFINITE_BOUNDARY;
 
-  lsDomain<double, D> substrate(bounds, boundaryCons, gridDelta);
+  auto substrate =
+      lsSmartPointer<lsDomain<double, D>>::New(bounds, boundaryCons, gridDelta);
 
   double origin[3] = {0., 0., 0.};
   double planeNormal[3] = {0., 0., 1.};
 
-  lsMakeGeometry<double, D>(substrate, lsPlane<double, D>(origin, planeNormal))
-      .apply();
+  {
+    auto plane = lsSmartPointer<lsPlane<double, D>>::New(origin, planeNormal);
+    lsMakeGeometry<double, D>(substrate, plane).apply();
+  }
 
-  lsDomain<double, D> trench(bounds, boundaryCons, gridDelta);
-  // make -x and +x greater than domain for numerical stability
-  double minCorner[D] = {-extent - 1, -extent / 4., -15.};
-  double maxCorner[D] = {extent + 1, extent / 4., 1.};
-  lsMakeGeometry<double, D>(trench, lsBox<double, D>(minCorner, maxCorner))
-      .apply();
+  {
+    auto trench = lsSmartPointer<lsDomain<double, D>>::New(bounds, boundaryCons,
+                                                           gridDelta);
+    // make -x and +x greater than domain for numerical stability
+    double minCorner[D] = {-extent - 1, -extent / 4., -15.};
+    double maxCorner[D] = {extent + 1, extent / 4., 1.};
+    auto box = lsSmartPointer<lsBox<double, D>>::New(minCorner, maxCorner);
+    lsMakeGeometry<double, D>(trench, box).apply();
 
-  // Create trench geometry
-  lsBooleanOperation<double, D>(substrate, trench,
-                                lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
-      .apply();
+    // Create trench geometry
+    lsBooleanOperation<double, D>(substrate, trench,
+                                  lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+        .apply();
+  }
 
   {
     std::cout << "Extracting..." << std::endl;
-    lsMesh mesh;
+    auto mesh = lsSmartPointer<lsMesh>::New();
     lsToSurfaceMesh<double, D>(substrate, mesh).apply();
     lsVTKWriter(mesh, "trench-0.vtk").apply();
   }
@@ -89,9 +91,9 @@ int main() {
 
   // create new levelset for new material, which will be grown
   // since it has to wrap around the substrate, just copy it
-  lsDomain<double, D> newLayer(substrate);
+  auto newLayer = lsSmartPointer<lsDomain<double, D>>::New(substrate);
 
-  velocityField velocities;
+  auto velocities = lsSmartPointer<velocityField>::New();
 
   std::cout << "Advecting" << std::endl;
   lsAdvect<double, D> advectionKernel;
@@ -107,7 +109,7 @@ int main() {
   for (double time = 0; time < 4.; time += advectionKernel.getAdvectedTime()) {
     advectionKernel.apply();
 
-    lsMesh mesh;
+    auto mesh = lsSmartPointer<lsMesh>::New();
     lsToSurfaceMesh<double, D>(newLayer, mesh).apply();
     lsVTKWriter(mesh, "trench-" + std::to_string(counter) + ".vtk").apply();
 
@@ -116,61 +118,6 @@ int main() {
 
     ++counter;
   }
-
-
-  omp_set_num_threads(1);
-  //TODO: this is shit the ls has to be extended here so that the sparsebox iterator is defined
-  lsCalculateCurvatures<double, D>::prepareLS(newLayer);
-  
-
-  lsCalculateCurvatures<double, D> test_curvature(newLayer);
- 
-  test_curvature.apply();
-
-
-  auto& gauss_curve = test_curvature.getGaussianCurvature();
-  auto& mean_curve = test_curvature.getMeanCurvature();
-  auto& my_normals = test_curvature.getNormals();
- 
-
-
-  std::vector<double> gauss;
-  std::vector<double> mean;
-  std::vector<std::array<double, D>> my_normal;
-
-
-  // prepare curvature data to write into output file
-  for (hrleConstSparseIterator<lsDomain<double, D>::DomainType> it(
-           newLayer.getDomain());
-       !it.isFinished(); ++it) {
-    if (!it.isDefined() || std::abs(it.getValue()) > 0.5)
-      continue;
-    my_normal.push_back(my_normals[it.getPointId()]);
-    gauss.push_back(gauss_curve[it.getPointId()]);
-    mean.push_back(mean_curve[it.getPointId()]);
-
-
-  }
-
-  lsMesh pointcloud;
-  std::cout << "Extracting point cloud..." << std::endl;
-  lsToDiskMesh<double, D>(newLayer, pointcloud).apply();
-
-  pointcloud.insertNextScalarData(gauss , "gaussian curvature");
-  pointcloud.insertNextScalarData(mean , "mean curvature");
-  pointcloud.insertNextVectorData(my_normal, "my Normals");
-
-  lsVTKWriter(pointcloud, lsFileFormatEnum::VTU , "Depo_curves").apply();
-
-
-
-
-
-
-
-
-
-
 
   // double advectionSteps = advectionKernel.getNumberOfTimeSteps();
   // std::cout << "Number of Advection steps taken: " << advectionSteps

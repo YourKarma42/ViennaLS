@@ -14,7 +14,7 @@ template <class T, int D> class silvacoLikeFlagging{
 
     typedef typename lsDomain<T, D>::DomainType hrleDomainType;
 
-    lsDomain<T, D> *levelSet = nullptr;
+    lsSmartPointer<lsDomain<double, D>> levelSet = nullptr;
 
     T cosAngleTreshold = 0.;
 
@@ -25,8 +25,8 @@ template <class T, int D> class silvacoLikeFlagging{
 
     public:
 
-    silvacoLikeFlagging(lsDomain<T, D> &passedLevelSet, T passedAngle)
-      : levelSet(&passedLevelSet){
+    silvacoLikeFlagging(lsSmartPointer<lsDomain<double, D>> passedLevelSet, T passedAngle)
+      : levelSet(passedLevelSet){
       
       cosAngleTreshold = std::cos(passedAngle);
       //TODO: remove rethink

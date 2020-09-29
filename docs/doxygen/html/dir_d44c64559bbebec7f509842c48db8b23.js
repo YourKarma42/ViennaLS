@@ -18,22 +18,25 @@ var dir_d44c64559bbebec7f509842c48db8b23 =
     [ "lsExpand.hpp", "lsExpand_8hpp.html", [
       [ "lsExpand", "classlsExpand.html", "classlsExpand" ]
     ] ],
-    [ "lsFastAdvect.hpp", "lsFastAdvect_8hpp.html", [
-      [ "lsFastAdvect", "classlsFastAdvect.html", "classlsFastAdvect" ]
-    ] ],
-    [ "lsFastAdvectDistributions.hpp", "lsFastAdvectDistributions_8hpp.html", [
-      [ "lsFastAdvectDistribution", "classlsFastAdvectDistribution.html", "classlsFastAdvectDistribution" ],
-      [ "lsSphereDistribution", "classlsSphereDistribution.html", "classlsSphereDistribution" ],
-      [ "lsBoxDistribution", "classlsBoxDistribution.html", "classlsBoxDistribution" ]
-    ] ],
     [ "lsFileFormats.hpp", "lsFileFormats_8hpp.html", "lsFileFormats_8hpp" ],
     [ "lsFiniteDifferences.hpp", "lsFiniteDifferences_8hpp.html", "lsFiniteDifferences_8hpp" ],
+    [ "lsFromMesh.hpp", "lsFromMesh_8hpp.html", [
+      [ "lsFromMesh", "classlsFromMesh.html", "classlsFromMesh" ]
+    ] ],
     [ "lsFromSurfaceMesh.hpp", "lsFromSurfaceMesh_8hpp.html", [
       [ "lsFromSurfaceMesh", "classlsFromSurfaceMesh.html", "classlsFromSurfaceMesh" ],
       [ "iterator", "classlsFromSurfaceMesh_1_1box_1_1iterator.html", "classlsFromSurfaceMesh_1_1box_1_1iterator" ]
     ] ],
     [ "lsFromVolumeMesh.hpp", "lsFromVolumeMesh_8hpp.html", [
       [ "lsFromVolumeMesh", "classlsFromVolumeMesh.html", "classlsFromVolumeMesh" ]
+    ] ],
+    [ "lsGeometricAdvect.hpp", "lsGeometricAdvect_8hpp.html", [
+      [ "lsGeometricAdvect", "classlsGeometricAdvect.html", "classlsGeometricAdvect" ]
+    ] ],
+    [ "lsGeometricAdvectDistributions.hpp", "lsGeometricAdvectDistributions_8hpp.html", [
+      [ "lsGeometricAdvectDistribution", "classlsGeometricAdvectDistribution.html", "classlsGeometricAdvectDistribution" ],
+      [ "lsSphereDistribution", "classlsSphereDistribution.html", "classlsSphereDistribution" ],
+      [ "lsBoxDistribution", "classlsBoxDistribution.html", "classlsBoxDistribution" ]
     ] ],
     [ "lsGeometries.hpp", "lsGeometries_8hpp.html", [
       [ "lsSphere", "classlsSphere.html", "classlsSphere" ],
@@ -83,6 +86,9 @@ var dir_d44c64559bbebec7f509842c48db8b23 =
     ] ],
     [ "lsReduce.hpp", "lsReduce_8hpp.html", [
       [ "lsReduce", "classlsReduce.html", "classlsReduce" ]
+    ] ],
+    [ "lsSmartPointer.hpp", "lsSmartPointer_8hpp.html", [
+      [ "lsSmartPointer", "classlsSmartPointer.html", "classlsSmartPointer" ]
     ] ],
     [ "lsStencilLocalLaxFriedrichsScalar.hpp", "lsStencilLocalLaxFriedrichsScalar_8hpp.html", [
       [ "lsStencilLocalLaxFriedrichsScalar", "classlsInternal_1_1lsStencilLocalLaxFriedrichsScalar.html", "classlsInternal_1_1lsStencilLocalLaxFriedrichsScalar" ]
