@@ -41,7 +41,7 @@
 
 //____________testing end___________________________
 
-constexpr int D = 2;
+constexpr int D = 3;
 typedef double NumericType;
 typedef typename lsDomain<NumericType, D>::DomainType hrleDomainType;
 
@@ -122,9 +122,9 @@ int main() {
 
     std::cout << "Fast Marching..." << std::endl;
 
-    lsEikonalExpand<NumericType, D> expander(levelSets.back(), activePoints);
+    //lsEikonalExpand<NumericType, D> expander(levelSets.back(), activePoints);
 
-    //lsExpandSphere<NumericType, D> expander(*(levelSets.back()), activePoints, radius);
+    lsExpandSphere<NumericType, D> expander(levelSets.back(), activePoints, radius);
 
 
     expander.apply(); 

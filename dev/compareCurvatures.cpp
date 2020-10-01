@@ -30,6 +30,8 @@
 
 #include <../dev/derivatives.hpp>
 
+#include <../dev/expandSphere.hpp>
+
 
 
 //____________testing not necessary_________________
@@ -665,7 +667,7 @@ void create_output_Euklid(lsSmartPointer<lsDomain<double, D>> levelSet,
 int main() {
 
 
-    omp_set_num_threads(4);
+    omp_set_num_threads(1);
 
     NumericType gridDelta = 0.25;
 
@@ -692,7 +694,9 @@ int main() {
 
     //lsDomain<NumericType,D> levelSet = makePlane(gridDelta, planeNormal);
 
-    lsSmartPointer<lsDomain<double, D>> levelSet = makeSphere(gridDelta, 100.);
+    NumericType radius = 100.;
+
+    lsSmartPointer<lsDomain<double, D>> levelSet = makeSphere(gridDelta, radius);
 
     //lsDomain<NumericType,D> levelSet = makeTrench(gridDelta, planeNormal);
 
@@ -734,7 +738,9 @@ int main() {
 
     std::cout << "Fast Marching..." << std::endl;
 
-    lsEikonalExpand<NumericType, D> expander(levelSets.back(), activePoints);
+    //lsEikonalExpand<NumericType, D> expander(levelSets.back(), activePoints);
+
+    lsExpandSphere<NumericType, D> expander(levelSets.back(), activePoints, radius);
 
     expander.apply(); 
 
@@ -747,7 +753,7 @@ int main() {
     create_output_Euklid(levelSets.back(), activePoints, "final_output_Euklid");
 
 
-    timingTests(levelSets.back(), activePoints);
+    //timingTests(levelSets.back(), activePoints);
 
 
     std::cout << "Finished" << std::endl;
