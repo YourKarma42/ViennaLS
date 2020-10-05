@@ -10,12 +10,15 @@
 #include <lsGeometries.hpp>
 #include <lsMakeGeometry.hpp>
 #include <lsPrune.hpp>
+#include <lsToMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
 #include <lsVTKWriter.hpp>
 #include <lsAdvect.hpp>
 
 constexpr int D = 3;
 using NumericType = double;
+constexpr NumericType gridDelta = 0.5;
+unsigned outputNum = 0;
 
 bool exists(const std::string& name) {
     std::ifstream f(name.c_str());
@@ -44,14 +47,19 @@ public:
   directional(std::array<NumericType, D> dir, std::vector<double> vel, double isoVel = 0) : direction(dir), velocities(vel), isoVelocity(isoVel) {};
 
   std::array<double, D> getVectorVelocity(
-      const std::array<NumericType, 3> & /*coordinate*/, int material,
-      const std::array<NumericType, 3> &/*normalVector = hrleVectorType<NumericType, 3>(0.)*/) {
+      const std::array<NumericType, 3> & coordinate, int material,
+      const std::array<NumericType, 3> & normalVector = std::array<NumericType, 3>({})) {
     if(material < int(velocities.size())) {
       std::array<NumericType, D> dir(direction);
       for(unsigned i = 0; i < D; ++i) {
         dir[i] *= velocities[material];
         dir[i] += isoVelocity;
       }
+      //if(coordinate == std::array<NumericType, 3>({10, 0, 28})){
+      //  std::cout << "OUTPUT " << outputNum << " -- > Material: " << material << std::endl;
+      //  std::cout << "Normal: " << normalVector[0] << ", " << normalVector[1] << ", " << normalVector[2] << std::endl;
+      //  std::cout << "Velocity: " << dir[0] << ", " << dir[1] << ", " << dir[2] << std::endl;
+      //}
       return dir;
     } else {
       return {0};
@@ -59,29 +67,41 @@ public:
   }
 };
 
-void writeSurfaces(std::deque<lsSmartPointer<lsDomain<NumericType, D>>>& domains) {
-  static unsigned outputNum = 0;
+void writeSurfaces(std::deque<lsSmartPointer<lsDomain<NumericType, D>>>& domains, bool writePoints = false) {
+/* 
   static unsigned numMat = 0;
 
   for(unsigned i = 0; (i < domains.size()) || (i < numMat); ++i) {
     auto mesh = lsSmartPointer<lsMesh>::New();
+    auto pointMesh = lsSmartPointer<lsMesh>::New();
     if(numMat != 0 && i >= numMat) {  // write emtpy meshes before so paraview displays it correctly
       for(unsigned j = 0; j < outputNum; ++j) {
-        std::string fileName = "surface-m" + std::to_string(i) + "-" + std::to_string(j) + ".vtk";
+        std::string fileName = std::to_string(i) + "-" + std::to_string(j) + ".vtk";
         if(!exists(fileName)){
-          lsVTKWriter(mesh, fileName).apply();
+          lsVTKWriter(mesh, "surface-m" + fileName).apply();
+          lsVTKWriter(mesh, "points-m" + fileName).apply();
         }
       }
     }
-    std::string fileName = "surface-m" + std::to_string(i) + "-" + std::to_string(outputNum) + ".vtk";
+    
     if(i < domains.size()) {
       lsToSurfaceMesh<NumericType, D>(domains[i], mesh).apply();
+      if(writePoints) {
+        lsToMesh<NumericType, D>(domains[i], pointMesh).apply();
+      }
     }
+    std::string fileName = "surface-m" + std::to_string(i) + "-" + std::to_string(outputNum) + ".vtk";
     lsVTKWriter(mesh, fileName).apply();
+    if(writePoints) {
+      std::string pointName = "points-m" + std::to_string(i) + "-" + std::to_string(outputNum) + ".vtk";
+      lsVTKWriter(pointMesh, pointName).apply();
+    }
   }
-  numMat = domains.size();
+  numMat = (domains.size()<numMat)?numMat:domains.size();
   // increase count
   ++outputNum;
+*/
+
 }
 
 class Process {
@@ -115,7 +135,7 @@ void execute(std::deque<lsSmartPointer<lsDomain<NumericType, D>>>& domains, std:
     advectionKernel->setAdvectionTime(it.time);
     advectionKernel->apply();
 
-    writeSurfaces(domains);
+    writeSurfaces(domains, true);
   }
 }
 
@@ -128,13 +148,13 @@ void planarise(std::deque<lsSmartPointer<lsDomain<NumericType, D>>>& domains, do
   for(auto &it : domains) {
     lsBooleanOperation<NumericType, D>(it, plane, lsBooleanOperationEnum::RELATIVE_COMPLEMENT).apply();
   }
-  writeSurfaces(domains);
+  writeSurfaces(domains, true);
 }
 
 int main() {
-  omp_set_num_threads(4);
+  omp_set_num_threads(2);
 
-  NumericType gridDelta = 0.5;
+  
   NumericType bounds[2 * D] = {0, 70, 0, 100, 0, 70}; // in nanometres
   lsDomain<NumericType, D>::BoundaryType boundaryCons[D];
   boundaryCons[0] = lsDomain<NumericType, D>::BoundaryType::PERIODIC_BOUNDARY;
@@ -151,7 +171,7 @@ int main() {
     lsMakeGeometry<NumericType, D>(domains[0], plane).apply();
   }
 
-  writeSurfaces(domains);
+  writeSurfaces(domains, true);
 
   // Set up first bunch of processes
   std::vector<Process> processes;
@@ -178,7 +198,7 @@ int main() {
       lsBooleanOperation<NumericType, D>(domains[i], domains.front(), lsBooleanOperationEnum::UNION).apply();
     }
   }
-  writeSurfaces(domains);
+  writeSurfaces(domains, true);
 
   // Double patterning processes
   {
@@ -198,7 +218,7 @@ int main() {
     }
     domains.pop_front(); // now remove
   }
-  writeSurfaces(domains);
+  writeSurfaces(domains, true);
 
   // pattern si/sige/si stack
   {
@@ -211,7 +231,7 @@ int main() {
 
   // Remove DP mask
   domains.pop_back();
-  writeSurfaces(domains);
+  writeSurfaces(domains, true);
 
   // deposit dummy gate material
   {
@@ -238,7 +258,7 @@ int main() {
       lsBooleanOperation<NumericType, D>(domains[i], domains.front(), lsBooleanOperationEnum::UNION).apply();
     }
   }
-  writeSurfaces(domains);
+  writeSurfaces(domains, true);
 
   // dummy gate patterning
   {
@@ -253,17 +273,17 @@ int main() {
   {
     domains.pop_front(); // now remove
   }
-  writeSurfaces(domains);
+  writeSurfaces(domains, true);
 
-  // spacer deposition, patterning, fin patterning, SD Epitaxy, dielectric deposition
+  // spacer deposition, spacer patterning, fin patterning, SD Epitaxy, dielectric deposition
   {
     processes.clear();
     processes.push_back(Process("Spacer-Deposition", 12, isoVelocity, true));
     std::array<NumericType, D> direction = {0, 0, -1};
-    auto spacerPatterning = lsSmartPointer<directional>::New(direction, std::vector<double>({0, 0, 0, 0, 0, 1}));
-    processes.push_back(Process("Spacer-Patterning", 35, spacerPatterning));
-    
-    auto finPatterning = lsSmartPointer<directional>::New(direction, std::vector<double>({-0.05, 1, 1, 1, 0, 0.1})); // 0.1 because there needs to be some etching on the top layer for fins to be etched properly (apparently some numeric issues)
+    auto spacerPatterning = lsSmartPointer<directional>::New(direction, std::vector<double>({0.1, 0.1, 0.1, 0.1, 0.1, 1}));
+    processes.push_back(Process("Spacer-Patterning", 40, spacerPatterning));
+
+    auto finPatterning = lsSmartPointer<directional>::New(direction, std::vector<double>({-0.05, 1, 1, 1, 0.1, 0.1})); // 0.1 because there needs to be some etching on the top layer for fins to be etched properly (apparently some numeric issues)
     processes.push_back(Process("Fin-Patterning", 19, finPatterning));
     
     auto SDEpitaxy = lsSmartPointer<isotropic>::New(std::vector<double>({1.0, 1.0, 1.0, 1.0, 0., 0., 1.0}));
@@ -272,6 +292,28 @@ int main() {
     processes.push_back(Process("Dielectric-Deposition", 35, isoVelocity, true));
   }
   execute(domains, processes);
+
+  /* iretative fin patterning */
+  // {
+  //   std::array<NumericType, D> direction = {0, 0, -1};
+  //   auto finPatterning = lsSmartPointer<directional>::New(direction, std::vector<double>({-0.05, 1, 1, 1, 0.1, 0.1})); // 0.1 because there needs to be some etching on the top layer for fins to be etched properly (apparently some numeric issues)
+  //   // processes.push_back(Process("Fin-Patterning", 19, finPatterning));
+
+  //   /* Iterative outputs */
+  //   auto advectionKernel = lsSmartPointer<lsAdvect<NumericType, D>>::New();
+  //   advectionKernel->setVelocityField(finPatterning);
+  //   advectionKernel->setSaveAdvectionVelocities(true);
+  //   for(auto &it : domains) {
+  //     advectionKernel->insertNextLevelSet(it);
+  //   }
+  //   double advectionTime = 19.0;
+  //   double currentTime = 0.0;
+  //   while (currentTime < advectionTime) {
+  //     advectionKernel->apply(); // no advection time set, so only advect once
+  //     currentTime += advectionKernel->getAdvectedTime();
+  //     writeSurfaces(domains, true);
+  //   }
+  // }
 
   // dummy gate and dielectric CMP at 72.5nm height
   planarise(domains, 72.5);
@@ -305,27 +347,6 @@ int main() {
 
   // gate CMP
   planarise(domains, 47.5);
-
-  // fin patterning
-  // {
-  //   std::array<NumericType, D> direction = {0, 0, -1};
-  //   auto finPatterning = lsSmartPointer<directional>::New(direction, std::vector<double>({-0.05, 1, 1, 1, 0, 0.1}));
-  //   auto advectionKernel = lsSmartPointer<lsAdvect<NumericType, D>>::New();
-  //   advectionKernel->setVelocityField(finPatterning);
-  //   for(auto &it : domains) {
-  //     advectionKernel->insertNextLevelSet(it);
-  //   }
-    
-  //   double currentTime = 0.0;
-  //   unsigned numberOfTimeSteps = 0;
-  //   double advectionTime = 20.0;
-  //   while (currentTime < advectionTime) {
-  //     advectionKernel->apply();
-  //     currentTime += advectionKernel->getAdvectedTime();
-  //     ++numberOfTimeSteps;
-  //     writeSurfaces(domains);
-  //   }
-  // }
 
   return 0;
 }

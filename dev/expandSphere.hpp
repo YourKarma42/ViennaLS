@@ -21,7 +21,7 @@
 template <class T, int D> class lsExpandSphere {
   typedef typename lsDomain<T, D>::DomainType hrleDomainType;
 
-  lsDomain<T, D> *levelSet = nullptr;
+  lsSmartPointer<lsDomain<T, D>> levelSet = nullptr;
 
   T gridDelta = 0.;
 
@@ -34,9 +34,9 @@ template <class T, int D> class lsExpandSphere {
 public:
   lsExpandSphere() {}
 
-  lsExpandSphere(lsDomain<T, D> &passedLevelSet, 
+  lsExpandSphere(lsSmartPointer<lsDomain<T, D>> passedLevelSet, 
       std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash>  passedActivePoints, T passedRadius)
-      : levelSet(&passedLevelSet), activePoints(passedActivePoints), radius(passedRadius) {
+      : levelSet(passedLevelSet), activePoints(passedActivePoints), radius(passedRadius) {
         //TODO: check if level set is euler normalized and give error if not
       gridDelta = levelSet->getGrid().getGridDelta();
   }
@@ -63,19 +63,24 @@ public:
     //The convergence of the narrowband depends on the width that is required
     //TODO: at the moment random static number think of better way to end the loop
 
-    for(int runs=0; runs < 2; runs++){
+    for(int runs=0; runs < 10; runs++){
         const int allocationFactor =
             1 + 1.0 / static_cast<double>(runs+1);
         //TODO:probably remove
         //const T limit = (runs + 1) * T(0.5);
         
         auto &grid = levelSet->getGrid();
-        lsDomain<T, D> newlsDomain(grid);
-        typename lsDomain<T, D>::DomainType &newDomain = newlsDomain.getDomain();
+
+        auto newlsDomain = lsSmartPointer<lsDomain<T, D>>::New(grid);
+        typename lsDomain<T, D>::DomainType &newDomain = newlsDomain->getDomain();
         typename lsDomain<T, D>::DomainType &domain = levelSet->getDomain();
 
         newDomain.initialize(domain.getNewSegmentation(),
                             domain.getAllocation() * allocationFactor);
+
+        std::cout << "min index " << grid.getMinIndex() << std::endl;
+
+        std::cout << "max index " << grid.getMaxIndex() << std::endl;
 
 //#pragma omp parallel num_threads(newDomain.getNumberOfSegments())
         {
@@ -101,41 +106,60 @@ public:
             neighborIt(domain, startVector);
             neighborIt.getIndices() < endVector; neighborIt.next()) {
 
+
+
+                int numUndefined = 0;
+
                 auto &centerIt = neighborIt.getCenter();
 
-                //mark all active grid points as accepted
-                if((activePoints.find(centerIt.getStartIndices()) != activePoints.end())){
-                    //add them to the new lvl set
-                    domainSegment.insertNextDefinedPoint(neighborIt.getIndices(),
-                                                        centerIt.getValue());  
-                }else{    
+                for(int i = 0; i < D; i++){
 
-                    T pointRadius = 0.;
+                  T pos = neighborIt.getNeighbor(i).getValue();
 
-                    for(int i = 0; i < D; i++){
-                        pointRadius += ( gridDelta * neighborIt.getIndices()[i]) * ( gridDelta * neighborIt.getIndices()[i]);
-                    }
+                  T neg = neighborIt.getNeighbor(i+D).getValue();
 
-                    pointRadius = std::sqrt(pointRadius);
+                  //change the sign to make fast marching on the inside correct
+                 // if(inside){
+                 //   pos = pos * -1.;
+                 //   neg = neg * -1.;
+                 // }
 
-                    if(pointRadius < radius + ((runs+1) * 0.5) && pointRadius > radius - ((runs+1) * 0.5)){
-                        
-                        T dist = pointRadius - radius;
+                  //check if the current point in the stencil is defined (not +/- inf)
+                  //TODO:this if is stupid
+                  if( pos !=  lsDomain<T, D>::POS_VALUE && 
+                      pos !=  lsDomain<T, D>::NEG_VALUE){
 
-                        if(std::abs(dist) > 1)
-                            std::cout << "blub";
-        
-                        domainSegment.insertNextDefinedPoint(neighborIt.getIndices(), dist);
-                    }else{
-                        domainSegment.insertNextUndefinedPoint(neighborIt.getIndices(), 
-                        (centerIt.getValue()<0.) ? lsDomain<T, D>::NEG_VALUE : lsDomain<T, D>::POS_VALUE);
-                    }
+                  }else if(neg !=  lsDomain<T, D>::POS_VALUE && 
+                          neg !=  lsDomain<T, D>::NEG_VALUE){
 
-
+                  }else{
+                    numUndefined++;
+                  }
 
                 }
-            
-                
+
+                //TODO: why was there an error when not using second condition?
+                if(numUndefined == D && 
+                  (activePoints.find(centerIt.getStartIndices()) == activePoints.end())){
+
+                  domainSegment.insertNextUndefinedPoint(neighborIt.getIndices(), 
+                    (centerIt.getValue()<0.) ? lsDomain<T, D>::NEG_VALUE : lsDomain<T, D>::POS_VALUE);
+                }else{
+                  T pointRadius = 0.;
+
+                  for(int i = 0; i < D; i++){
+                      //std::cout << neighborIt.getIndices()[i] << std::endl;
+                      pointRadius += ( gridDelta * neighborIt.getIndices()[i]) * ( gridDelta * neighborIt.getIndices()[i]);
+                  }
+
+                  pointRadius = std::sqrt(pointRadius);
+
+                  T dist = pointRadius - radius;                       
+      
+                  domainSegment.insertNextDefinedPoint(neighborIt.getIndices(), dist);
+
+                }
+             
             }
         } 
         newDomain.finalize();

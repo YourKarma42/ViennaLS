@@ -79,22 +79,28 @@ int main() {
     auto start = std::chrono::high_resolution_clock::now(); 
     auto stop = std::chrono::high_resolution_clock::now(); 
 
-    std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets;
+    std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets1;
+
+    std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets2;
 
     NumericType radius = 10.;
 
-    lsSmartPointer<lsDomain<double, D>> levelSet = makeSphere(gridDelta, radius);
+    lsSmartPointer<lsDomain<double, D>> levelSet1 = makeSphere(gridDelta, radius);
 
-    levelSets.push_back(levelSet);  
+    levelSets1.push_back(levelSet1);  
 
+    lsSmartPointer<lsDomain<double, D>> levelSet2 = makeSphere(gridDelta, radius);
+
+   levelSets2.push_back(levelSet2);  
+/*
     auto pointcloud = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting point cloud..." << std::endl;
     
-    lsToMesh<double, D>(levelSets.back(), pointcloud, true, true).apply();
+    lsToMesh<double, D>(levelSets1.back(), pointcloud, true, true).apply();
 
     lsVTKWriter(pointcloud, lsFileFormatEnum::VTU ,"point_cloud").apply();
 
-/*
+
     int order = 1;
     lsExpand<NumericType, D>(levelSets.back(), 2 * (order + 2) + 1).apply();
 */
@@ -102,12 +108,16 @@ int main() {
 
     std::cout << "Converting..." << std::endl;
 
-    lsConvertEuclid<NumericType, D>  converter(levelSets.back());
+    lsConvertEuclid<NumericType, D>  converter1(levelSets1.back());
 
-    converter.apply();
+    converter1.apply();
+
+    lsConvertEuclid<NumericType, D>  converter2(levelSets2.back());
+
+    converter2.apply();
 
     //get the active grid points of the level set
-    auto activePoints = converter.getActivePoints();
+    auto activePoints = converter1.getActivePoints();
 
     std::cout << "active points: " << activePoints.size() << std::endl;
 
@@ -122,16 +132,34 @@ int main() {
 
     std::cout << "Fast Marching..." << std::endl;
 
-    lsEikonalExpand<NumericType, D> expander(levelSets.back(), activePoints);
+    lsEikonalExpand<NumericType, D> expanderEikonal(levelSets1.back(), activePoints);
 
-    //lsExpandSphere<NumericType, D> expander(*(levelSets.back()), activePoints, radius);
+    expanderEikonal.apply(); 
 
+    lsExpandSphere<NumericType, D> expanderAnalytical(levelSets2.back(), converter2.getActivePoints(), radius);
 
-    expander.apply(); 
+    expanderAnalytical.apply();
+
+    std::cout << "FMM done..." << std::endl;
+
+    std::vector<NumericType> analyticValues;
+
+    for(hrleConstSparseIterator<hrleDomainType> it(levelSets2.back()->getDomain());
+        !it.isFinished(); ++it){
+
+        if (!it.isDefined()) {
+            continue;
+        } 
+
+        analyticValues.push_back(it.getValue());
+
+    }
 
     auto narrowband1 = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting after Marching..." << std::endl;
-    lsToMesh<NumericType, D>(levelSets.back(), narrowband1, true, false).apply(activePoints);
+    lsToMesh<NumericType, D>(levelSets1.back(), narrowband1, true, false).apply(activePoints);
+
+    narrowband1->insertNextScalarData(analyticValues ,"Analytical Value");
  
     lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "FMMOutput" ).apply();
 
@@ -143,9 +171,9 @@ int main() {
     std::vector<NumericType> curve;
 
 
-    hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType> neighborStarIt(levelSets.back()->getDomain());
+    hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType> neighborStarIt(levelSets1.back()->getDomain());
 
-    for(hrleConstSparseIterator<hrleDomainType> it(levelSets.back()->getDomain());
+    for(hrleConstSparseIterator<hrleDomainType> it(levelSets1.back()->getDomain());
         !it.isFinished(); ++it){
 
         //if (!it.isDefined() || std::abs(it.getValue()) > 0.5) {
@@ -163,7 +191,7 @@ int main() {
 
     auto narrowband3 = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<NumericType, D>(levelSets.back(), narrowband3, true, true).apply(activePoints);
+    lsToMesh<NumericType, D>(levelSets1.back(), narrowband3, true, true).apply(activePoints);
     //lsToMesh<NumericType, D>(levelSet, narrowband3, true, true).apply();
     //lsPoints
 
