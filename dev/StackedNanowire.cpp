@@ -134,7 +134,7 @@ void planarise(std::deque<lsSmartPointer<lsDomain<NumericType, D>>>& domains, do
 int main() {
   omp_set_num_threads(4);
 
-  NumericType gridDelta = 2.0;
+  NumericType gridDelta = 0.5;
   NumericType bounds[2 * D] = {0, 70, 0, 100, 0, 70}; // in nanometres
   lsDomain<NumericType, D>::BoundaryType boundaryCons[D];
   boundaryCons[0] = lsDomain<NumericType, D>::BoundaryType::PERIODIC_BOUNDARY;
