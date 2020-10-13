@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.4)
 
 project(
   "ViennaLS"
-  VERSION 1.2.0)
+  VERSION 1.3.0)
 
 add_definitions(-DVIENNALS_VERSION=${PROJECT_VERSION})
 
@@ -46,7 +46,7 @@ if(VIENNALS_USE_VTK)
   find_package(VTK QUIET)
   if(VTK_FOUND)
     message(STATUS "Found VTK")
-    add_definitions(-DVIENNALS_USE_VTK)
+    add_compile_definitions(VIENNALS_USE_VTK)
     include(${VTK_USE_FILE})
     # only link needed vtk libraries for static builds
     if(VIENNALS_STATIC_BUILD)
