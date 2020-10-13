@@ -176,7 +176,7 @@ int main(int argc, char* argv[]) {
     myFlagging<NumericType, D> myFlagger(levelSets.back(), 1e-3);
 
 
-    for(int i =0; i < 5; i++){
+    for(int i =0; i < 10; i++){
 
         start = std::chrono::high_resolution_clock::now(); 
 
@@ -197,7 +197,7 @@ int main(int argc, char* argv[]) {
 
     silvacoLikeFlagging<NumericType,D> silvacoFlagger(levelSets.back(), 0.34906585039887);
 
-    for(int i =0; i < 5; i++){
+    for(int i =0; i < 10; i++){
 
         start = std::chrono::high_resolution_clock::now(); 
 
@@ -208,7 +208,8 @@ int main(int argc, char* argv[]) {
         std::cout << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << " "; 
 
     }
-
+    std::cout << std::endl;
+    
     silvacoFlagger.createFlagsOutput(activePoints);
 
     std::cout << "Silvaco Flagging: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << std::endl; 

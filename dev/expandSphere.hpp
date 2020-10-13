@@ -27,6 +27,8 @@ template <class T, int D> class lsExpandSphere {
 
   T radius = 0.;
 
+  hrleVectorType<T, D> origin;
+
   //TOD: make call by reference (problem with initialization)
   std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash>  activePoints;
 
@@ -35,8 +37,9 @@ public:
   lsExpandSphere() {}
 
   lsExpandSphere(lsSmartPointer<lsDomain<T, D>> passedLevelSet, 
-      std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash>  passedActivePoints, T passedRadius)
-      : levelSet(passedLevelSet), activePoints(passedActivePoints), radius(passedRadius) {
+      std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash>  passedActivePoints, 
+      T passedRadius, hrleVectorType<T, D> passedOrigin)
+      : levelSet(passedLevelSet), activePoints(passedActivePoints), radius(passedRadius), origin(passedOrigin){
         //TODO: check if level set is euler normalized and give error if not
       gridDelta = levelSet->getGrid().getGridDelta();
   }
@@ -149,7 +152,7 @@ public:
 
                   for(int i = 0; i < D; i++){
                       //std::cout << neighborIt.getIndices()[i] << std::endl;
-                      pointRadius += ( gridDelta * neighborIt.getIndices()[i]) * ( gridDelta * neighborIt.getIndices()[i]);
+                      pointRadius += ( gridDelta * neighborIt.getIndices()[i] - origin[i]) * ( gridDelta * neighborIt.getIndices()[i] - origin[i]);
                   }
 
                   pointRadius = std::sqrt(pointRadius);

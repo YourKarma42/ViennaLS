@@ -299,7 +299,8 @@ void timingTests(lsSmartPointer<lsDomain<double, D>> levelSet,
 
 
 
-lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius){
+lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
+                            std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & lsPoints){
 
     std::cout << "creating sphere..." << std::endl;
 
@@ -308,9 +309,12 @@ lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius){
     auto levelSet =
         lsSmartPointer<lsDomain<double, D>>::New(gridDelta);
 
-    lsMakeGeometry<double, D>(
-      levelSet, lsSmartPointer<lsSphere<double, D>>::New(origin, radius))
-      .apply();
+    auto lsWithGeometry = lsMakeGeometry<double, D>(
+      levelSet, lsSmartPointer<lsSphere<double, D>>::New(origin, radius));
+
+    lsWithGeometry.apply();
+
+    lsPoints = lsWithGeometry.getActivePoints();
 
 
     return levelSet;
@@ -492,10 +496,9 @@ void create_output_Manhatten(lsSmartPointer<lsDomain<double, D>> levelSet,
         } 
 
         // move neighborIterator to current position
+        neighborIterator.goToIndicesSequential(centerIt.getStartIndices());
 
         meanCurvatureSD1.push_back(shape1(neighborIt));
-
-        neighborIterator.goToIndicesSequential(centerIt.getStartIndices());
 
         meanCurvatureSD2.push_back(shape2(neighborIterator));
 
@@ -696,7 +699,9 @@ int main() {
 
     NumericType radius = 100.;
 
-    lsSmartPointer<lsDomain<double, D>> levelSet = makeSphere(gridDelta, radius);
+    std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> activePoints;
+
+    lsSmartPointer<lsDomain<double, D>> levelSet = makeSphere(gridDelta, radius, activePoints);
 
     //lsDomain<NumericType,D> levelSet = makeTrench(gridDelta, planeNormal);
 
@@ -708,39 +713,37 @@ int main() {
 
 /*
     int order = 1;
-    lsExpand<NumericType, D>(*(levelSets.back()), 2 * (order + 2) + 1).apply();
+    lsExpand<NumericType, D>(levelSets.back(), 2 * (order + 2) + 1).apply();
 
     std::cout << "Calculating Curvatures..." << std::endl;
 
-    create_output_Manhatten(*(levelSets.back()),  "final_output_Manhatten");
+    create_output_Manhatten(levelSets.back(),  "final_output_Manhatten");
 */
 
 
-
+/*
     std::cout << "Converting..." << std::endl;
 
     lsConvertEuclid<NumericType, D>  converter(levelSets.back());
 
     converter.apply();
 
+
+
     //get the active grid points of the level set
-    auto activePoints = converter.getActivePoints();
+    activePoints = converter.getActivePoints();
 
     std::cout << activePoints.size() << std::endl;
+*/
 
-    ///lsMesh narrowband1;
-   // std::cout << "Extracting after Marching..." << std::endl;
-    //lsToMesh<NumericType, D>(levelSet, narrowband1, true, false).apply(activePoints);
-   // lsToMesh<NumericType, D>(*(levelSets.back()), narrowband1, true, true).apply(activePoints);  
-   // lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "FMMOutput" ).apply();
 
     auto start = std::chrono::high_resolution_clock::now(); 
 
     std::cout << "Fast Marching..." << std::endl;
 
-    //lsEikonalExpand<NumericType, D> expander(levelSets.back(), activePoints);
+    lsEikonalExpand<NumericType, D> expander(levelSets.back(), activePoints);
 
-    lsExpandSphere<NumericType, D> expander(levelSets.back(), activePoints, radius);
+    //lsExpandSphere<NumericType, D> expander(levelSets.back(), activePoints, radius);
 
     expander.apply(); 
 

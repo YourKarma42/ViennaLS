@@ -39,24 +39,30 @@
 
 #include <lsCalculateNormalVectors.hpp>
 
+#include <lsPrune.hpp>
+
 //____________testing end___________________________
 
 constexpr int D = 2;
 typedef double NumericType;
 typedef typename lsDomain<NumericType, D>::DomainType hrleDomainType;
 
-lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius){
+lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius, 
+            std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & lsPoints){
 
     std::cout << "creating sphere..." << std::endl;
 
-    double origin[3] = {0., 0., 0.};
+    double origin[3] = {-0.25, -0.25, 0.};
 
     auto levelSet =
         lsSmartPointer<lsDomain<double, D>>::New(gridDelta);
 
-    lsMakeGeometry<double, D>(
-      levelSet, lsSmartPointer<lsSphere<double, D>>::New(origin, radius))
-      .apply();
+    auto lsWithGeometry = lsMakeGeometry<double, D>(
+      levelSet, lsSmartPointer<lsSphere<double, D>>::New(origin, radius));
+
+    lsWithGeometry.apply();
+
+    lsPoints = lsWithGeometry.getActivePoints();
 
 
     return levelSet;
@@ -85,13 +91,21 @@ int main() {
 
     NumericType radius = 10.;
 
-    lsSmartPointer<lsDomain<double, D>> levelSet1 = makeSphere(gridDelta, radius);
+
+    
+
+    std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> activePoints1;
+
+    std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> activePoints2;
+    
+
+    lsSmartPointer<lsDomain<double, D>> levelSet1 = makeSphere(gridDelta, radius, activePoints1);
 
     levelSets1.push_back(levelSet1);  
 
-    lsSmartPointer<lsDomain<double, D>> levelSet2 = makeSphere(gridDelta, radius);
+    lsSmartPointer<lsDomain<double, D>> levelSet2 = makeSphere(gridDelta, radius, activePoints2);
 
-   levelSets2.push_back(levelSet2);  
+    levelSets2.push_back(levelSet2);  
 /*
     auto pointcloud = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting point cloud..." << std::endl;
@@ -105,7 +119,7 @@ int main() {
     lsExpand<NumericType, D>(levelSets.back(), 2 * (order + 2) + 1).apply();
 */
 
-
+/*
     std::cout << "Converting..." << std::endl;
 
     lsConvertEuclid<NumericType, D>  converter1(levelSets1.back());
@@ -117,26 +131,39 @@ int main() {
     converter2.apply();
 
     //get the active grid points of the level set
-    auto activePoints = converter1.getActivePoints();
+    //auto activePoints = converter1.getActivePoints();
 
-    std::cout << "active points: " << activePoints.size() << std::endl;
+    //std::cout << "active points: " << activePoints.size() << std::endl;
 
-   // lsMesh narrowband;
-    //std::cout << "Extracting after conversion..." << std::endl;
-    //lsToMesh<NumericType, D>(*(levelSets.back()), narrowband, true, true).apply(activePoints);
+    activePoints1 = converter1.getActivePoints();
+
+    activePoints2 = converter2.getActivePoints();
+
+*/
+
+
+//TODO: create active POINTS!!!!!!!!
+
+    //lsPrune<NumericType, D>(levelSets1.back()).apply();
+
+    auto narrowband = lsSmartPointer<lsMesh>::New();
+    std::cout << "Extracting after conversion..." << std::endl;
+    lsToMesh<NumericType, D>(levelSets1.back(), narrowband, true, true).apply(activePoints1);
     //lsPoints
   
-    //lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "ConversionOutput" ).apply();
+    lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "ConversionOutput" ).apply();
 
     start = std::chrono::high_resolution_clock::now(); 
 
     std::cout << "Fast Marching..." << std::endl;
 
-    lsEikonalExpand<NumericType, D> expanderEikonal(levelSets1.back(), activePoints);
+    lsEikonalExpand<NumericType, D> expanderEikonal(levelSets1.back(), activePoints1);
 
     expanderEikonal.apply(); 
 
-    lsExpandSphere<NumericType, D> expanderAnalytical(levelSets2.back(), converter2.getActivePoints(), radius);
+    hrleVectorType<NumericType, D> origin (-0.25, -0.25, 0.);
+
+    lsExpandSphere<NumericType, D> expanderAnalytical(levelSets2.back(), activePoints2, radius, origin);
 
     expanderAnalytical.apply();
 
@@ -157,7 +184,7 @@ int main() {
 
     auto narrowband1 = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting after Marching..." << std::endl;
-    lsToMesh<NumericType, D>(levelSets1.back(), narrowband1, true, false).apply(activePoints);
+    lsToMesh<NumericType, D>(levelSets1.back(), narrowband1, true, false).apply(activePoints1);
 
     narrowband1->insertNextScalarData(analyticValues ,"Analytical Value");
  
@@ -177,7 +204,7 @@ int main() {
         !it.isFinished(); ++it){
 
         //if (!it.isDefined() || std::abs(it.getValue()) > 0.5) {
-        if (!it.isDefined() || (activePoints.find(it.getStartIndices()) == activePoints.end())) {
+        if (!it.isDefined() || (activePoints1.find(it.getStartIndices()) == activePoints1.end())) {
             continue;
         } 
 
@@ -191,7 +218,7 @@ int main() {
 
     auto narrowband3 = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<NumericType, D>(levelSets1.back(), narrowband3, true, true).apply(activePoints);
+    lsToMesh<NumericType, D>(levelSets1.back(), narrowband3, true, true).apply(activePoints1);
     //lsToMesh<NumericType, D>(levelSet, narrowband3, true, true).apply();
     //lsPoints
 

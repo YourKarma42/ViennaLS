@@ -89,7 +89,7 @@ template <class T, int D> class myFlagging{
 
             hrleSparseBoxIterator<hrleDomain<T, D>> boxIterator(levelSet->getDomain(), 1);
 
-            //curvaturGeneralFormulaBigStencilBias <T, D> curvatureCalculator(1.0);
+            //curvaturGeneralFormulaBigStencilBias <T, D> curvatureCalculator(levelSet->getGrid().getGridDelta());
 
             //hrleConstSparseStarIterator<typename lsDomain<T, D>::DomainType> neighborIt(domain);
 
@@ -124,7 +124,7 @@ template <class T, int D> class myFlagging{
 
                 //T curve = curvatureCalculator(neighborIt);
 
-                boxIterator.goToIndicesSequential(it.getStartIndices());
+                boxIterator.goToIndices(it.getStartIndices());
 
                 T curve = curvatureCalculator(boxIterator);
 

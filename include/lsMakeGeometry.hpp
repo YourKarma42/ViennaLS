@@ -15,6 +15,9 @@
 #include <lsMesh.hpp>
 #include <lsMessage.hpp>
 
+//TODO:remove
+#include <unordered_set>
+
 /// Create level sets describing basic geometric forms.
 template <class T, int D> class lsMakeGeometry {
   typedef typename lsDomain<T, D>::PointValueVectorType pointDataType;
@@ -134,7 +137,18 @@ public:
     }
   }
 
+
+  //TODO: remove
+  std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash>  getActivePoints(){
+      return activePoints;
+  }
+
 private:
+
+  //TODO:remove rework its stupid that way
+  std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> activePoints;
+
+
   void makeSphere(hrleVectorType<T, D> origin, T radius, int width = 2) {
     if (levelSet == nullptr) {
       lsMessage::getInstance()
@@ -161,6 +175,85 @@ private:
 
     pointDataType pointData;
     const hrleVectorType<hrleIndexType, D> minIndex = index;
+
+//     TEST start
+
+//TODO: Currently quite stupid!
+
+
+
+    while (index < endIndex) {
+      // take shortest manhatten distance to gridline intersection
+      T distance = std::numeric_limits<T>::max();
+      for (unsigned i = 0; i < D; ++i) {
+        T y = (index[(i + 1) % D] * gridDelta) - origin[(i + 1) % D];
+        T z = 0;
+        if (D == 3)
+          z = (index[(i + 2) % D] * gridDelta) - origin[(i + 2) % D];
+        T x = radius2 - y * y - z * z;
+        if (x < 0.)
+          continue;
+        T dirRadius =
+            std::abs((index[i] * gridDelta) - origin[i]) - std::sqrt(x);
+        if (std::abs(dirRadius) < std::abs(distance))
+          distance = dirRadius;
+      }
+
+      if (std::abs(distance) <= valueLimit + 1e-10) {
+
+        T dist = 0.;
+
+        for(unsigned i = 0; i < D; i++){
+          dist += (index[i]*gridDelta  - origin[i])* (index[i]*gridDelta - origin[i]);
+        }
+
+        dist = std::sqrt(dist);
+
+        pointData.push_back(std::make_pair(index, (dist - radius)));
+
+        //if(std::abs(distance / gridDelta) < 0.5)
+          activePoints.insert(index);
+      }
+      int dim = 0;
+      for (; dim < D - 1; ++dim) {
+        if (index[dim] < endIndex[dim])
+          break;
+        index[dim] = minIndex[dim];
+      }
+      ++index[dim];
+    }
+
+/*
+    //currently only works on centered spheres
+    while (index < endIndex) {
+
+      T dist = 0;
+      for(unsigned i = 0; i < D; i++){
+        dist += index[i]*gridDelta * index[i]*gridDelta;
+      }
+
+      dist = std::sqrt(dist);
+
+      if(std::abs(radius - dist) < (std::sqrt(2.*gridDelta*gridDelta)/2.)){
+        pointData.push_back(std::make_pair(index, (dist - radius)));
+        activePoints.insert(index);
+      }
+
+      int dim = 0;
+      for (; dim < D - 1; ++dim) {
+        if (index[dim] < endIndex[dim])
+          break;
+        index[dim] = minIndex[dim];
+      }
+      ++index[dim];
+
+    }
+*/   
+
+//    Test End
+
+/*
+
 
     while (index < endIndex) {
       // take shortest manhatten distance to gridline intersection
@@ -190,7 +283,7 @@ private:
       }
       ++index[dim];
     }
-
+*/
     // Mirror indices correctly into domain, unless boundary conditions
     // are ignored
     if (!ignoreBoundaryConditions) {

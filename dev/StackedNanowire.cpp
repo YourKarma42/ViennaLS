@@ -12,13 +12,20 @@
 #include <lsPrune.hpp>
 #include <lsToMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
+#include <lsToDiskMesh.hpp>
 #include <lsVTKWriter.hpp>
 #include <lsAdvect.hpp>
 
+#include <lsCalculateNormalVectors.hpp>
+
+#include "derivatives.hpp"
+
 constexpr int D = 3;
 using NumericType = double;
-constexpr NumericType gridDelta = 0.5;
+constexpr NumericType gridDelta = 1.0;
 unsigned outputNum = 0;
+
+typedef typename lsDomain<NumericType, D>::DomainType hrleDomainType;
 
 bool exists(const std::string& name) {
     std::ifstream f(name.c_str());
@@ -67,9 +74,12 @@ public:
   }
 };
 
+
 void writeSurfaces(std::deque<lsSmartPointer<lsDomain<NumericType, D>>>& domains, bool writePoints = false) {
-/* 
+
   static unsigned numMat = 0;
+
+  std::string path = "SN_Output/";
 
   for(unsigned i = 0; (i < domains.size()) || (i < numMat); ++i) {
     auto mesh = lsSmartPointer<lsMesh>::New();
@@ -78,8 +88,8 @@ void writeSurfaces(std::deque<lsSmartPointer<lsDomain<NumericType, D>>>& domains
       for(unsigned j = 0; j < outputNum; ++j) {
         std::string fileName = std::to_string(i) + "-" + std::to_string(j) + ".vtk";
         if(!exists(fileName)){
-          lsVTKWriter(mesh, "surface-m" + fileName).apply();
-          lsVTKWriter(mesh, "points-m" + fileName).apply();
+          lsVTKWriter(mesh, path + "surface-m" + fileName).apply();
+          lsVTKWriter(mesh, path + "points-m" + fileName).apply();
         }
       }
     }
@@ -91,18 +101,93 @@ void writeSurfaces(std::deque<lsSmartPointer<lsDomain<NumericType, D>>>& domains
       }
     }
     std::string fileName = "surface-m" + std::to_string(i) + "-" + std::to_string(outputNum) + ".vtk";
-    lsVTKWriter(mesh, fileName).apply();
+    lsVTKWriter(mesh, path + fileName).apply();
     if(writePoints) {
+      
+
       std::string pointName = "points-m" + std::to_string(i) + "-" + std::to_string(outputNum) + ".vtk";
-      lsVTKWriter(pointMesh, pointName).apply();
+      lsVTKWriter(pointMesh, path + pointName).apply();
     }
   }
   numMat = (domains.size()<numMat)?numMat:domains.size();
   // increase count
   ++outputNum;
-*/
+
 
 }
+
+std::vector<NumericType> calcCurve(lsSmartPointer<lsDomain<NumericType, D>>& domain){
+
+    hrleSparseBoxIterator<hrleDomain<NumericType, D>> neighborIterator(domain->getDomain(), 1);
+
+    std::vector<NumericType> curvatures;
+
+    //std::cout << "blub";
+
+    lsExpand<NumericType, D>(domain, 7).apply();
+
+    //std::cout << "blub2";
+
+    NumericType gridDelta = domain->getGrid().getGridDelta();
+
+    curvaturGeneralFormula<NumericType, D> generalFormula(gridDelta);
+
+    for(hrleConstSparseIterator<hrleDomainType> centerIt(domain->getDomain());
+      !centerIt.isFinished(); ++centerIt){
+
+        if (!centerIt.isDefined() || (std::abs(centerIt.getValue()) > 0.5)) {
+          continue;
+        } 
+
+        neighborIterator.goToIndicesSequential(centerIt.getStartIndices());
+
+        curvatures.push_back(generalFormula(neighborIterator));    
+
+    }
+
+    return curvatures;
+
+}
+
+void writeFeaturOutput(std::deque<lsSmartPointer<lsDomain<NumericType, D>>>& domains) {
+
+  static unsigned numMat = 0;
+
+  std::string path = "SN_Output/";
+
+  for(unsigned i = 0; (i < domains.size()) || (i < numMat); ++i) {
+    auto pointMesh = lsSmartPointer<lsMesh>::New();
+    if(numMat != 0 && i >= numMat) {  // write emtpy meshes before so paraview displays it correctly
+      for(unsigned j = 0; j < outputNum; ++j) {
+        std::string fileName = std::to_string(i) + "-" + std::to_string(j) + ".vtk";
+        if(!exists(fileName)){
+          lsVTKWriter(pointMesh, path + "points-features" + fileName).apply();
+        }
+      }
+    }
+    
+    if(i < domains.size()) {
+
+      lsExpand<NumericType, D>(domains[i], 7).apply();
+
+      //lsCalculateNormalVectors<NumericType, D>(domains[i]).apply();
+      lsToDiskMesh<NumericType, D>(domains[i], pointMesh).apply();
+      std::vector<NumericType> curves = calcCurve(domains[i]);       
+      //lsToMesh<NumericType, D>(domains[i], pointMesh, true, true).apply();
+      pointMesh->insertNextScalarData(curves, "curvature");
+    }
+
+    std::string pointName = "points-features" + std::to_string(i) + "-" + std::to_string(outputNum) + ".vtk";
+    lsVTKWriter(pointMesh, path + pointName).apply();
+    
+  }
+  numMat = (domains.size()<numMat)?numMat:domains.size();
+  // increase count
+  ++outputNum;
+
+
+}
+
 
 class Process {
   public:
@@ -152,7 +237,7 @@ void planarise(std::deque<lsSmartPointer<lsDomain<NumericType, D>>>& domains, do
 }
 
 int main() {
-  omp_set_num_threads(2);
+  omp_set_num_threads(4);
 
   
   NumericType bounds[2 * D] = {0, 70, 0, 100, 0, 70}; // in nanometres
@@ -220,6 +305,8 @@ int main() {
   }
   writeSurfaces(domains, true);
 
+  writeFeaturOutput(domains);
+
   // pattern si/sige/si stack
   {
     processes.clear();
@@ -233,6 +320,11 @@ int main() {
   domains.pop_back();
   writeSurfaces(domains, true);
 
+//first 9 Steps
+
+  writeFeaturOutput(domains);
+
+return 0;
   // deposit dummy gate material
   {
     processes.clear();
