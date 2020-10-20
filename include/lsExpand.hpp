@@ -58,6 +58,8 @@ public:
 
     if(usedMetric == EULER){
       testFMM();
+    }
+    if(levelSet->getNumberOfPoints() == 0) {
       return;
     }
 

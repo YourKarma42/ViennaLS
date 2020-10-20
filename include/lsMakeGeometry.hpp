@@ -100,11 +100,18 @@ public:
     geometry = lsGeometryEnum::CUSTOM;
   }
 
-  void setIgnoreBoundaryConditions(bool &passedIgnoreBoundaryConditions) {
+  void setIgnoreBoundaryConditions(bool passedIgnoreBoundaryConditions) {
     ignoreBoundaryConditions = passedIgnoreBoundaryConditions;
   }
 
   void apply() {
+    if (levelSet == nullptr) {
+      lsMessage::getInstance()
+          .addWarning("No level set was passed to lsMakeGeometry.")
+          .print();
+      return;
+    }
+
     switch (geometry) {
     case lsGeometryEnum::SPHERE:
       makeSphere(sphere->origin, sphere->radius);
@@ -143,10 +150,16 @@ public:
       return activePoints;
   }
 
+  std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash>  getNarrowPoints(){
+      return narrowPoints;
+  }
+
 private:
 
   //TODO:remove rework its stupid that way
   std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> activePoints;
+
+  std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> narrowPoints;
 
 
   void makeSphere(hrleVectorType<T, D> origin, T radius, int width = 2) {
@@ -180,7 +193,7 @@ private:
 
 //TODO: Currently quite stupid!
 
-
+/*
 
     while (index < endIndex) {
       // take shortest manhatten distance to gridline intersection
@@ -211,7 +224,9 @@ private:
 
         pointData.push_back(std::make_pair(index, (dist - radius)));
 
-        //if(std::abs(distance / gridDelta) < 0.5)
+        narrowPoints.insert(index);
+
+        if(std::abs(distance / gridDelta) < 0.5)
           activePoints.insert(index);
       }
       int dim = 0;
@@ -223,7 +238,7 @@ private:
       ++index[dim];
     }
 
-/*
+
     //currently only works on centered spheres
     while (index < endIndex) {
 
@@ -252,7 +267,7 @@ private:
 
 //    Test End
 
-/*
+
 
 
     while (index < endIndex) {
@@ -283,6 +298,8 @@ private:
       }
       ++index[dim];
     }
+/*
+
 */
     // Mirror indices correctly into domain, unless boundary conditions
     // are ignored

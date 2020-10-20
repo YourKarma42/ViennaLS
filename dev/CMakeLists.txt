@@ -22,6 +22,11 @@ find_package(ViennaLS REQUIRED)
 # target_include_directories(normalizeFMM PUBLIC ${VIENNALS_INCLUDE_DIRS})
 # target_link_libraries(normalizeFMM PRIVATE ${VIENNALS_LIBRARIES})
 
+
+add_executable(advectSphereCurve advectSphereCurve.cpp)
+target_include_directories(advectSphereCurve PUBLIC ${VIENNALS_INCLUDE_DIRS})
+target_link_libraries(advectSphereCurve PRIVATE ${VIENNALS_LIBRARIES})
+
 add_executable(compareCurvatures compareCurvatures.cpp)
 target_include_directories(compareCurvatures PUBLIC ${VIENNALS_INCLUDE_DIRS})
 target_link_libraries(compareCurvatures PRIVATE ${VIENNALS_LIBRARIES})

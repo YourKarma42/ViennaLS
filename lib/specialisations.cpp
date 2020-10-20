@@ -25,6 +25,7 @@
 #include <lsToMesh.hpp>
 #include <lsToSurfaceMesh.hpp>
 #include <lsToVoxelMesh.hpp>
+#include <lsWriteVisualizationMesh.hpp>
 #include <lsWriter.hpp>
 
 // now call the specialize macro to precompile them
@@ -56,5 +57,4 @@ PRECOMPILE_SPECIALIZE(lsToMesh)
 PRECOMPILE_SPECIALIZE(lsToSurfaceMesh)
 PRECOMPILE_SPECIALIZE(lsToVoxelMesh)
 PRECOMPILE_SPECIALIZE(lsWriter)
-
-
+PRECOMPILE_SPECIALIZE(lsWriteVisualizationMesh)

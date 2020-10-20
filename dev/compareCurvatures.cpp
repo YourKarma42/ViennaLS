@@ -300,7 +300,8 @@ void timingTests(lsSmartPointer<lsDomain<double, D>> levelSet,
 
 
 lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
-                            std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & lsPoints){
+                            std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & lsPoints,
+                            std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & narrowPoints){
 
     std::cout << "creating sphere..." << std::endl;
 
@@ -315,6 +316,7 @@ lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
     lsWithGeometry.apply();
 
     lsPoints = lsWithGeometry.getActivePoints();
+    narrowPoints = lsWithGeometry.getNarrowPoints();
 
 
     return levelSet;
@@ -701,7 +703,9 @@ int main() {
 
     std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> activePoints;
 
-    lsSmartPointer<lsDomain<double, D>> levelSet = makeSphere(gridDelta, radius, activePoints);
+    std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> narrowPoints;
+
+    lsSmartPointer<lsDomain<double, D>> levelSet = makeSphere(gridDelta, radius, activePoints, narrowPoints);
 
     //lsDomain<NumericType,D> levelSet = makeTrench(gridDelta, planeNormal);
 
@@ -734,14 +738,14 @@ int main() {
     activePoints = converter.getActivePoints();
 
     std::cout << activePoints.size() << std::endl;
-*/
 
+*/
 
     auto start = std::chrono::high_resolution_clock::now(); 
 
     std::cout << "Fast Marching..." << std::endl;
 
-    lsEikonalExpand<NumericType, D> expander(levelSets.back(), activePoints);
+    lsEikonalExpand<NumericType, D> expander(levelSets.back(), narrowPoints);
 
     //lsExpandSphere<NumericType, D> expander(levelSets.back(), activePoints, radius);
 
