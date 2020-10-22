@@ -22,7 +22,7 @@
 
 constexpr int D = 3;
 using NumericType = double;
-constexpr NumericType gridDelta = 1.0;
+constexpr NumericType gridDelta = 0.5;
 unsigned outputNum = 0;
 
 typedef typename lsDomain<NumericType, D>::DomainType hrleDomainType;
@@ -81,6 +81,7 @@ std::vector<std::vector<NumericType>> calcCurve(lsSmartPointer<lsDomain<NumericT
     std::vector<std::vector<NumericType>> curvaturesReturn;
     std::vector<NumericType> curvatures;
     std::vector<NumericType> curvaturesBias;
+    std::vector<NumericType> curvaturesAbs;
 
     //std::cout << "blub";
 
@@ -103,7 +104,11 @@ std::vector<std::vector<NumericType>> calcCurve(lsSmartPointer<lsDomain<NumericT
 
         neighborIterator.goToIndicesSequential(centerIt.getStartIndices());
 
-        curvatures.push_back(generalFormula(neighborIterator)); 
+        NumericType c = generalFormula(neighborIterator);
+
+        curvatures.push_back(c); 
+
+        curvaturesAbs.push_back(std::abs(c));
 
         curvaturesBias.push_back(generalFormulaBias(neighborIterator));   
 
@@ -111,6 +116,7 @@ std::vector<std::vector<NumericType>> calcCurve(lsSmartPointer<lsDomain<NumericT
 
     curvaturesReturn.push_back(curvatures);
     curvaturesReturn.push_back(curvaturesBias);
+    curvaturesReturn.push_back(curvaturesAbs);
 
     return curvaturesReturn;
 
@@ -143,6 +149,7 @@ void writeFeaturOutput(std::deque<lsSmartPointer<lsDomain<NumericType, D>>>& dom
       //lsToMesh<NumericType, D>(domains[i], pointMesh, true, true).apply();
       pointMesh->insertNextScalarData(curves[0], "curvature");
       pointMesh->insertNextScalarData(curves[1], "curvatureBias");
+      pointMesh->insertNextScalarData(curves[2], "curvatureAbs");
     }
 
     std::string pointName = "points-features" + std::to_string(i) + "-" + std::to_string(outputNum) + ".vtk";
