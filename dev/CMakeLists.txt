@@ -47,6 +47,10 @@ add_executable(StackedNanowire StackedNanowire.cpp)
 target_include_directories(StackedNanowire PUBLIC ${VIENNALS_INCLUDE_DIRS})
 target_link_libraries(StackedNanowire PRIVATE ${VIENNALS_LIBRARIES})
 
+add_executable(timeCurvatures timeCurvatures.cpp)
+target_include_directories(timeCurvatures PUBLIC ${VIENNALS_INCLUDE_DIRS})
+target_link_libraries(timeCurvatures PRIVATE ${VIENNALS_LIBRARIES})
+
 
 
 

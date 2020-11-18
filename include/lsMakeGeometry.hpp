@@ -193,7 +193,7 @@ private:
 
 //TODO: Currently quite stupid!
 
-/*
+
 
     while (index < endIndex) {
       // take shortest manhatten distance to gridline intersection
@@ -263,13 +263,15 @@ private:
       ++index[dim];
 
     }
+
+/*
 */   
 
 //    Test End
 
 
 
-
+/*
     while (index < endIndex) {
       // take shortest manhatten distance to gridline intersection
       T distance = std::numeric_limits<T>::max();
@@ -298,7 +300,7 @@ private:
       }
       ++index[dim];
     }
-/*
+
 
 */
     // Mirror indices correctly into domain, unless boundary conditions

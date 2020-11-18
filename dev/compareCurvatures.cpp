@@ -674,7 +674,7 @@ int main() {
 
     omp_set_num_threads(1);
 
-    NumericType gridDelta = 0.25;
+    NumericType gridDelta = 0.5;
 
     //______________________________First____________________________________________________________________
 
