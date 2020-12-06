@@ -47,13 +47,15 @@ constexpr int D = 2;
 typedef double NumericType;
 typedef typename lsDomain<NumericType, D>::DomainType hrleDomainType;
 
-lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius, 
-            std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & lsPoints){
+
+lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
+                            std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & lsPoints,
+                            std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & narrowPoints){
 
     std::cout << "creating sphere..." << std::endl;
 
-    double origin[3] = {-0.25, -0.25, 0.};
-
+    double origin[3] = {0.0, 0.0, 0.0};
+    
     auto levelSet =
         lsSmartPointer<lsDomain<double, D>>::New(gridDelta);
 
@@ -63,6 +65,7 @@ lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
     lsWithGeometry.apply();
 
     lsPoints = lsWithGeometry.getActivePoints();
+    narrowPoints = lsWithGeometry.getNarrowPoints();
 
 
     return levelSet;
@@ -87,276 +90,50 @@ int main() {
 
     std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets1;
 
-    std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets2;
-
-    NumericType radius = 10.;
+    NumericType radius = 15.;
 
 
     
 
-    std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> activePoints1;
+    std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> activePoints;
 
-    std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> activePoints2;
+    std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> narrowPoints;
+
     
 
-    lsSmartPointer<lsDomain<double, D>> levelSet1 = makeSphere(gridDelta, radius, activePoints1);
+    lsSmartPointer<lsDomain<double, D>> levelSet1 = makeSphere(gridDelta, radius, activePoints, narrowPoints);
 
     levelSets1.push_back(levelSet1);  
 
-    lsSmartPointer<lsDomain<double, D>> levelSet2 = makeSphere(gridDelta, radius, activePoints2);
-
-    levelSets2.push_back(levelSet2);  
-/*
-    auto pointcloud = lsSmartPointer<lsMesh>::New();
-    std::cout << "Extracting point cloud..." << std::endl;
-    
-    lsToMesh<double, D>(levelSets1.back(), pointcloud, true, true).apply();
-
-    lsVTKWriter(pointcloud, lsFileFormatEnum::VTU ,"point_cloud").apply();
-
-
-    int order = 1;
-    lsExpand<NumericType, D>(levelSets.back(), 2 * (order + 2) + 1).apply();
-*/
-
-/*
-    std::cout << "Converting..." << std::endl;
-
-    lsConvertEuclid<NumericType, D>  converter1(levelSets1.back());
-
-    converter1.apply();
-
-    lsConvertEuclid<NumericType, D>  converter2(levelSets2.back());
-
-    converter2.apply();
-
-    //get the active grid points of the level set
-    //auto activePoints = converter1.getActivePoints();
-
-    //std::cout << "active points: " << activePoints.size() << std::endl;
-
-    activePoints1 = converter1.getActivePoints();
-
-    activePoints2 = converter2.getActivePoints();
-
-*/
-
-
-//TODO: create active POINTS!!!!!!!!
-
-    //lsPrune<NumericType, D>(levelSets1.back()).apply();
-
-    auto narrowband = lsSmartPointer<lsMesh>::New();
-    std::cout << "Extracting after conversion..." << std::endl;
-    lsToMesh<NumericType, D>(levelSets1.back(), narrowband, true, true).apply(activePoints1);
-    //lsPoints
+    auto narrowband1 = lsSmartPointer<lsMesh>::New();
+    std::cout << "Extracting narrowband..." << std::endl;
+    lsToMesh<NumericType, D>(levelSets1.back(), narrowband1,  gridDelta/2.).apply();
   
-    lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "ConversionOutput" ).apply();
+    lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "narrowbandAfterCreation" ).apply();
 
     start = std::chrono::high_resolution_clock::now(); 
 
     std::cout << "Fast Marching..." << std::endl;
 
-    lsEikonalExpand<NumericType, D> expanderEikonal(levelSets1.back(), activePoints1);
+    lsEikonalExpand<NumericType, D> expanderEikonal(levelSets1.back(), narrowPoints);
 
     expanderEikonal.apply(); 
 
-    hrleVectorType<NumericType, D> origin (-0.25, -0.25, 0.);
-
-    lsExpandSphere<NumericType, D> expanderAnalytical(levelSets2.back(), activePoints2, radius, origin);
-
-    expanderAnalytical.apply();
-
-    std::cout << "FMM done..." << std::endl;
-
-    std::vector<NumericType> analyticValues;
-
-    for(hrleConstSparseIterator<hrleDomainType> it(levelSets2.back()->getDomain());
-        !it.isFinished(); ++it){
-
-        if (!it.isDefined()) {
-            continue;
-        } 
-
-        analyticValues.push_back(it.getValue());
-
-    }
-
-    auto narrowband1 = lsSmartPointer<lsMesh>::New();
-    std::cout << "Extracting after Marching..." << std::endl;
-    lsToMesh<NumericType, D>(levelSets1.back(), narrowband1, true, false).apply(activePoints1);
-
-    narrowband1->insertNextScalarData(analyticValues ,"Analytical Value");
- 
-    lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "FMMOutput" ).apply();
-
-    stop = std::chrono::high_resolution_clock::now(); 
-
-    std::cout << "time for FMM: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << std::endl; 
-
-    curvaturShapeDerivatives1<NumericType, D> curveCalc(gridDelta);
-    std::vector<NumericType> curve;
-
-
-    hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType> neighborStarIt(levelSets1.back()->getDomain());
-
-    for(hrleConstSparseIterator<hrleDomainType> it(levelSets1.back()->getDomain());
-        !it.isFinished(); ++it){
-
-        //if (!it.isDefined() || std::abs(it.getValue()) > 0.5) {
-        if (!it.isDefined() || (activePoints1.find(it.getStartIndices()) == activePoints1.end())) {
-            continue;
-        } 
-
-        neighborStarIt.goToIndices(it.getStartIndices());
-
-        curve.push_back(curveCalc(neighborStarIt));
-
-    }
-
-
-
-    auto narrowband3 = lsSmartPointer<lsMesh>::New();
+    auto narrowband = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<NumericType, D>(levelSets1.back(), narrowband3, true, true).apply(activePoints1);
-    //lsToMesh<NumericType, D>(levelSet, narrowband3, true, true).apply();
-    //lsPoints
+    lsToMesh<NumericType, D>(levelSets1.back(), narrowband, true, true, gridDelta).apply();
 
-    //narrowband3.insertNextVectorData(normal, "Normal");
-    narrowband3->insertNextScalarData(curve, "curvature");
+    //lsToDiskMesh<NumericType, D>(levelSets1.back(), narrowband).apply(activePoints);
   
-    lsVTKWriter(narrowband3, lsFileFormatEnum::VTU , "narrowband" ).apply();
-
+    lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "narrowband" ).apply();
 
     std::cout << "Finished" << std::endl;
 
     return 0;
 }
 
-/*
-    ITERATOR TIMING TESTS
-    
-    double runs = 50.;
-
-    std::cout << "Number of runs: " << runs << std::endl;
-
-    start = std::chrono::high_resolution_clock::now(); 
-
-    for(int i=0; i<runs;i++){
-
-        for (hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType>
-            neighborIt(levelSet.getDomain(), levelSet.getGrid().getMinGridPoint());
-            neighborIt.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
-
-            auto &it = neighborIt.getCenter();
-
-            //if (!it.isDefined() || std::abs(it.getValue()) > 0.5) {
-            if (!it.isDefined() || (activePoints.find(it.getStartIndices()) == activePoints.end())) {
-                continue;
-            } 
-                  
-        }
-    }
-    stop = std::chrono::high_resolution_clock::now(); 
-
-    std::cout << "Star Iterator direct: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count()/runs << std::endl; 
-
-        start = std::chrono::high_resolution_clock::now(); 
-
-    for(int i=0; i<runs;i++){
-
-        hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType> neighborStarIt(levelSet.getDomain());
-
-        for(hrleConstSparseIterator<hrleDomainType> it(levelSet.getDomain());
-            !it.isFinished(); ++it){
-
-            //if (!it.isDefined() || std::abs(it.getValue()) > 0.5) {
-            if (!it.isDefined() || (activePoints.find(it.getStartIndices()) == activePoints.end())) {
-                continue;
-            } 
-
-            neighborStarIt.goToIndicesSequential(it.getStartIndices());
-
-        }
-    }
-
-    stop = std::chrono::high_resolution_clock::now(); 
-
-    std::cout << "Sparese iterator + Star Iterator goToIndicesSequential: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count()/runs << std::endl; 
-
-        start = std::chrono::high_resolution_clock::now(); 
-
-    for(int i=0; i<runs;i++){
-
-        hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType> neighborStarIt(levelSet.getDomain());
 
 
-        for(hrleConstSparseIterator<hrleDomainType> it(levelSet.getDomain());
-            !it.isFinished(); ++it){
-
-            //if (!it.isDefined() || std::abs(it.getValue()) > 0.5) {
-            if (!it.isDefined() || (activePoints.find(it.getStartIndices()) == activePoints.end())) {
-                continue;
-            } 
-
-            neighborStarIt.goToIndices(it.getStartIndices());
-
-        }
-    }
-
-    stop = std::chrono::high_resolution_clock::now(); 
-
-    std::cout << "Sparese iterator + Star Iterator goToIndices: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count()/runs << std::endl; 
-
-    start = std::chrono::high_resolution_clock::now(); 
-
-    for(int i=0; i<runs;i++){
-
-        hrleSparseBoxIterator<hrleDomain<NumericType, D>> boxIterator(levelSet.getDomain(), 1);
-
-        for(hrleConstSparseIterator<hrleDomainType> it(levelSet.getDomain());
-            !it.isFinished(); ++it){
-
-            //if (!it.isDefined() || std::abs(it.getValue()) > 0.5) {
-            if (!it.isDefined() || (activePoints.find(it.getStartIndices()) == activePoints.end())) {
-                continue;
-            } 
-
-            boxIterator.goToIndicesSequential(it.getStartIndices());
-
-        }
-    }
-    stop = std::chrono::high_resolution_clock::now(); 
-
-    std::cout << "Sparese iterator + Box Iterator goToIndicesSequential: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count()/runs << std::endl; 
-
-        start = std::chrono::high_resolution_clock::now(); 
-
-    for(int i=0; i<runs;i++){
-
-        hrleSparseBoxIterator<hrleDomain<NumericType, D>> boxIterator(levelSet.getDomain(), 1);
-
-
-        for(hrleConstSparseIterator<hrleDomainType> it(levelSet.getDomain());
-            !it.isFinished(); ++it){
-
-            //if (!it.isDefined() || std::abs(it.getValue()) > 0.5) {
-            if (!it.isDefined() || (activePoints.find(it.getStartIndices()) == activePoints.end())) {
-                continue;
-            } 
-
-            boxIterator.goToIndices(it.getStartIndices());
-
-        }
-    }
-    stop = std::chrono::high_resolution_clock::now(); 
-
-    std::cout << "Sparese iterator + Box Iterator goToIndices: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count()/runs << std::endl; 
-
- 
-
-
-*/
 
 
 

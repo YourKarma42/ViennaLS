@@ -65,6 +65,9 @@ public:
       p = omp_get_thread_num();
 #endif
 
+      //tmp for euler normalization
+      T gridDelta = grid.getGridDelta();
+
       auto &normalVectors = normalVectorsVector[p];
       normalVectors.reserve(pointsPerSegment);
 
@@ -97,7 +100,7 @@ public:
         for (int i = 0; i < D; i++) {
           T pos = neighborIt.getNeighbor(i).getValue() - center.getValue();
           T neg = center.getValue() - neighborIt.getNeighbor(i + D).getValue();
-          n[i] = (pos + neg) * 0.5;
+          n[i] = (pos + neg) / (2.*gridDelta);//* 0.5;
           denominator += n[i] * n[i];
         }
 

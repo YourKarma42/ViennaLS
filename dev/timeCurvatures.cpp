@@ -16,6 +16,8 @@
 
 #include <unordered_set>
 
+#include <filesystem>
+
 
 
 #include <lsConvertEuclid.hpp>
@@ -150,7 +152,7 @@ int main(int argc, char* argv[]) {
 
     omp_set_num_threads(numThreads);
 
-    NumericType gridDelta = 0.25;
+    NumericType gridDelta = 0.5;
 
     auto start = std::chrono::high_resolution_clock::now(); 
 
@@ -678,9 +680,12 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Writig csv file" << std::endl;  
 
+    std::filesystem::create_directory("timings");
+
+
     std::ofstream output;
 
-    output.open("timingsCurvature" + std::to_string(numThreads) + ".csv");
+    output.open("timings/timingsCurvature" + std::to_string(numThreads) + ".csv");
 
     output << csvOutput.rdbuf();
 

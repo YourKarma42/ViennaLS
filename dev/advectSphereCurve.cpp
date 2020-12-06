@@ -33,6 +33,8 @@
 
 #include <../dev/expandSphere.hpp>
 
+#include <../dev/eulerAdvect.cpp>
+
 
 
 //____________testing not necessary_________________
@@ -41,7 +43,7 @@
 
 #include <lsCalculateNormalVectors.hpp>
 
-constexpr int D = 3 ;
+constexpr int D = 2 ;
 typedef double NumericType;
 
 typedef typename lsDomain<NumericType, D>::DomainType hrleDomainType;
@@ -335,7 +337,7 @@ int main(int argc, char* argv[]) {
 
     int numThreads = 1;
 
-    NumericType gridDelta = 0.5;
+    NumericType gridDelta = 0.75;
 
     if(argc != 1){
         numThreads = std::stoi(argv[1]);
@@ -363,7 +365,7 @@ int main(int argc, char* argv[]) {
     auto velocities = lsSmartPointer<velocityField>::New();
 
     std::cout << "Advecting levelset..." << std::endl;
-    lsAdvect<double, D> advectionKernel;
+    eulerAdvect<double, D> advectionKernel;
 
     // the level set to be advected has to be inserted last
     // the other could be taken as a mask layer for advection
@@ -372,6 +374,8 @@ int main(int argc, char* argv[]) {
 
     advectionKernel.setVelocityField(velocities);
     // advectionKernel.setAdvectionTime(4.);
+
+    advectionKernel.setInterfaceArrays(activePoints, narrowPoints);
 
 
     advectionKernel.setAdvectionTime(5.);
@@ -382,8 +386,8 @@ int main(int argc, char* argv[]) {
     lsVTKWriter(mesh, "sphere-" + std::to_string(1) + ".vtk").apply();
 
 
-    int order = 1;
-    lsExpand<NumericType, D>(levelSet, 2 * (order + 2) + 1).apply();
+    //int order = 1;
+    //lsExpand<NumericType, D>(levelSet, 2 * (order + 2) + 1).apply();
 
 /*
     std::cout << "Converting levelset ..." << std::endl;
@@ -403,10 +407,10 @@ int main(int argc, char* argv[]) {
     expander.apply(); 
 */
 
-    std::cout << "Calculating Curvatures ..." << std::endl;
+    //std::cout << "Calculating Curvatures ..." << std::endl;
 
     //create_output_Euklid(levelSet,newActivePoints,"advectedEuklid");
-    create_output_Manhatten(levelSet,"advectedManhatten");
+    //create_output_Manhatten(levelSet,"advectedManhatten");
 
 /*
     unsigned counter = 1;

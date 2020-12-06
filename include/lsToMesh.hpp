@@ -23,15 +23,16 @@ template <class T, int D> class lsToMesh {
   bool onlyDefined;
   bool onlyActive;
   static constexpr long long maxDomainExtent = 1e6;
+  T maxValue = 0.5;
 
 public:
   lsToMesh(){};
 
   lsToMesh(const lsSmartPointer<lsDomain<T, D>> passedLevelSet,
            lsSmartPointer<lsMesh> passedMesh, bool passedOnlyDefined = true,
-           bool passedOnlyActive = false)
+           bool passedOnlyActive = false, T passedMaxValue = 0.5)
       : levelSet(passedLevelSet), mesh(passedMesh),
-        onlyDefined(passedOnlyDefined), onlyActive(passedOnlyActive) {}
+        onlyDefined(passedOnlyDefined), onlyActive(passedOnlyActive), maxValue(passedMaxValue) {}
 
   void setLevelSet(lsSmartPointer<lsDomain<T, D>> passedlsDomain) {
     levelSet = passedlsDomain;
@@ -44,6 +45,8 @@ public:
   }
 
   void setOnlyActive(bool passedOnlyActive) { onlyActive = passedOnlyActive; }
+
+  void setMaxValue(const T passedMaxValue) { maxValue = passedMaxValue; }
 
 
   //TODO: extracts mesh from an euclidian lvlset (talk to Xaver)
@@ -137,7 +140,7 @@ public:
     for (hrleConstSparseIterator<hrleDomainType> it(levelSet->getDomain());
          !it.isFinished(); ++it) {
       if ((onlyDefined && !it.isDefined()) ||
-          (onlyActive && std::abs(it.getValue()) > 0.5))
+          (onlyActive && std::abs(it.getValue()) > maxValue))
         continue;
 
       if (!onlyDefined && !it.isDefined()) {

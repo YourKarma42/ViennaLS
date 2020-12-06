@@ -54,7 +54,7 @@ public:
 
     mesh->clear();
 
-    lsExpand<T, D>(levelSet, (maxValue * 4) + 1).apply();
+    //lsExpand<T, D>(levelSet, (maxValue * 4) + 1).apply();
     lsCalculateNormalVectors<T, D>(levelSet, maxValue).apply();
 
     const T gridDelta = levelSet->getGrid().getGridDelta();
@@ -115,7 +115,7 @@ public:
       }
 
       // now normalize vector to scale position correctly to manhatten distance
-      double scaling = it.getValue() * gridDelta * max;
+      double scaling = it.getValue(); //* gridDelta; * max;
       for (unsigned i = 0; i < D; ++i) {
         node[i] -= scaling * normalVectors[pointId][i];
       }

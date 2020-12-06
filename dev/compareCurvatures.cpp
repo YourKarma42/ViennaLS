@@ -613,6 +613,7 @@ void create_output_Euklid(lsSmartPointer<lsDomain<double, D>> levelSet,
 
         //auto &centerIt = neighborIt.getCenter();
         if (!centerIt.isDefined() || (lsPoints.find(centerIt.getStartIndices()) == lsPoints.end())) {
+        //if (!centerIt.isDefined() || std::abs(centerIt.getValue()) > (gridDelta*0.5)) {
           continue;
         } 
 
@@ -757,7 +758,7 @@ int main() {
 
     std::cout << "Calculating Curvatures..." << std::endl;
 
-    create_output_Euklid(levelSets.back(), activePoints, "final_output_Euklid");
+    create_output_Euklid(levelSets.back(), narrowPoints, "final_output_Euklid");
 
 
     //timingTests(levelSets.back(), activePoints);

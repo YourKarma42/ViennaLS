@@ -762,13 +762,15 @@ template <class T, int D> class variationOfNormals{
 
     T gridDelta;
 
-    T scaling = 0;
+    T GD = 0;
+    T twoGD = 0;
 
     public:
 
     variationOfNormals(T mGD)
     :  gridDelta(mGD){
-        scaling = 1./gridDelta;
+        GD = 1./gridDelta;
+        twoGD = 1./(2.*gridDelta);
     }
 
     /*
@@ -840,53 +842,53 @@ template <class T, int D> class variationOfNormals{
 
 
             //central
-            centralDiff[i] = (phi_px - phi_nx)*0.5;
+            centralDiff[i] = (phi_px - phi_nx)*twoGD;
 
             //one sided
-            oneSidedeDiff[i] = (phi_px - phi_0);
-            oneSidedeDiff[i+3] = (phi_0 - phi_nx);
+            oneSidedeDiff[i] = (phi_px - phi_0)*GD;
+            oneSidedeDiff[i+3] = (phi_0 - phi_nx)*GD;
 
             //central outer
-            derivativesPos[i]   = (phi_pp - phi_np)*0.5; 
-            derivativesPos[i+3] = (phi_pp - phi_pn)*0.5; 
+            derivativesPos[i]   = (phi_pp - phi_np)*twoGD; 
+            derivativesPos[i+3] = (phi_pp - phi_pn)*twoGD; 
 
-            derivativesNeg[i] = (phi_pn- phi_nn)*0.5; 
-            derivativesNeg[i+3] = (phi_np - phi_nn)*0.5; 
+            derivativesNeg[i] = (phi_pn- phi_nn)*twoGD; 
+            derivativesNeg[i+3] = (phi_np - phi_nn)*twoGD; 
 
         }
 
         T n_x = (oneSidedeDiff[0] /
-                (2*std::sqrt((oneSidedeDiff[0]*oneSidedeDiff[0]) + 
+                (std::sqrt((oneSidedeDiff[0]*oneSidedeDiff[0]) + 
                 std::pow((derivativesPos[3] + centralDiff[1])*0.5, 2) + 
                 std::pow((derivativesPos[5] + centralDiff[2])*0.5, 2)))) 
                 -
                 (oneSidedeDiff[3] /
-                (2*std::sqrt((oneSidedeDiff[3]*oneSidedeDiff[3]) + 
+                (std::sqrt((oneSidedeDiff[3]*oneSidedeDiff[3]) + 
                 std::pow((derivativesNeg[3] + centralDiff[1])*0.5, 2) + 
                 std::pow((derivativesNeg[5] + centralDiff[2])*0.5, 2))));
 
         T n_y = (oneSidedeDiff[1] /
-                (2*std::sqrt((oneSidedeDiff[1]*oneSidedeDiff[1]) + 
+                (std::sqrt((oneSidedeDiff[1]*oneSidedeDiff[1]) + 
                 std::pow((derivativesPos[0] + centralDiff[0])*0.5, 2) + 
                 std::pow((derivativesPos[1] + centralDiff[2])*0.5, 2)))) 
                 -
                 (oneSidedeDiff[4] /
-                (2*std::sqrt((oneSidedeDiff[4]*oneSidedeDiff[4]) + 
+                (std::sqrt((oneSidedeDiff[4]*oneSidedeDiff[4]) + 
                 std::pow((derivativesNeg[0] + centralDiff[0])*0.5, 2) + 
                 std::pow((derivativesNeg[1] + centralDiff[2])*0.5, 2))));
 
         T n_z = (oneSidedeDiff[2] /
-                (2*std::sqrt((oneSidedeDiff[2]*oneSidedeDiff[2]) + 
+                (std::sqrt((oneSidedeDiff[2]*oneSidedeDiff[2]) + 
                 std::pow((derivativesPos[2] + centralDiff[0])*0.5, 2) + 
                 std::pow((derivativesPos[4] + centralDiff[1])*0.5, 2)))) 
                 -
                 (oneSidedeDiff[5] /
-                (2*std::sqrt((oneSidedeDiff[5]*oneSidedeDiff[5]) + 
+                (std::sqrt((oneSidedeDiff[5]*oneSidedeDiff[5]) + 
                 std::pow((derivativesNeg[2] + centralDiff[0])*0.5, 2) + 
                 std::pow((derivativesNeg[4] + centralDiff[1])*0.5, 2))));
 
                            
-        return (n_x + n_y + n_z)*scaling;
+        return (n_x + n_y + n_z);
         
 
     }
@@ -949,53 +951,53 @@ template <class T, int D> class variationOfNormals{
 
 
             //central
-            centralDiff[i] = (phi_px - phi_nx)*0.5;
+            centralDiff[i] = (phi_px - phi_nx)*twoGD;
 
             //one sided
-            oneSidedeDiff[i] = (phi_px - phi_0);
-            oneSidedeDiff[i+3] = (phi_0 - phi_nx);
+            oneSidedeDiff[i] = (phi_px - phi_0)*GD;
+            oneSidedeDiff[i+3] = (phi_0 - phi_nx)*GD;
 
             //central outer
-            derivativesPos[i]   = (phi_pp - phi_np)*0.5; 
-            derivativesPos[i+3] = (phi_pp - phi_pn)*0.5; 
+            derivativesPos[i]   = (phi_pp - phi_np)*twoGD; 
+            derivativesPos[i+3] = (phi_pp - phi_pn)*twoGD; 
 
-            derivativesNeg[i] = (phi_pn- phi_nn)*0.5; 
-            derivativesNeg[i+3] = (phi_np - phi_nn)*0.5; 
+            derivativesNeg[i] = (phi_pn- phi_nn)*twoGD; 
+            derivativesNeg[i+3] = (phi_np - phi_nn)*twoGD; 
 
         }
 
         T n_x = (oneSidedeDiff[0] /
-                (2*std::sqrt((oneSidedeDiff[0]*oneSidedeDiff[0]) + 
+                (std::sqrt((oneSidedeDiff[0]*oneSidedeDiff[0]) + 
                 std::pow((derivativesPos[3] + centralDiff[1])*0.5, 2) + 
                 std::pow((derivativesPos[5] + centralDiff[2])*0.5, 2)))) 
                 -
                 (oneSidedeDiff[3] /
-                (2*std::sqrt((oneSidedeDiff[3]*oneSidedeDiff[3]) + 
+                (std::sqrt((oneSidedeDiff[3]*oneSidedeDiff[3]) + 
                 std::pow((derivativesNeg[3] + centralDiff[1])*0.5, 2) + 
                 std::pow((derivativesNeg[5] + centralDiff[2])*0.5, 2))));
 
         T n_y = (oneSidedeDiff[1] /
-                (2*std::sqrt((oneSidedeDiff[1]*oneSidedeDiff[1]) + 
+                (std::sqrt((oneSidedeDiff[1]*oneSidedeDiff[1]) + 
                 std::pow((derivativesPos[0] + centralDiff[0])*0.5, 2) + 
                 std::pow((derivativesPos[1] + centralDiff[2])*0.5, 2)))) 
                 -
                 (oneSidedeDiff[4] /
-                (2*std::sqrt((oneSidedeDiff[4]*oneSidedeDiff[4]) + 
+                (std::sqrt((oneSidedeDiff[4]*oneSidedeDiff[4]) + 
                 std::pow((derivativesNeg[0] + centralDiff[0])*0.5, 2) + 
                 std::pow((derivativesNeg[1] + centralDiff[2])*0.5, 2))));
 
         T n_z = (oneSidedeDiff[2] /
-                (2*std::sqrt((oneSidedeDiff[2]*oneSidedeDiff[2]) + 
+                (std::sqrt((oneSidedeDiff[2]*oneSidedeDiff[2]) + 
                 std::pow((derivativesPos[2] + centralDiff[0])*0.5, 2) + 
                 std::pow((derivativesPos[4] + centralDiff[1])*0.5, 2)))) 
                 -
                 (oneSidedeDiff[5] /
-                (2*std::sqrt((oneSidedeDiff[5]*oneSidedeDiff[5]) + 
+                (std::sqrt((oneSidedeDiff[5]*oneSidedeDiff[5]) + 
                 std::pow((derivativesNeg[2] + centralDiff[0])*0.5, 2) + 
                 std::pow((derivativesNeg[4] + centralDiff[1])*0.5, 2))));
 
                            
-        return (n_x + n_y + n_z)*scaling;
+        return (n_x + n_y + n_z);
         
 
     }
@@ -1012,6 +1014,7 @@ template <class T, int D> class curvaturGeneralFormulaBigStencil{
     T twoGD = 0;
     T fourGDsq = 0;
     T threeGDsq = 0;
+    T fourGD = 0;
 
     public:
 
@@ -1019,6 +1022,7 @@ template <class T, int D> class curvaturGeneralFormulaBigStencil{
     :  gridDelta(mGD){
 
         twoGD = 1./(2.*gridDelta);
+        fourGD = 1./(4.*gridDelta);
         threeGDsq = 1./(3.*gridDelta*gridDelta);
         fourGDsq = 1./(4.*gridDelta*gridDelta);
     }
@@ -1078,7 +1082,9 @@ template <class T, int D> class curvaturGeneralFormulaBigStencil{
             T phi_ny = neighborIterator.getNeighbor(negUnit).getValue();
 
 
-            d[i] = (phi_px - phi_nx)*twoGD;
+            //d[i] = (phi_px - phi_nx)*twoGD;
+
+            d[i] = (phi_pp - phi_np + phi_pn - phi_nn)*fourGD;
 
             d[i+3] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)*threeGDsq;
 
@@ -1151,7 +1157,9 @@ template <class T, int D> class curvaturGeneralFormulaBigStencil{
             T phi_ny = neighborIterator.getNeighbor(negUnit).getValue();
 
 
-            d[i] = (phi_px - phi_nx)*twoGD;
+            //d[i] = (phi_px - phi_nx)*twoGD;
+
+            d[i] = (phi_pp - phi_np + phi_pn - phi_nn)*fourGD;
 
             d[i+3] = (phi_pp - 2.*phi_py + phi_np + phi_px -2.*phi_0 + phi_nx + phi_pn - 2.*phi_ny + phi_nn)*threeGDsq;
 
@@ -1245,7 +1253,7 @@ template <class T, int D> class curvaturGeneralFormulaBigStencilBias{
 
         //TODO: konstant die ebenen hinschreiben hinschreiben
 
-        if(g[0] > g[1] ){
+        if(g[0] >= g[1] ){
 
             if(g[1] > g[2]){
                 //0,1,2
@@ -1457,7 +1465,7 @@ template <class T, int D> class curvaturGeneralFormulaBigStencilBias{
 
         //TODO: konstant die ebenen hinschreiben hinschreiben
 
-        if(g[0] > g[1] ){
+        if(g[0] >= g[1] ){
 
             if(g[1] > g[2]){
                 //0,1,2
