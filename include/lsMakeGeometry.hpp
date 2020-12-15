@@ -193,8 +193,31 @@ private:
 
 //TODO: Currently quite stupid!
 
+while(index<endIndex){
+    T pointRadius = 0.;
+
+    for(int i = 0; i < D; i++){
+        //std::cout << neighborIt.getIndices()[i] << std::endl;
+        pointRadius += ( gridDelta * index[i] - origin[i]) * ( gridDelta * index[i] - origin[i]);
+    }
+
+    if(std::abs(std::sqrt(pointRadius) - radius) <= gridDelta){
+        pointData.push_back(std::make_pair(index, (std::sqrt(pointRadius) - radius)));
+    }
+
+    int dim = 0;
+    for (; dim < D - 1; ++dim) {
+      if (index[dim] < endIndex[dim])
+        break;
+      index[dim] = minIndex[dim];
+    }
+    ++index[dim];
 
 
+}
+
+
+/*
     while (index < endIndex) {
       // take shortest manhatten distance to gridline intersection
       T distance = std::numeric_limits<T>::max();
@@ -263,9 +286,7 @@ private:
       ++index[dim];
 
     }
-
-/*
-*/   
+ */
 
 //    Test End
 

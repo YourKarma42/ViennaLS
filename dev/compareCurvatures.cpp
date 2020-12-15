@@ -40,6 +40,8 @@
 
 #include <lsCalculateNormalVectors.hpp>
 
+#include <../dev/lsEikonalExpandTest.hpp>
+
 //____________testing end___________________________
 
 constexpr int D = 3 ;
@@ -612,8 +614,8 @@ void create_output_Euklid(lsSmartPointer<lsDomain<double, D>> levelSet,
      //     neighborIt.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
 
         //auto &centerIt = neighborIt.getCenter();
-        if (!centerIt.isDefined() || (lsPoints.find(centerIt.getStartIndices()) == lsPoints.end())) {
-        //if (!centerIt.isDefined() || std::abs(centerIt.getValue()) > (gridDelta*0.5)) {
+        //if (!centerIt.isDefined() || (lsPoints.find(centerIt.getStartIndices()) == lsPoints.end())) {
+        if (!centerIt.isDefined() || std::abs(centerIt.getValue()) > gridDelta) {
           continue;
         } 
 
@@ -646,7 +648,7 @@ void create_output_Euklid(lsSmartPointer<lsDomain<double, D>> levelSet,
 
     auto narrowband = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<NumericType, D>(levelSet, narrowband, true, true).apply(lsPoints);
+    lsToMesh<NumericType, D>(levelSet, narrowband, true, true, gridDelta).apply();
     //lsPoints
 
 
@@ -700,7 +702,7 @@ int main() {
 
     //lsDomain<NumericType,D> levelSet = makePlane(gridDelta, planeNormal);
 
-    NumericType radius = 100.;
+    NumericType radius = 10.;
 
     std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> activePoints;
 
@@ -746,7 +748,9 @@ int main() {
 
     std::cout << "Fast Marching..." << std::endl;
 
-    lsEikonalExpand<NumericType, D> expander(levelSets.back(), narrowPoints);
+    //lsEikonalExpand<NumericType, D> expander(levelSets.back(), narrowPoints);
+
+    lsEikonalExpandTest<NumericType, D> expander(levelSets.back(), narrowPoints);
 
     //lsExpandSphere<NumericType, D> expander(levelSets.back(), activePoints, radius);
 
@@ -758,7 +762,7 @@ int main() {
 
     std::cout << "Calculating Curvatures..." << std::endl;
 
-    create_output_Euklid(levelSets.back(), narrowPoints, "final_output_Euklid");
+    create_output_Euklid(levelSets.back(), narrowPoints, "/media/sf_shared/narrowband");
 
 
     //timingTests(levelSets.back(), activePoints);
