@@ -17,7 +17,7 @@
 
 
 #include <lsConvertEuclid.hpp>
-//#include <lsEikonalExpand.hpp>
+#include <lsEikonalExpand.hpp>
 #include <../dev/expandSphere.hpp>
 
 //#include <hrleSparseBoxIterator.hpp>
@@ -45,7 +45,7 @@
 
 //____________testing end___________________________
 
-constexpr int D = 2;
+constexpr int D = 3;
 typedef double NumericType;
 typedef typename lsDomain<NumericType, D>::DomainType hrleDomainType;
 
@@ -118,6 +118,8 @@ int main() {
     std::cout << "Fast Marching..." << std::endl;
 
     lsEikonalExpandTest<NumericType, D> expanderEikonal(levelSets1.back(), narrowPoints);
+
+    //lsEikonalExpand<NumericType, D> expanderEikonal(levelSets1.back(), narrowPoints);
 
     expanderEikonal.apply(); 
 

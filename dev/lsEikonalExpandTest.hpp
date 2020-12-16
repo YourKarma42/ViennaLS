@@ -69,7 +69,7 @@ public:
     }
 
     //TODO: strange bug with 0 element when using to big order
-    int order = 5;
+    int order = 6;
 
     //used to keep track of the Interface
     T largeValue = 1000.;
@@ -136,7 +136,7 @@ public:
               T dist = calcDist(it, (it.getCenter().getValue() < 0.));
                 if(dist != 0){                      
                     newDomain.getDomainSegment(0).insertNextDefinedPoint(it.getIndices(),
-                                            (it.getCenter().getValue()<0.) ? -largeValue : largeValue);                   
+                                            (it.getCenter().getValue()<0.) ? -largeValue : largeValue);                  
                 }else{
                     newDomain.getDomainSegment(0).insertNextUndefinedPoint(it.getIndices(), 
                     (it.getCenter().getValue()<0.) ? lsDomain<T, D>::NEG_VALUE : lsDomain<T, D>::POS_VALUE);
@@ -164,12 +164,8 @@ public:
 
     levelSet->finalize(width);
 
+    std::cout << "ready to march" << std::endl;
 
-    //0 ... far
-    //1 ... considered
-    //2 ... accepted
-    std::vector<int> accepted;
-    //TODO RESERVE!!!!
 
     for (hrleSparseIterator<hrleDomainType> it(levelSet->getDomain());
         !it.isFinished(); ++it) {
@@ -178,43 +174,22 @@ public:
             if(interface.find(it.getStartIndices()) != interface.end()){
                 accepted.push_back(2);
             }else{
-                accepted.push_back(0);
-
-                //put inside and outside start values into the LS
-                /*if(it.getStartIndices() == startValueOutside.second){
-                    T &currentValue = it.getValue();
-                    currentValue = startValueOutside.first;
-                }
-                if(it.getStartIndices() == startValueInside.second){
-                    T &currentValue = it.getValue();
-                    currentValue = -startValueInside.first;
-                }*/          
+                accepted.push_back(0);     
             }
         }
     }
 
-    //minHeap.push(startValueInside);
-    //minHeap.push(startValueOutside);
-
+    std::cout << "test";
 
     hrleSparseStarIterator<typename lsDomain<T, D>::DomainType> neighborStarIterator(levelSet->getDomain());
 
     hrleSparseStarIterator<typename lsDomain<T, D>::DomainType> starItEikonal(levelSet->getDomain());
-/*
-    neighborStarIterator.goToIndices(startValueInside.second);
-
-    std::cout << neighborStarIterator.getCenter().getValue()<< std::endl;
-
-    for(int i = 0; i < 2*D; i++){
-      std::cout << neighborStarIterator.getNeighbor(i).getValue()<< std::endl;
-    }
-*/
 
     while(!minHeap.empty()){
 
-
-
         auto currentPoint = minHeap.top();
+
+
 
         minHeap.pop();
 
@@ -222,6 +197,8 @@ public:
 
         //is the current value already accepted
         if(accepted[neighborStarIterator.getCenter().getPointId()] <= 1){
+
+            //std::cout << minHeap.size() << std::endl;
 
             if(currentPoint.first > 3*gridDelta)
               break;
@@ -233,15 +210,21 @@ public:
 
                 auto currentNeighbor = neighborStarIterator.getNeighbor(i);
 
+                int tmpAccepted = 0;
+
+                if(currentNeighbor.isDefined()){
+                    tmpAccepted = accepted[currentNeighbor.getPointId()]; 
+                }
+
                 //if not accepted
-                if(accepted[currentNeighbor.getPointId()] <= 1){
+                if(tmpAccepted <= 1){
 
                     T &currentValue = currentNeighbor.getValue();
 
                     starItEikonal.goToIndices(currentNeighbor.getOffsetIndices());
                     
                     //send iterator
-                    T dist = calcDist(starItEikonal, (currentNeighbor.getValue() < 0.));   
+                    T dist = calcDistFMM(starItEikonal, (currentNeighbor.getValue() < 0.));   
 
 
                     if(abs(dist) < abs(currentValue)){
@@ -250,19 +233,14 @@ public:
                         minHeap.push(std::make_pair(std::abs(dist), currentNeighbor.getOffsetIndices()));                           
                     }                 
 
-
-                    if(accepted[currentNeighbor.getPointId()] == 0){
-                        //add the new value to the queue (all excess values will be ignored when one is accepted)
-
-                        accepted[currentNeighbor.getPointId()] == 1;
-                    }
+                    accepted[currentNeighbor.getPointId()] == 1;
+                    
 
                 }
             }
 
         }
     }
-    std::cout << std::endl;
 
     levelSet->getDomain().segment();
 
@@ -271,8 +249,143 @@ public:
 
   private:
 
+  //0 ... far
+  //1 ... considered
+  //2 ... accepted
+  std::vector<int> accepted;
 
-  T calcDist(hrleSparseStarIterator<typename lsDomain<T, D>::DomainType>& starStencil, bool inside){
+
+  T calcDistFMM(hrleSparseStarIterator<typename lsDomain<T, D>::DomainType>& starStencil, bool inside){
+
+    //TODO: write eikonal equation somwhere
+
+    T stencilMin[D];
+
+    int dim = 0;
+    int undefined = 0;
+
+
+    //find the maximum values in the stencil
+    for(int i = 0; i < D; i++){
+
+      T pos = starStencil.getNeighbor(i).getValue();
+
+      T neg = starStencil.getNeighbor(i+D).getValue();
+
+
+      //change the sign to make fast marching on the inside correct
+      if(inside){
+        pos = pos * -1.;
+        neg = neg * -1.;
+      }
+
+
+      //STENCIL CAN ACESS MEMORY THAT IS NOT INITIALZED IN accepted
+
+      int posAccepted = 0;
+      if(pos != lsDomain<T, D>::POS_VALUE){
+          posAccepted = accepted[starStencil.getNeighbor(i).getPointId()];
+      }
+
+
+      int negAccepted = 0;
+      if(neg != lsDomain<T, D>::POS_VALUE){
+          negAccepted = accepted[starStencil.getNeighbor(i+D).getPointId()];
+      }
+      
+
+
+
+      //check if the current point in the stencil is defined (not +/- inf)
+
+
+      if( pos !=  lsDomain<T, D>::POS_VALUE && 
+          posAccepted == 2){
+          //pos !=  lsDomain<T, D>::NEG_VALUE){
+
+        if(neg !=  lsDomain<T, D>::POS_VALUE && 
+           //neg !=  lsDomain<T, D>::NEG_VALUE){
+            negAccepted == 2){
+            if(pos < neg){
+              stencilMin[i] = pos;
+            }else{
+              stencilMin[i] = neg;
+            }
+        }else{
+          stencilMin[i] = pos;
+        }
+        dim++;
+      }else if(neg !=  lsDomain<T, D>::POS_VALUE && 
+              negAccepted == 2){
+               //neg !=  lsDomain<T, D>::NEG_VALUE){
+        stencilMin[i] = neg;
+        dim++;
+      }else{
+        undefined++;
+        stencilMin[i] = 0.;
+      }
+
+    }
+
+    //all points in the stencil are undefined return 0. (infinity)
+    if(undefined == D)
+      return 0.;
+
+    T sol = 0.;
+    
+    for(int run = D; run > 0; run--){
+      //perform one dimensional update
+      if(dim == 1){
+          for(int i = 0; i < D; i++)
+              sol += stencilMin[i];
+          sol += gridDelta;
+          break;
+      }
+
+      T sumT = 0.;
+      T sumTsq = 0.;
+
+      for(int i = 0; i < D; i++){
+        sumT += stencilMin[i];
+        sumTsq += stencilMin[i]*stencilMin[i];
+      }
+
+      T a = T(dim);
+      T b = -2*sumT;
+      T c = sumTsq - gridDeltaSqared;
+      T q = b*b - 4*a*c;
+      
+      //discriminant is negative must perform a lower dimensional update
+      if(q < 0.){
+        //remove max value
+        T max = 0.;
+        int maxIndex = 0;
+        for(int i = 0; i < D; i++){
+          if(stencilMin[i] > max){
+            max = stencilMin[i];
+            maxIndex = i;
+          }
+        }
+        dim--;
+        stencilMin[maxIndex] = 0.;
+
+      }else{
+
+        //the distance has to increase and most of the time be greater 0 so we only need the bigger solution
+        sol = (-b + std::sqrt(q))/(2.*a);
+        break;
+      }
+    }    
+
+    if(inside){
+      return -sol;
+    }else{
+      return sol;
+    }
+    
+  }
+
+    T calcDist(hrleSparseStarIterator<typename lsDomain<T, D>::DomainType>& starStencil, bool inside){
 
     //TODO: write eikonal equation somwhere
 

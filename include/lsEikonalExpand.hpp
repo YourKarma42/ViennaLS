@@ -107,6 +107,7 @@ public:
 
           //mark all active grid points as accepted
           if((activePoints.find(centerIt.getStartIndices()) != activePoints.end())){
+          //if(std::abs(centerIt.getValue()) <= gridDelta){
             //add them to the new lvl set
             domainSegment.insertNextDefinedPoint(neighborIt.getIndices(),
                                                 centerIt.getValue());  

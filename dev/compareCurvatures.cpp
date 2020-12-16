@@ -648,7 +648,7 @@ void create_output_Euklid(lsSmartPointer<lsDomain<double, D>> levelSet,
 
     auto narrowband = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<NumericType, D>(levelSet, narrowband, true, true, gridDelta).apply();
+    lsToMesh<NumericType, D>(levelSet, narrowband, true, true).apply(lsPoints);
     //lsPoints
 
 
@@ -702,7 +702,7 @@ int main() {
 
     //lsDomain<NumericType,D> levelSet = makePlane(gridDelta, planeNormal);
 
-    NumericType radius = 10.;
+    NumericType radius = 100.;
 
     std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> activePoints;
 
