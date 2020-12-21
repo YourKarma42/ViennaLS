@@ -2,6 +2,12 @@ cmake_minimum_required(VERSION 3.4)
 
 project("curve")
 
+## Enable Clang sanitizer for debug builds
+if ("${CMAKE_CXX_COMPILER_ID}" STREQUAL "Clang")
+set(CMAKE_CXX_FLAGS_DEBUG "${CMAKE_CXX_FLAGS_DEBUG} -fno-omit-frame-pointer -fsanitize=address -fsanitize=thread -fsanitize=memory" CACHE STRING "")
+set(CMAKE_EXE_LINKER_FLAGS_DEBUG "${CMAKE_EXE_LINKER_FLAGS_DEBUGS} -fno-omit-frame-pointer -fsanitize=address -fsanitize=thread -fsanitize=memory" CACHE STRING "")
+endif()
+
 set(ViennaHRLE_DIR $ENV{VIENNAHRLE_DIR})
 set(ViennaLS_DIR "${ViennaLS_BINARY_DIR}")
 set(ViennaLS_COMMON_TARGET ${PROJECT_NAME})
@@ -50,6 +56,7 @@ target_link_libraries(StackedNanowire PRIVATE ${VIENNALS_LIBRARIES})
 add_executable(timeCurvatures timeCurvatures.cpp)
 target_include_directories(timeCurvatures PUBLIC ${VIENNALS_INCLUDE_DIRS})
 target_link_libraries(timeCurvatures PRIVATE ${VIENNALS_LIBRARIES})
+
 
 
 

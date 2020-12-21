@@ -1,0 +1,11 @@
+
+
+- closer look at lsReduce
+
+- implement the other schemes for Euler normalization
+
+- closer look at ignore voids
+
+- implement possibility for multiple time steps with no FMM between the steps
+
+- test multiple materials

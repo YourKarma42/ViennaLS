@@ -1,6 +1,5 @@
 #include <iostream>
 
-#include <lsAdvect.hpp>
 #include <lsBooleanOperation.hpp>
 #include <lsDomain.hpp>
 #include <lsExpand.hpp>
@@ -43,6 +42,12 @@
 
 #include <lsPrune.hpp>
 
+#include<lsAdvect.hpp>
+
+#include <../dev/eulerAdvect.cpp>
+
+//#include <lsAdvect.hpp>
+
 //____________testing end___________________________
 
 constexpr int D = 3;
@@ -74,7 +79,19 @@ lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
 
 }
 
-
+class velocityField : public lsVelocityField<double> {
+public:
+  double
+  getScalarVelocity(const std::array<double, 3> & /*coordinate*/,
+                    int /*material*/,
+                    const std::array<double, 3>
+                        & /*normalVector = hrleVectorType<double, 3>(0.)*/) {
+    // Some arbitrary velocity function of your liking
+    // (try changing it and see what happens :)
+    double velocity = 1.;
+    return velocity;
+  }
+};
 
 int main() {
 
@@ -92,7 +109,7 @@ int main() {
 
     std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets1;
 
-    NumericType radius = 10.;
+    NumericType radius = 5.;
 
 
     
@@ -107,30 +124,42 @@ int main() {
 
     levelSets1.push_back(levelSet1);  
 
+
+    auto velocities = lsSmartPointer<velocityField>::New();
+
+    std::cout << "Advecting levelset..." << std::endl;
+    eulerAdvect<NumericType, D> advectionKernel(levelSets1, velocities);
+
+    advectionKernel.setAdvectionTime(5.);
+    advectionKernel.apply();
+
     auto narrowband1 = lsSmartPointer<lsMesh>::New();
-    std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<NumericType, D>(levelSets1.back(), narrowband1, true, false,  gridDelta).apply();
+    std::cout << "Extracting narrowband after advection..." << std::endl;
+    lsToMesh<NumericType, D>(levelSets1.back(), narrowband1, true, false, gridDelta).apply();
+
+    //lsToDiskMesh<NumericType, D>(levelSets1.back(), narrowband).apply(activePoints);
   
-    lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "/media/sf_shared/narrowbandAfterCreation" ).apply();
+    //lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "narrowband" ).apply();
+    lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "/media/sf_shared/narrowband" ).apply();
 
     start = std::chrono::high_resolution_clock::now(); 
 
     std::cout << "Fast Marching..." << std::endl;
 
-    lsEikonalExpandTest<NumericType, D> expanderEikonal(levelSets1.back(), narrowPoints);
+    lsEikonalExpandTest<NumericType, D> expanderEikonal(levelSets1.back(), 3);
 
     //lsEikonalExpand<NumericType, D> expanderEikonal(levelSets1.back(), narrowPoints);
 
     expanderEikonal.apply(); 
 
     auto narrowband = lsSmartPointer<lsMesh>::New();
-    std::cout << "Extracting narrowband..." << std::endl;
+    std::cout << "Extracting FMM result..." << std::endl;
     lsToMesh<NumericType, D>(levelSets1.back(), narrowband, true, false, gridDelta).apply();
 
     //lsToDiskMesh<NumericType, D>(levelSets1.back(), narrowband).apply(activePoints);
   
     //lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "narrowband" ).apply();
-    lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "/media/sf_shared/narrowband" ).apply();
+    lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "/media/sf_shared/narrowbandFMM" ).apply();
 
     std::vector<std::array<NumericType, 3>> grad1;
 

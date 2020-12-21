@@ -30,7 +30,8 @@
 
 //new stuff
 
-#include "lsEikonalExpand.hpp"
+//#include <../dev/_tmpTest.hpp>
+#include <../dev/lsEikonalExpandTest.hpp>
 
 /// Enumeration for the different Integration schemes
 /// used by the advection kernel
@@ -71,8 +72,6 @@ template <class T, int D> class eulerAdvect {
   bool saveAdvectionVelocities = false;
   static constexpr double wrappingLayerEpsilon = 1e-4;
 
-  std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> activePoints;
-  std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> narrowPoints;
 
   // SFINAE functions needed for StencilLocalLaxFriedrichs
   template <
@@ -107,156 +106,38 @@ template <class T, int D> class eulerAdvect {
   }
 
   void rebuildLS() {
-    // TODO: this function uses manhatten distances for renormalisation,
-    // since this is the quickest. For visualisation applications, better
-    // renormalisation is needed, so it might be good to implement
-    // Euler distance renormalisation as an option
-    auto &grid = levelSets.back()->getGrid();
-    auto newlsDomain = lsSmartPointer<lsDomain<T, D>>::New(grid);
-    typename lsDomain<T, D>::DomainType &newDomain = newlsDomain->getDomain();
-    typename lsDomain<T, D>::DomainType &domain = levelSets.back()->getDomain();
 
-    newDomain.initialize(domain.getNewSegmentation(),
-                         domain.getAllocation() *
-                             (2.0 / levelSets.back()->getLevelSetWidth()));
+    //auto narrowband = lsSmartPointer<lsMesh>::New();
+    //std::cout << "Extracting narrowband..." << std::endl;
+    //lsToMesh<T, D>(levelSets.back(), narrowband, true, true, 5*0.5).apply();
 
+    //lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "/media/sf_shared/beforeRebuild" ).apply();
+
+    //std::cout << "Debug: Starting Expand" << std::endl;
+    //if FMM is done in every time step time step is 3
+    lsEikonalExpandTest<T, D>(levelSets.back(), 3).apply();
+    //std::cout << "Debug: Expention done" << std::endl;
+    lsReduce<T, D>(levelSets.back(), 1, true).apply();
+    //std::cout << "Debug: Velocity extention done" << std::endl;
+/*
+    auto narrowband = lsSmartPointer<lsMesh>::New();
+    std::cout << "Extracting narrowband..." << std::endl;
+    lsToMesh<T, D>(levelSets.back(), narrowband, true, true, 6).apply();
+
+    lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "/media/sf_shared/afterRebuild" ).apply();
+*/
+
+    
+
+    //LENZ: TODO: think of how to trancsfare vector data after Velocity extention
+
+/*
     // save how data should be transferred to new level set
     // list of indices into the old pointData vector
     std::vector<std::vector<unsigned>> newDataSourceIds;
     newDataSourceIds.resize(newDomain.getNumberOfSegments());
 
-#pragma omp parallel num_threads(newDomain.getNumberOfSegments())
-    {
-      int p = 0;
-#ifdef _OPENMP
-      p = omp_get_thread_num();
-#endif
-
-      auto &domainSegment = newDomain.getDomainSegment(p);
-
-      hrleVectorType<hrleIndexType, D> startVector =
-          (p == 0) ? grid.getMinGridPoint()
-                   : newDomain.getSegmentation()[p - 1];
-
-      hrleVectorType<hrleIndexType, D> endVector =
-          (p != static_cast<int>(newDomain.getNumberOfSegments() - 1))
-              ? newDomain.getSegmentation()[p]
-              : grid.incrementIndices(grid.getMaxGridPoint());
-
-      // reserve a bit more to avoid reallocation
-      // would expect number of points to roughly double
-      newDataSourceIds[p].reserve(2.5 * domainSegment.getNumberOfPoints());
-
-      for (hrleSparseStarIterator<typename lsDomain<T, D>::DomainType> it(
-               domain, startVector);
-           it.getIndices() < endVector; ++it) {
-
-        // if the center is an active grid point
-        // <1.0 since it could have been change by 0.5 max
-        if (std::abs(it.getCenter().getValue()) <= 1.0) {
-
-          int k = 0;
-          for (; k < 2 * D; k++)
-            if (std::signbit(it.getNeighbor(k).getValue() - 1e-7) !=
-                std::signbit(it.getCenter().getValue() + 1e-7))
-              break;
-
-          // if there is at least one neighbor of opposite sign
-          if (k != 2 * D) {
-            if (it.getCenter().getDefinedValue() > 0.5) {
-              int j = 0;
-              for (; j < 2 * D; j++) {
-                if (std::abs(it.getNeighbor(j).getValue()) <= 1.0)
-                  if (it.getNeighbor(j).getDefinedValue() < -0.5)
-                    break;
-              }
-              if (j == 2 * D) {
-                domainSegment.insertNextDefinedPoint(
-                    it.getIndices(), it.getCenter().getDefinedValue());
-                newDataSourceIds[p].push_back(it.getCenter().getPointId());
-                // if there is at least one active grid point, which is < -0.5
-              } else {
-                domainSegment.insertNextDefinedPoint(it.getIndices(), 0.5);
-                newDataSourceIds[p].push_back(it.getNeighbor(j).getPointId());
-              }
-            } else if (it.getCenter().getDefinedValue() < -0.5) {
-              int j = 0;
-              for (; j < 2 * D; j++) {
-                if (std::abs(it.getNeighbor(j).getValue()) <= 1.0)
-                  if (it.getNeighbor(j).getDefinedValue() > 0.5)
-                    break;
-              }
-
-              if (j == 2 * D) {
-                domainSegment.insertNextDefinedPoint(
-                    it.getIndices(), it.getCenter().getDefinedValue());
-                newDataSourceIds[p].push_back(it.getCenter().getPointId());
-                // if there is at least one active grid point, which is > 0.5
-              } else {
-                domainSegment.insertNextDefinedPoint(it.getIndices(), -0.5);
-                newDataSourceIds[p].push_back(it.getNeighbor(j).getPointId());
-              }
-            } else {
-              domainSegment.insertNextDefinedPoint(
-                  it.getIndices(), it.getCenter().getDefinedValue());
-              newDataSourceIds[p].push_back(it.getCenter().getPointId());
-            }
-          } else {
-            domainSegment.insertNextUndefinedPoint(
-                it.getIndices(), (it.getCenter().getDefinedValue() < 0)
-                                     ? lsDomain<T, D>::NEG_VALUE
-                                     : lsDomain<T, D>::POS_VALUE);
-          }
-
-        } else { // if the center is not an active grid point
-          if (it.getCenter().getValue() >= 0) {
-            int usedNeighbor = -1;
-            T distance = lsDomain<T, D>::POS_VALUE;
-            for (int i = 0; i < 2 * D; i++) {
-              T value = it.getNeighbor(i).getValue();
-              if (std::abs(value) <= 1.0 && (value < 0.)) {
-                if (distance > value + 1.0) {
-                  distance = value + 1.0;
-                  usedNeighbor = i;
-                }
-              }
-            }
-
-            if (distance <= 1.) {
-              domainSegment.insertNextDefinedPoint(it.getIndices(), distance);
-              newDataSourceIds[p].push_back(
-                  it.getNeighbor(usedNeighbor).getPointId());
-            } else {
-              domainSegment.insertNextUndefinedPoint(it.getIndices(),
-                                                     lsDomain<T, D>::POS_VALUE);
-            }
-
-          } else {
-            int usedNeighbor = -1;
-            T distance = lsDomain<T, D>::NEG_VALUE;
-            for (int i = 0; i < 2 * D; i++) {
-              T value = it.getNeighbor(i).getValue();
-              if (std::abs(value) <= 1.0 && (value > 0)) {
-                if (distance < value - 1.0) {
-                  // distance = std::max(distance, value - T(1.0));
-                  distance = value - 1.0;
-                  usedNeighbor = i;
-                }
-              }
-            }
-
-            if (distance >= -1.) {
-              domainSegment.insertNextDefinedPoint(it.getIndices(), distance);
-              newDataSourceIds[p].push_back(
-                  it.getNeighbor(usedNeighbor).getPointId());
-            } else {
-              domainSegment.insertNextUndefinedPoint(it.getIndices(),
-                                                     lsDomain<T, D>::NEG_VALUE);
-            }
-          }
-        }
-      }
-    }
+    ******rebuild LS*******
 
     // now copy old data into new level set
     auto &pointData = levelSets.back()->getPointData();
@@ -301,12 +182,9 @@ template <class T, int D> class eulerAdvect {
           newVectors.push_back(vectors[newDataSourceIds[0][i]]);
         }
       }
-    }
+    }*/
 
-    newDomain.finalize();
-    newDomain.segment();
-    levelSets.back()->deepCopy(newlsDomain);
-    levelSets.back()->finalize(2);
+
   }
 
   /// internal function used as a wrapper to call specialized integrateTime
@@ -336,7 +214,9 @@ template <class T, int D> class eulerAdvect {
       lsInternal::lsEnquistOsher<T, D, 1>::prepareLS(levelSets.back());
       auto is = lsInternal::lsEnquistOsher<T, D, 1>(levelSets.back(),
                                                     calculateNormalVectors);
+      //std::cout << "Debug: FMM done" << std::endl;
       currentTime = integrateTime(is, maxTimeStep);
+/* #region other schemes */
     } else if (integrationScheme ==
                lsIntegrationSchemeEnum::ENGQUIST_OSHER_2ND_ORDER) {
       lsInternal::lsEnquistOsher<T, D, 2>::prepareLS(levelSets.back());
@@ -406,7 +286,7 @@ template <class T, int D> class eulerAdvect {
       // to stop advection
       return std::numeric_limits<double>::max();
     }
-
+/* #endregion */
     rebuildLS();
 
     // Adjust all level sets below the advected one
@@ -422,6 +302,13 @@ template <class T, int D> class eulerAdvect {
             .apply();
       }
     }
+
+
+   // auto narrowband = lsSmartPointer<lsMesh>::New();
+   // std::cout << "Extracting narrowband..." << std::endl;
+   // lsToMesh<T, D>(levelSets.back(), narrowband, true, true, 5*0.5).apply();
+
+   //lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "/media/sf_shared/afterRebuild" ).apply();
 
     return currentTime;
   }
@@ -444,9 +331,13 @@ template <class T, int D> class eulerAdvect {
     auto &topDomain = levelSets.back()->getDomain();
     auto &grid = levelSets.back()->getGrid();
 
+    //Lenz: needed for euler advection
+    T gridDelta = grid.getGridDelta();
+
     std::vector<std::vector<std::pair<T, T>>> totalTempRates;
     totalTempRates.resize((levelSets.back())->getNumberOfSegments());
 
+    //Lenz: ignore voids needs a bit of thinking 
     if (ignoreVoids) {
       lsMarkVoidPoints<T, D>(levelSets.back()).apply();
     }
@@ -490,7 +381,8 @@ template <class T, int D> class eulerAdvect {
                topDomain, startVector);
            it.getStartIndices() < endVector; ++it) {
 
-        if (!it.isDefined() || std::abs(it.getValue()) > 0.5)
+        //Lenz: Euler advection
+        if (!it.isDefined() || std::abs(it.getValue()) > gridDelta)
           continue;
 
         T value = it.getValue();
@@ -571,6 +463,8 @@ template <class T, int D> class eulerAdvect {
           tempMaxTimeStep = maxStepTime;
       }
 
+//std::cout << "Debug: Velocities calculated" << std::endl;
+
 #pragma omp critical
       {
         // If scheme is STENCIL_LOCAL_LAX_FRIEDRICHS the time step is reduced
@@ -584,9 +478,20 @@ template <class T, int D> class eulerAdvect {
       }
     }
 
+    //auto narrowband = lsSmartPointer<lsMesh>::New();
+    //std::cout << "Extracting narrowband..." << std::endl;
+    //lsToMesh<T, D>(levelSets.back(), narrowband, true, true, 5*0.5).apply();
+
+    //lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "/media/sf_shared/beforeReduce" ).apply();
+
+    //LENZ: euler advection need to change thikness
+
+    //TODO: curreently 0.5 griddelta hardcoded
+
     // reduce to one layer thickness and apply new values directly to the
     // domain segments --> DO NOT CHANGE SEGMENTATION HERE (true parameter)
     lsReduce<T, D>(levelSets.back(), 1, true).apply();
+//std::cout << "Debug: Level set reduction" << std::endl;
 
     const bool saveVelocities = saveAdvectionVelocities;
     std::vector<std::vector<double>> velocityVectors(
@@ -651,6 +556,15 @@ template <class T, int D> class eulerAdvect {
           pointData, "AdvectionVelocity");
     }
 
+//std::cout << "Debug: Advection done" << std::endl;
+
+
+    //auto narrowband1 = lsSmartPointer<lsMesh>::New();
+    //std::cout << "Extracting narrowband..." << std::endl;
+    //lsToMesh<T, D>(levelSets.back(), narrowband1, true, true, 5*gridDelta).apply();
+
+    //lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "/media/sf_shared/afterMovement" ).apply();
+
     return maxTimeStep;
   }
 
@@ -682,10 +596,6 @@ public:
     velocities =
         std::dynamic_pointer_cast<lsVelocityField<T>>(passedVelocities);
   }
-
-  void setInterfaceArrays(std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> passedactivePoints,
-                          std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> passednarrowPoints) 
-                          { activePoints = passedactivePoints; activePoints = passednarrowPoints;}
 
   /// Pushes the passed level set to the back of the list of level sets
   /// used for advection.

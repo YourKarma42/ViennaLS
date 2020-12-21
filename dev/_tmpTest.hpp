@@ -1,5 +1,5 @@
-#ifndef LS_EIKONAL_EXPAND_TEST_HPP
-#define LS_EIKONAL_EXPAND_TEST_HPP
+#ifndef TMP_TEST_HPP
+#define TMP_TEST_HPP
 
 
 #include <lsPreCompileMacros.hpp>
@@ -10,11 +10,6 @@
 #include <lsDomain.hpp>
 
 #include <queue>
-
-#include <lsToMesh.hpp>
-#include <lsToDiskMesh.hpp>
-#include <lsToSurfaceMesh.hpp>
-#include <lsVTKWriter.hpp>
 
 #include <unordered_set>
 
@@ -27,7 +22,7 @@
 /// This expansion is more accurate than using Manhatten expansion, however it has alonger Calculation time.
 /// This form of expansion keeps the signed distance porperty of the level set |grad(f)| = 1.
 
-template <class T, int D> class lsEikonalExpandTest {
+template <class T, int D> class lsEikonalExpandTest2 {
   typedef typename lsDomain<T, D>::DomainType hrleDomainType;
 
   lsSmartPointer<lsDomain<T, D>> levelSet = nullptr;
@@ -40,9 +35,9 @@ template <class T, int D> class lsEikonalExpandTest {
 
 
 public:
-  lsEikonalExpandTest() {}
+  lsEikonalExpandTest2() {}
   //the band should have at least width 3 for finite differences to work properly
-  lsEikonalExpandTest(lsSmartPointer<lsDomain<T, D>> passedLevelSet, 
+  lsEikonalExpandTest2(lsSmartPointer<lsDomain<T, D>> passedLevelSet, 
                       int passedWidth = 3)
       : levelSet(passedLevelSet), width(passedWidth) {
         //TODO: check if level set is euler normalized and give error if not
@@ -56,8 +51,6 @@ public:
     levelSet = passedLevelSet;
   }
 
-  //TODO: check why lambda dostn work
-  //auto myCompare = [](auto &a, auto &b){return (a.first > b.first);}
   struct myCompare{
     bool operator()(std::pair<T, hrleVectorType<hrleIndexType, D>> &a, std::pair<T, hrleVectorType<hrleIndexType, D>> &b){
         return (a.first > b.first);
@@ -177,7 +170,6 @@ public:
     hrleSparseStarIterator<typename lsDomain<T, D>::DomainType> neighborStarIterator(levelSet->getDomain());
 
     hrleSparseStarIterator<typename lsDomain<T, D>::DomainType> starItEikonal(levelSet->getDomain());
-    
 
     while(!minHeap.empty()){
 
@@ -189,13 +181,8 @@ public:
 
         neighborStarIterator.goToIndices(currentPoint.second);
 
-        //std::cout << neighborStarIterator.getCenter().isDefined() << " " << 
-        //neighborStarIterator.getCenter().getValue() << " " << neighborStarIterator.getCenter().getPointId()<< std::endl; 
-
         //is the current value already accepted
-        //if(accepted.at(neighborStarIterator.getCenter().getPointId()) <= 1){
         if(accepted[neighborStarIterator.getCenter().getPointId()] <= 1){
-          
 
             //break the loop if the narrowband has expanded far enough for application
             if(currentPoint.first > width*gridDelta)
@@ -208,28 +195,31 @@ public:
 
                 auto currentNeighbor = neighborStarIterator.getNeighbor(i);
 
-                //if curretn neighbour is undefined skip (points at the border of the domain)
+                int tmpAccepted = 0;
+
                 if(currentNeighbor.isDefined()){
-                
-                    if(accepted[currentNeighbor.getPointId()] <= 1){
+                    tmpAccepted = accepted[currentNeighbor.getPointId()]; 
+                }
 
-                        T &currentValue = currentNeighbor.getValue();
+                //if not accepted
+                if(tmpAccepted <= 1){
 
-                        starItEikonal.goToIndices(currentNeighbor.getOffsetIndices());
-                        
-                        //send iterator
-                        T dist = calcDistFMM(starItEikonal, (currentNeighbor.getValue() < 0.));   
+                    T &currentValue = currentNeighbor.getValue();
+
+                    starItEikonal.goToIndices(currentNeighbor.getOffsetIndices());
+                    
+                    //send iterator
+                    T dist = calcDistFMM(starItEikonal, (currentNeighbor.getValue() < 0.));   
 
 
-                        if(abs(dist) < abs(currentValue)){
+                    if(abs(dist) < abs(currentValue)){
 
-                            currentValue = dist;
-                            minHeap.push(std::make_pair(std::abs(dist), currentNeighbor.getOffsetIndices()));                           
-                        }                 
+                        currentValue = dist;
+                        minHeap.push(std::make_pair(std::abs(dist), currentNeighbor.getOffsetIndices()));                           
+                    }                 
 
-                        accepted[currentNeighbor.getPointId()] == 1;
-                        
-                    }
+                    accepted[currentNeighbor.getPointId()] == 1;
+                    
 
                 }
             }
@@ -257,24 +247,8 @@ public:
 
     int dim = 0;
     int undefined = 0;
-/*
 
-      hrleVectorType<hrleIndexType, D> stopVec(-25,16);
 
-    if(starStencil.getCenter().getStartIndices() == stopVec){
-        auto narrowband = lsSmartPointer<lsMesh>::New();
-        std::cout << "Extracting FMM result..." << std::endl;
-        lsToMesh<T, D>(levelSet, narrowband, true, false, 20).apply();
-
-        std::vector<T> acceptedT(accepted.begin(), accepted.end());
-
-        narrowband->insertNextScalarData(acceptedT, "accepted");
-        lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "/media/sf_shared/duringFMM" ).apply();
-
-        std::cout << "pause" <<std::endl;
-    }
-
-*/
     //find the maximum values in the stencil
     for(int i = 0; i < D; i++){
 
@@ -293,13 +267,13 @@ public:
       //STENCIL CAN ACESS MEMORY THAT IS NOT INITIALZED IN accepted
 
       int posAccepted = 0;
-      if(starStencil.getNeighbor(i).isDefined() && pos != lsDomain<T, D>::POS_VALUE){
+      if(pos != lsDomain<T, D>::POS_VALUE){
           posAccepted = accepted[starStencil.getNeighbor(i).getPointId()];
       }
 
 
       int negAccepted = 0;
-      if(starStencil.getNeighbor(i+D).isDefined() && neg != lsDomain<T, D>::POS_VALUE){
+      if(neg != lsDomain<T, D>::POS_VALUE){
           negAccepted = accepted[starStencil.getNeighbor(i+D).getPointId()];
       }
       
@@ -395,7 +369,7 @@ public:
     
   }
 
-  T calcDist(hrleSparseStarIterator<typename lsDomain<T, D>::DomainType>& starStencil, bool inside){
+    T calcDist(hrleSparseStarIterator<typename lsDomain<T, D>::DomainType>& starStencil, bool inside){
 
     //TODO: write eikonal equation somwhere
 
@@ -506,4 +480,4 @@ public:
 
 
 
-#endif // LS_EIKONAL_EXPAND_TEST_HPP
+#endif // TMP_TEST_HPP

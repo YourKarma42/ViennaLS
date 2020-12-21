@@ -8,6 +8,11 @@
 #include <lsExpand.hpp>
 #include <lsVelocityField.hpp>
 
+//Lenz: Changed for EULER normalization
+#include <../dev/lsEikonalExpandTest.hpp>
+
+//#include <../dev/_tmpTest.hpp>
+
 namespace lsInternal {
 
 /// Engquist osher integration scheme based on the
@@ -22,8 +27,10 @@ template <class T, int D, int order> class lsEnquistOsher {
 
 public:
   static void prepareLS(lsSmartPointer<lsDomain<T, D>> passedlsDomain) {
-    assert(order == 1 || order == 2);
-    lsExpand<T, D>(passedlsDomain, 2 * order + 1).apply();
+    //the level set needs to have a width of order + 2 to have enough values for finite differences 
+    lsEikonalExpandTest<T, D>(passedlsDomain, order + 2).apply();
+    //assert(order == 1 || order == 2);
+    //lsExpand<T, D>(passedlsDomain, 2 * order + 1).apply();
   }
 
   lsEnquistOsher(lsSmartPointer<lsDomain<T, D>> passedlsDomain,
@@ -123,7 +130,8 @@ public:
                 neighborIterator.getCenter().getValue();
         T neg = neighborIterator.getCenter().getValue() -
                 neighborIterator.getNeighbor(i + D).getValue();
-        normalVector[i] = (pos + neg) * 0.5; // = 0;
+        //Lenz: change for euler
+        normalVector[i] = (pos + neg) / (2.*gridDelta); // *0.5; //= 0;
         denominator += normalVector[i] * normalVector[i];
       }
       denominator = std::sqrt(denominator);

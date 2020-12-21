@@ -195,7 +195,6 @@ void create_output_Manhatten(lsSmartPointer<lsDomain<double, D>> levelSet,
   }
 
 void create_output_Euklid(lsSmartPointer<lsDomain<double, D>> levelSet,
-  std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & lsPoints,
   std::string output_name){
 
     //std::vector<NumericType> distance;
@@ -264,7 +263,8 @@ void create_output_Euklid(lsSmartPointer<lsDomain<double, D>> levelSet,
      //     neighborIt.getIndices() < levelSet.getGrid().incrementIndices(levelSet.getGrid().getMaxGridPoint()); neighborIt.next()) {
 
         //auto &centerIt = neighborIt.getCenter();
-        if (!centerIt.isDefined() || (lsPoints.find(centerIt.getStartIndices()) == lsPoints.end())) {
+        //if (!centerIt.isDefined() || (lsPoints.find(centerIt.getStartIndices()) == lsPoints.end())) {
+        if (!centerIt.isDefined() || std::abs(centerIt.getValue()) > gridDelta) {
           continue;
         } 
 
@@ -297,7 +297,7 @@ void create_output_Euklid(lsSmartPointer<lsDomain<double, D>> levelSet,
 
     auto narrowband = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<NumericType, D>(levelSet, narrowband, true, true).apply(lsPoints);
+    lsToMesh<NumericType, D>(levelSet, narrowband, true, true, gridDelta).apply();
     //lsPoints
 
 
@@ -315,8 +315,7 @@ void create_output_Euklid(lsSmartPointer<lsDomain<double, D>> levelSet,
     lsVTKWriter(narrowband, lsFileFormatEnum::VTU , output_name ).apply();
 
 
-}
-
+  }
 class velocityField : public lsVelocityField<double> {
 public:
   double
@@ -348,68 +347,35 @@ int main(int argc, char* argv[]) {
 
     omp_set_num_threads(numThreads);
 
+   std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets1;
 
-    NumericType radius = 95.;
-
-    std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> activePoints;
+     std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> activePoints;
 
     std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> narrowPoints;
 
+
+    NumericType radius = 95.;
+
     lsSmartPointer<lsDomain<double, D>> levelSet = makeSphere(gridDelta, radius, activePoints, narrowPoints);
 
-/*  */
-    // create new levelset for new material, which will be grown
-    // since it has to wrap around the substrate, just copy it
-    auto newLayer = lsSmartPointer<lsDomain<double, D>>::New(levelSet);
+    levelSets1.push_back(levelSet);  
 
     auto velocities = lsSmartPointer<velocityField>::New();
 
     std::cout << "Advecting levelset..." << std::endl;
-    eulerAdvect<double, D> advectionKernel;
-
-    // the level set to be advected has to be inserted last
-    // the other could be taken as a mask layer for advection
-    advectionKernel.insertNextLevelSet(levelSet);
-    //advectionKernel.insertNextLevelSet(newLayer);
-
-    advectionKernel.setVelocityField(velocities);
-    // advectionKernel.setAdvectionTime(4.);
-
-    advectionKernel.setInterfaceArrays(activePoints, narrowPoints);
+    eulerAdvect<NumericType, D> advectionKernel(levelSets1, velocities);
 
 
     advectionKernel.setAdvectionTime(5.);
     advectionKernel.apply();
 
-    auto mesh = lsSmartPointer<lsMesh>::New();
-    lsToDiskMesh<double, D>(levelSet, mesh).apply();
-    lsVTKWriter(mesh, "sphere-" + std::to_string(1) + ".vtk").apply();
+//    auto mesh = lsSmartPointer<lsMesh>::New();
+//    lsToDiskMesh<double, D>(levelSet, mesh).apply();
+//    lsVTKWriter(mesh, "sphere-" + std::to_string(1) + ".vtk").apply();
 
+    std::cout << "Calculating Curvatures ..." << std::endl;
 
-    //int order = 1;
-    //lsExpand<NumericType, D>(levelSet, 2 * (order + 2) + 1).apply();
-
-/*
-    std::cout << "Converting levelset ..." << std::endl;
-
-
-    lsConvertEuclid<NumericType, D>  converter(levelSet);
-
-    converter.apply();
-
-    //get the active grid points of the level set
-    auto newActivePoints = converter.getActivePoints();
-
-    std::cout << "Fast Marching..." << std::endl;
-
-    lsEikonalExpand<NumericType, D> expander(levelSet, newActivePoints);
-
-    expander.apply(); 
-*/
-
-    //std::cout << "Calculating Curvatures ..." << std::endl;
-
-    //create_output_Euklid(levelSet,newActivePoints,"advectedEuklid");
+    create_output_Euklid(levelSet, "advectedEuklid");
     //create_output_Manhatten(levelSet,"advectedManhatten");
 
 /*

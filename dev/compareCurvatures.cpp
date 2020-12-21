@@ -750,7 +750,7 @@ int main() {
 
     //lsEikonalExpand<NumericType, D> expander(levelSets.back(), narrowPoints);
 
-    lsEikonalExpandTest<NumericType, D> expander(levelSets.back(), narrowPoints);
+    lsEikonalExpandTest<NumericType, D> expander(levelSets.back());
 
     //lsExpandSphere<NumericType, D> expander(levelSets.back(), activePoints, radius);
 
