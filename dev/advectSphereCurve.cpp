@@ -43,7 +43,7 @@
 
 #include <lsCalculateNormalVectors.hpp>
 
-constexpr int D = 2 ;
+constexpr int D = 3 ;
 typedef double NumericType;
 
 typedef typename lsDomain<NumericType, D>::DomainType hrleDomainType;
@@ -230,6 +230,12 @@ void create_output_Euklid(lsSmartPointer<lsDomain<double, D>> levelSet,
 
     NumericType gridDelta = levelSet->getGrid().getGridDelta();
 
+
+    lsEikonalExpandTest<NumericType, D> expanderEikonal(levelSet, 3);
+
+    expanderEikonal.apply(); 
+
+
     variationOfNormals<NumericType, D> variationOfGrad(gridDelta);
 
     curvaturShapeDerivatives1<NumericType, D> shape1(gridDelta);
@@ -336,7 +342,7 @@ int main(int argc, char* argv[]) {
 
     int numThreads = 1;
 
-    NumericType gridDelta = 0.75;
+    NumericType gridDelta = 0.5;
 
     if(argc != 1){
         numThreads = std::stoi(argv[1]);
@@ -375,7 +381,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Calculating Curvatures ..." << std::endl;
 
-    create_output_Euklid(levelSet, "advectedEuklid");
+    create_output_Euklid(levelSet, "advectedEuler");
     //create_output_Manhatten(levelSet,"advectedManhatten");
 
 /*
