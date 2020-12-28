@@ -72,6 +72,9 @@ public:
       return;
     }
 
+    //currently Eikonal expand is only single core so the ls has to be contained in one segment
+    levelSet->getDomain().desegment();
+
     //used to keep track of the Interface
     T largeValue = 1000.;
 
@@ -141,7 +144,6 @@ public:
                 }
             }
         }
-        newDomain.finalize();
         levelSet->deepCopy(newlsDomain);
     }
 
@@ -156,12 +158,6 @@ public:
         minHeap.push(std::make_pair(std::abs(p.first), p.second));
     }
 
-    //TODO: carful with segment here multicore!
-
-
-    levelSet->finalize(width);
-
-
     for (hrleSparseIterator<hrleDomainType> it(levelSet->getDomain());
         !it.isFinished(); ++it) {
 
@@ -174,68 +170,8 @@ public:
         }
     }
 
-    hrleSparseStarIterator<typename lsDomain<T, D>::DomainType> neighborStarIterator(levelSet->getDomain());
 
-    hrleSparseStarIterator<typename lsDomain<T, D>::DomainType> starItEikonal(levelSet->getDomain());
-    
-
-    while(!minHeap.empty()){
-
-        auto currentPoint = minHeap.top();
-
-
-
-        minHeap.pop();
-
-        neighborStarIterator.goToIndices(currentPoint.second);
-
-        //std::cout << neighborStarIterator.getCenter().isDefined() << " " << 
-        //neighborStarIterator.getCenter().getValue() << " " << neighborStarIterator.getCenter().getPointId()<< std::endl; 
-
-        //is the current value already accepted
-        //if(accepted.at(neighborStarIterator.getCenter().getPointId()) <= 1){
-        if(accepted[neighborStarIterator.getCenter().getPointId()] <= 1){
-          
-
-            //break the loop if the narrowband has expanded far enough for application
-            if(currentPoint.first > width*gridDelta)
-              break;
-
-            accepted[neighborStarIterator.getCenter().getPointId()] = 2;
-
-            //update neighbours
-            for(int i = 0; i < 2*D; i++){
-
-                auto currentNeighbor = neighborStarIterator.getNeighbor(i);
-
-                //if curretn neighbour is undefined skip (points at the border of the domain)
-                if(currentNeighbor.isDefined()){
-                
-                    if(accepted[currentNeighbor.getPointId()] <= 1){
-
-                        T &currentValue = currentNeighbor.getValue();
-
-                        starItEikonal.goToIndices(currentNeighbor.getOffsetIndices());
-                        
-                        //send iterator
-                        T dist = calcDistFMM(starItEikonal, (currentNeighbor.getValue() < 0.));   
-
-
-                        if(abs(dist) < abs(currentValue)){
-
-                            currentValue = dist;
-                            minHeap.push(std::make_pair(std::abs(dist), currentNeighbor.getOffsetIndices()));                           
-                        }                 
-
-                        accepted[currentNeighbor.getPointId()] == 1;
-                        
-                    }
-
-                }
-            }
-
-        }
-    }
+    march(minHeap);
 
     levelSet->getDomain().segment();
 
@@ -248,6 +184,74 @@ public:
   //1 ... considered
   //2 ... accepted
   std::vector<int> accepted;
+
+
+  void march(std::priority_queue <std::pair<T, hrleVectorType<hrleIndexType, D>>, 
+                         std::vector<std::pair<T, hrleVectorType<hrleIndexType, D>>>, 
+                         myCompare> & minHeap ){
+
+      hrleSparseStarIterator<typename lsDomain<T, D>::DomainType> neighborStarIterator(levelSet->getDomain());
+
+      hrleSparseStarIterator<typename lsDomain<T, D>::DomainType> starItEikonal(levelSet->getDomain());
+
+      while(!minHeap.empty()){
+
+          auto currentPoint = minHeap.top();
+
+          minHeap.pop();
+
+          neighborStarIterator.goToIndices(currentPoint.second);
+
+          //std::cout << neighborStarIterator.getCenter().isDefined() << " " << 
+          //neighborStarIterator.getCenter().getValue() << " " << neighborStarIterator.getCenter().getPointId()<< std::endl; 
+
+          //is the current value already accepted
+          //if(accepted.at(neighborStarIterator.getCenter().getPointId()) <= 1){
+          if(accepted[neighborStarIterator.getCenter().getPointId()] <= 1){
+            
+
+              //break the loop if the narrowband has expanded far enough for application
+              if(currentPoint.first > width*gridDelta)
+                break;
+
+              accepted[neighborStarIterator.getCenter().getPointId()] = 2;
+
+              //update neighbours
+              for(int i = 0; i < 2*D; i++){
+
+                  auto currentNeighbor = neighborStarIterator.getNeighbor(i);
+
+                  //if curretn neighbour is undefined skip (points at the border of the domain)
+                  if(currentNeighbor.isDefined()){
+                  
+                      if(accepted[currentNeighbor.getPointId()] <= 1){
+
+                          T &currentValue = currentNeighbor.getValue();
+
+                          starItEikonal.goToIndices(currentNeighbor.getOffsetIndices());
+                          
+                          //send iterator
+                          T dist = calcDistFMM(starItEikonal, (currentNeighbor.getValue() < 0.));   
+
+
+                          if(abs(dist) < abs(currentValue)){
+
+                              currentValue = dist;
+                              minHeap.push(std::make_pair(std::abs(dist), currentNeighbor.getOffsetIndices()));                           
+                          }                 
+
+                          accepted[currentNeighbor.getPointId()] == 1;
+                          
+                      }
+
+                  }
+              }
+
+          }
+      }
+
+
+  }
 
   T calcDistFMM(hrleSparseStarIterator<typename lsDomain<T, D>::DomainType>& starStencil, bool inside){
 

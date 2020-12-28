@@ -96,7 +96,7 @@ public:
 int main() {
 
 
-    omp_set_num_threads(1);
+    omp_set_num_threads(4);
 
     NumericType gridDelta = 0.5;
 

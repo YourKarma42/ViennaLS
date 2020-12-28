@@ -105,7 +105,7 @@ template <class T, int D> class eulerAdvect {
     MaxTimeStep = std::min(timeStep, MaxTimeStep);
   }
 
-  void rebuildLS() {
+  void rebuildLSEuler() {
 
     //auto narrowband = lsSmartPointer<lsMesh>::New();
     //std::cout << "Extracting narrowband..." << std::endl;
@@ -131,13 +131,13 @@ template <class T, int D> class eulerAdvect {
 
     //LENZ: TODO: think of how to trancsfare vector data after Velocity extention
 
-/*
+
     // save how data should be transferred to new level set
     // list of indices into the old pointData vector
-    std::vector<std::vector<unsigned>> newDataSourceIds;
+/*    std::vector<std::vector<unsigned>> newDataSourceIds;
     newDataSourceIds.resize(newDomain.getNumberOfSegments());
 
-    ******rebuild LS*******
+    //******rebuild LS*******
 
     // now copy old data into new level set
     auto &pointData = levelSets.back()->getPointData();
@@ -186,6 +186,210 @@ template <class T, int D> class eulerAdvect {
 
 
   }
+
+  void rebuildLS() {
+    // TODO: this function uses manhatten distances for renormalisation,
+    // since this is the quickest. For visualisation applications, better
+    // renormalisation is needed, so it might be good to implement
+    // Euler distance renormalisation as an option
+    auto &grid = levelSets.back()->getGrid();
+    auto newlsDomain = lsSmartPointer<lsDomain<T, D>>::New(grid);
+    typename lsDomain<T, D>::DomainType &newDomain = newlsDomain->getDomain();
+    typename lsDomain<T, D>::DomainType &domain = levelSets.back()->getDomain();
+
+    newDomain.initialize(domain.getNewSegmentation(),
+                         domain.getAllocation() *
+                             (2.0 / levelSets.back()->getLevelSetWidth()));
+
+    // save how data should be transferred to new level set
+    // list of indices into the old pointData vector
+    std::vector<std::vector<unsigned>> newDataSourceIds;
+    newDataSourceIds.resize(newDomain.getNumberOfSegments());
+
+#pragma omp parallel num_threads(newDomain.getNumberOfSegments())
+    {
+      int p = 0;
+#ifdef _OPENMP
+      p = omp_get_thread_num();
+#endif
+
+      auto &domainSegment = newDomain.getDomainSegment(p);
+
+      hrleVectorType<hrleIndexType, D> startVector =
+          (p == 0) ? grid.getMinGridPoint()
+                   : newDomain.getSegmentation()[p - 1];
+
+      hrleVectorType<hrleIndexType, D> endVector =
+          (p != static_cast<int>(newDomain.getNumberOfSegments() - 1))
+              ? newDomain.getSegmentation()[p]
+              : grid.incrementIndices(grid.getMaxGridPoint());
+
+      // reserve a bit more to avoid reallocation
+      // would expect number of points to roughly double
+      newDataSourceIds[p].reserve(2.5 * domainSegment.getNumberOfPoints());
+
+      for (hrleSparseStarIterator<typename lsDomain<T, D>::DomainType> it(
+               domain, startVector);
+           it.getIndices() < endVector; ++it) {
+
+        // if the center is an active grid point
+        // <1.0 since it could have been change by 0.5 max
+        if (std::abs(it.getCenter().getValue()) <= 1.0) {
+
+          int k = 0;
+          for (; k < 2 * D; k++)
+            if (std::signbit(it.getNeighbor(k).getValue() - 1e-7) !=
+                std::signbit(it.getCenter().getValue() + 1e-7))
+              break;
+
+          // if there is at least one neighbor of opposite sign
+          if (k != 2 * D) {
+            if (it.getCenter().getDefinedValue() > 0.5) {
+              int j = 0;
+              for (; j < 2 * D; j++) {
+                if (std::abs(it.getNeighbor(j).getValue()) <= 1.0)
+                  if (it.getNeighbor(j).getDefinedValue() < -0.5)
+                    break;
+              }
+              if (j == 2 * D) {
+                domainSegment.insertNextDefinedPoint(
+                    it.getIndices(), it.getCenter().getDefinedValue());
+                newDataSourceIds[p].push_back(it.getCenter().getPointId());
+                // if there is at least one active grid point, which is < -0.5
+              } else {
+                domainSegment.insertNextDefinedPoint(it.getIndices(), 0.5);
+                newDataSourceIds[p].push_back(it.getNeighbor(j).getPointId());
+              }
+            } else if (it.getCenter().getDefinedValue() < -0.5) {
+              int j = 0;
+              for (; j < 2 * D; j++) {
+                if (std::abs(it.getNeighbor(j).getValue()) <= 1.0)
+                  if (it.getNeighbor(j).getDefinedValue() > 0.5)
+                    break;
+              }
+
+              if (j == 2 * D) {
+                domainSegment.insertNextDefinedPoint(
+                    it.getIndices(), it.getCenter().getDefinedValue());
+                newDataSourceIds[p].push_back(it.getCenter().getPointId());
+                // if there is at least one active grid point, which is > 0.5
+              } else {
+                domainSegment.insertNextDefinedPoint(it.getIndices(), -0.5);
+                newDataSourceIds[p].push_back(it.getNeighbor(j).getPointId());
+              }
+            } else {
+              domainSegment.insertNextDefinedPoint(
+                  it.getIndices(), it.getCenter().getDefinedValue());
+              newDataSourceIds[p].push_back(it.getCenter().getPointId());
+            }
+          } else {
+            domainSegment.insertNextUndefinedPoint(
+                it.getIndices(), (it.getCenter().getDefinedValue() < 0)
+                                     ? lsDomain<T, D>::NEG_VALUE
+                                     : lsDomain<T, D>::POS_VALUE);
+          }
+
+        } else { // if the center is not an active grid point
+          if (it.getCenter().getValue() >= 0) {
+            int usedNeighbor = -1;
+            T distance = lsDomain<T, D>::POS_VALUE;
+            for (int i = 0; i < 2 * D; i++) {
+              T value = it.getNeighbor(i).getValue();
+              if (std::abs(value) <= 1.0 && (value < 0.)) {
+                if (distance > value + 1.0) {
+                  distance = value + 1.0;
+                  usedNeighbor = i;
+                }
+              }
+            }
+
+            if (distance <= 1.) {
+              domainSegment.insertNextDefinedPoint(it.getIndices(), distance);
+              newDataSourceIds[p].push_back(
+                  it.getNeighbor(usedNeighbor).getPointId());
+            } else {
+              domainSegment.insertNextUndefinedPoint(it.getIndices(),
+                                                     lsDomain<T, D>::POS_VALUE);
+            }
+
+          } else {
+            int usedNeighbor = -1;
+            T distance = lsDomain<T, D>::NEG_VALUE;
+            for (int i = 0; i < 2 * D; i++) {
+              T value = it.getNeighbor(i).getValue();
+              if (std::abs(value) <= 1.0 && (value > 0)) {
+                if (distance < value - 1.0) {
+                  // distance = std::max(distance, value - T(1.0));
+                  distance = value - 1.0;
+                  usedNeighbor = i;
+                }
+              }
+            }
+
+            if (distance >= -1.) {
+              domainSegment.insertNextDefinedPoint(it.getIndices(), distance);
+              newDataSourceIds[p].push_back(
+                  it.getNeighbor(usedNeighbor).getPointId());
+            } else {
+              domainSegment.insertNextUndefinedPoint(it.getIndices(),
+                                                     lsDomain<T, D>::NEG_VALUE);
+            }
+          }
+        }
+      }
+    }
+
+    // now copy old data into new level set
+    auto &pointData = levelSets.back()->getPointData();
+    if (!pointData.getScalarDataSize() || !pointData.getVectorDataSize()) {
+      auto &newPointData = newlsDomain->getPointData();
+      // concatenate all source ids into one vector
+      newDataSourceIds.reserve(newlsDomain->getNumberOfPoints());
+      for (unsigned i = 1; i < newDataSourceIds.size(); ++i) {
+        for (unsigned j = 0; j < newDataSourceIds[i].size(); ++j) {
+          newDataSourceIds[0].push_back(newDataSourceIds[i][j]);
+        }
+        // free memory of copied vectors
+        std::vector<unsigned>().swap(newDataSourceIds[i]);
+      }
+
+      // scalars
+      for (unsigned scalarId = 0; scalarId < pointData.getScalarDataSize();
+           ++scalarId) {
+        newPointData.insertNextScalarData(
+            lsPointData::ScalarDataType(),
+            pointData.getScalarDataLabel(scalarId));
+        auto &newScalars = *(newPointData.getScalarData(scalarId));
+        auto &scalars = *(pointData.getScalarData(scalarId));
+        newScalars.reserve(newlsDomain->getNumberOfPoints());
+
+        for (unsigned i = 0; i < newDataSourceIds[0].size(); ++i) {
+          newScalars.push_back(scalars[newDataSourceIds[0][i]]);
+        }
+      }
+
+      // vectors
+      for (unsigned vectorId = 0; vectorId < pointData.getVectorDataSize();
+           ++vectorId) {
+        newPointData.insertNextVectorData(
+            lsPointData::VectorDataType(),
+            pointData.getVectorDataLabel(vectorId));
+        auto &newVectors = *(newPointData.getVectorData(vectorId));
+        auto &vectors = *(pointData.getVectorData(vectorId));
+        newVectors.reserve(newlsDomain->getNumberOfPoints());
+
+        for (unsigned i = 0; i < newDataSourceIds[0].size(); ++i) {
+          newVectors.push_back(vectors[newDataSourceIds[0][i]]);
+        }
+      }
+    }
+
+    newDomain.finalize();
+    newDomain.segment();
+    levelSets.back()->deepCopy(newlsDomain);
+    levelSets.back()->finalize(2);
+  }
+
 
   /// internal function used as a wrapper to call specialized integrateTime
   /// with the chosen integrationScheme
@@ -287,7 +491,10 @@ template <class T, int D> class eulerAdvect {
       return std::numeric_limits<double>::max();
     }
 /* #endregion */
-    rebuildLS();
+    
+    //TODO: check Levelset normalization
+    
+    rebuildLSEuler();
 
     // Adjust all level sets below the advected one
     // This means, that when the top levelset and one below

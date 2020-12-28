@@ -7,14 +7,19 @@
 #include <hrleVectorType.hpp>
 #include <lsDomain.hpp>
 
+//LENZ: Rworked for Eulernormalization to use gridDelta insted of 0.5
+//TODO: think of a way to differentiate Manhatten/Euler normalization
+
 /// Reduce the level set size to the specified width.
-/// This means all level set points with value <= 0.5*width
+/// This means all level set points with value <= 0.5*width (gridDelta*width)
 /// are removed, reducing the memory footprint of the lsDomain.
 template <class T, int D> class lsReduce {
   typedef typename lsDomain<T, D>::GridType GridType;
   lsSmartPointer<lsDomain<T, D>> levelSet = nullptr;
   int width = 0;
   bool noNewSegment = false;
+
+  T lsValLimit = 0.;
 
 public:
   lsReduce() {}
@@ -25,14 +30,19 @@ public:
   lsReduce(lsSmartPointer<lsDomain<T, D>> passedlsDomain, int passedWidth,
            bool passedNoNewSegment = false)
       : levelSet(passedlsDomain), width(passedWidth),
-        noNewSegment(passedNoNewSegment){};
+        noNewSegment(passedNoNewSegment){
+        //TODO: check LS type
+        lsValLimit = levelSet->getGrid().getGridDelta();
+
+  };
 
   void setLevelSet(lsSmartPointer<lsDomain<T, D>> passedlsDomain) {
     levelSet = passedlsDomain;
+    //TODO: check LS type
   }
 
   /// Set which level set points should be kept.
-  /// All points with a level set value >0.5*width will be
+  /// All points with a level set value >0.5*width (gridDelta*width) will be
   /// removed by this algorithm.
   void setWidth(int passedWidth) { width = passedWidth; }
 
@@ -44,7 +54,7 @@ public:
   }
 
   /// Reduces the leveleSet to the specified number of layers.
-  /// The largest value in the levelset is thus width*0.5
+  /// The largest value in the levelset is thus width*0.5 (gridDelta*width)
   /// Returns the number of added points
   void apply() {
     if (levelSet == nullptr) {
@@ -57,12 +67,13 @@ public:
     if (width >= levelSet->getLevelSetWidth())
       return;
 
-    const T valueLimit = width * 0.5;
-
     auto &grid = levelSet->getGrid();
     auto newlsDomain = lsSmartPointer<lsDomain<T, D>>::New(levelSet->getGrid());
     typename lsDomain<T, D>::DomainType &newDomain = newlsDomain->getDomain();
     typename lsDomain<T, D>::DomainType &domain = levelSet->getDomain();
+
+    const T valueLimit = width * lsValLimit;
+    //const T valueLimit = width * 0.5;
 
     newDomain.initialize(domain.getNewSegmentation(), domain.getAllocation());
 
