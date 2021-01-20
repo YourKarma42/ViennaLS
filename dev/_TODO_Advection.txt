@@ -1,7 +1,5 @@
 
 
-- closer look at lsReduce
-
 - implement the other schemes for Euler normalization
 
 - closer look at ignore voids

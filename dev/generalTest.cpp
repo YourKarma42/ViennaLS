@@ -42,7 +42,7 @@
 
 #include <lsPrune.hpp>
 
-#include<lsAdvect.hpp>
+#include <lsAdvect.hpp>
 
 #include <../dev/eulerAdvect.cpp>
 
@@ -50,7 +50,7 @@
 
 //____________testing end___________________________
 
-constexpr int D = 3;
+constexpr int D = 2;
 typedef double NumericType;
 typedef typename lsDomain<NumericType, D>::DomainType hrleDomainType;
 
@@ -140,7 +140,7 @@ int main() {
     //lsToDiskMesh<NumericType, D>(levelSets1.back(), narrowband).apply(activePoints);
   
     //lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "narrowband" ).apply();
-    lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "/media/sf_shared/narrowband" ).apply();
+    lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "narrowband" ).apply();
 
     start = std::chrono::high_resolution_clock::now(); 
 
@@ -159,7 +159,7 @@ int main() {
     //lsToDiskMesh<NumericType, D>(levelSets1.back(), narrowband).apply(activePoints);
   
     //lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "narrowband" ).apply();
-    lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "/media/sf_shared/narrowbandFMM" ).apply();
+    lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "narrowbandFMM" ).apply();
 
     std::vector<std::array<NumericType, 3>> grad1;
 
@@ -234,7 +234,7 @@ int main() {
     narrowband2->insertNextScalarData(meanCurvatureG, "general");
 
   
-    lsVTKWriter(narrowband2, lsFileFormatEnum::VTU, "/media/sf_shared/normals" ).apply();
+    lsVTKWriter(narrowband2, lsFileFormatEnum::VTU, "normals" ).apply();
 
 
 

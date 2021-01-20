@@ -25,8 +25,11 @@ template <class T, int D, int order> class lsEnquistOsher {
 
   static T pow2(const T &value) { return value * value; }
 
+  //TODO: IMPLEMENT LS TYPE
+
 public:
   static void prepareLS(lsSmartPointer<lsDomain<T, D>> passedlsDomain) {
+    //TODO: CURRENTLY ONLY WORKING WITH EULER
     //the level set needs to have a width of order + 2 to have enough values for finite differences 
     lsEikonalExpandTest<T, D>(passedlsDomain, order + 2).apply();
     //assert(order == 1 || order == 2);

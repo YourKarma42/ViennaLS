@@ -29,7 +29,7 @@
 #include <omp.h>
 
 
-#include <../dev/derivatives.hpp>
+#include <../dev/lsCurvatureCalculator.hpp>
 
 
 //____________testing not necessary_________________
@@ -135,7 +135,7 @@ int main(int argc, char* argv[]) {
 
     int numThreads = 1;
 
-    int numberOfRuns = 5;
+    int numberOfRuns = 10;
 
     std::vector<double> timings;
 
@@ -161,7 +161,7 @@ int main(int argc, char* argv[]) {
     std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets;
 
 
-    NumericType radius = 100.;
+    NumericType radius = 10.;
 
     std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> activePoints;
 
@@ -198,7 +198,7 @@ int main(int argc, char* argv[]) {
 
     for(int i = 0; i < numberOfRuns; i++){
 
-        curvaturShapeDerivatives1<NumericType, D> shapeOperator(gridDelta);
+        lsInternal::curvaturShapeDerivatives1<NumericType, D> shapeOperator(gridDelta);
 
         auto grid = levelSets.back()->getGrid();
 
@@ -245,8 +245,8 @@ int main(int argc, char* argv[]) {
                 
                 neighborIt.goToIndices(it.getStartIndices());
                 //std::cout << "TÜ" << std::endl;
-
-                meanCurveSegment.push_back(shapeOperator(neighborIt));
+                shapeOperator.calcDerivatives(neighborIt);
+                meanCurveSegment.push_back(shapeOperator.getMeanCurvature());
             
             }
 
@@ -280,7 +280,7 @@ int main(int argc, char* argv[]) {
 
     for(int i = 0; i < numberOfRuns; i++){
 
-        curvaturGeneralFormula<NumericType, D> generalFormula(gridDelta);
+        lsInternal::curvaturGeneralFormula<NumericType, D> generalFormula(gridDelta);
 
         auto grid = levelSets.back()->getGrid();
 
@@ -327,8 +327,8 @@ int main(int argc, char* argv[]) {
                 
                 neighborIt.goToIndices(it.getStartIndices());
                 //std::cout << "TÜ" << std::endl;
-
-                meanCurveSegment.push_back(generalFormula(neighborIt));
+                generalFormula.calcDerivatives(neighborIt);
+                meanCurveSegment.push_back(generalFormula.getMeanCurvature());
             
             }
 
@@ -361,7 +361,7 @@ int main(int argc, char* argv[]) {
 
     for(int i = 0; i < numberOfRuns; i++){
 
-        curvaturGeneralFormulaBigStencil<NumericType, D> generalFormula(gridDelta);
+        lsInternal::curvaturGeneralFormulaBigStencil<NumericType, D> generalFormula(gridDelta);
 
         auto grid = levelSets.back()->getGrid();
 
@@ -408,8 +408,8 @@ int main(int argc, char* argv[]) {
                 
                 neighborIt.goToIndices(it.getStartIndices());
                 //std::cout << "TÜ" << std::endl;
-
-                meanCurveSegment.push_back(generalFormula(neighborIt));
+                generalFormula.calcDerivatives(neighborIt);
+                meanCurveSegment.push_back(generalFormula.getMeanCurvature());
             
             }
 
@@ -442,7 +442,7 @@ int main(int argc, char* argv[]) {
 
     for(int i = 0; i < numberOfRuns; i++){
 
-        variationOfNormals<NumericType, D> generalFormula(gridDelta);
+        lsInternal::variationOfNormals<NumericType, D> generalFormula(gridDelta);
 
         auto grid = levelSets.back()->getGrid();
 
@@ -489,8 +489,8 @@ int main(int argc, char* argv[]) {
                 
                 neighborIt.goToIndices(it.getStartIndices());
                 //std::cout << "TÜ" << std::endl;
-
-                meanCurveSegment.push_back(generalFormula(neighborIt));
+                generalFormula.calcDerivatives(neighborIt);
+                meanCurveSegment.push_back(generalFormula.getMeanCurvature());
             
             }
 
@@ -523,7 +523,7 @@ int main(int argc, char* argv[]) {
 
     for(int i = 0; i < numberOfRuns; i++){
 
-        curvaturGeneralFormulaBigStencilBias<NumericType, D> generalFormula(gridDelta);
+        lsInternal::curvaturGeneralFormulaBigStencilBias<NumericType, D> generalFormula(gridDelta);
 
         auto grid = levelSets.back()->getGrid();
 
@@ -570,8 +570,8 @@ int main(int argc, char* argv[]) {
                 
                 neighborIt.goToIndices(it.getStartIndices());
                 //std::cout << "TÜ" << std::endl;
-
-                meanCurveSegment.push_back(generalFormula(neighborIt));
+                generalFormula.calcDerivatives(neighborIt);
+                meanCurveSegment.push_back(generalFormula.getMeanCurvature());
             
             }
 
@@ -604,7 +604,7 @@ int main(int argc, char* argv[]) {
 
     for(int i = 0; i < numberOfRuns; i++){
 
-        curvaturTest<NumericType, D> generalFormula(gridDelta);
+        lsInternal::curvaturTest<NumericType, D> generalFormula(gridDelta);
 
         auto grid = levelSets.back()->getGrid();
 
@@ -651,8 +651,8 @@ int main(int argc, char* argv[]) {
                 
                 neighborIt.goToIndices(it.getStartIndices());
                 //std::cout << "TÜ" << std::endl;
-
-                meanCurveSegment.push_back(generalFormula(neighborIt));
+                generalFormula.calcDerivatives(neighborIt);
+                meanCurveSegment.push_back(generalFormula.getMeanCurvature());
             
             }
 

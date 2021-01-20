@@ -75,12 +75,10 @@ public:
     //currently Eikonal expand is only single core so the ls has to be contained in one segment
     levelSet->getDomain().desegment();
 
+    accepted.clear();
+
     //used to keep track of the Interface
     T largeValue = 1000.;
-
-    std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> interface;
-
-    hrleVectorType<hrleIndexType, D> tmpVec(0);
 
     //minimum heap for FMM
     std::vector<std::pair<T, hrleVectorType<hrleIndexType, D>>> container;
@@ -94,19 +92,7 @@ public:
 
     std::vector<std::pair<T, hrleVectorType<hrleIndexType, D>>> initialValues;
 
-    //initialize the Domain for FMM
-    for (hrleSparseStarIterator<hrleDomainType> it(levelSet->getDomain());
-        !it.isFinished(); ++it) {
-
-        if(it.getCenter().isDefined())
-          continue;
-
-        T dist = calcDist(it, (it.getCenter().getValue() < 0.));
-        if(dist != 0){
-            initialValues.push_back(std::make_pair(dist, it.getIndices()));            
-        }                            
-    }
-
+    //expand the domain for FMM
     for(int runs = 0; runs < order; runs++){
 
         auto &grid = levelSet->getGrid();
@@ -128,48 +114,170 @@ public:
                 newDomain.getDomainSegment(0).insertNextDefinedPoint(it.getIndices(),
                                             it.getCenter().getValue());
                 if(runs == 0){
-                    interface.insert(it.getIndices());
+                    //interface.insert(it.getIndices());
                 }
 
             }else{
 
-              //TODO: rethink can problably made faster not always calc dist
-              T dist = calcDist(it, (it.getCenter().getValue() < 0.));
-                if(dist != 0){                      
-                    newDomain.getDomainSegment(0).insertNextDefinedPoint(it.getIndices(),
-                                            (it.getCenter().getValue()<0.) ? -largeValue : largeValue);                  
-                }else{
-                    newDomain.getDomainSegment(0).insertNextUndefinedPoint(it.getIndices(), 
-                    (it.getCenter().getValue()<0.) ? lsDomain<T, D>::NEG_VALUE : lsDomain<T, D>::POS_VALUE);
-                }
+            int undefined = 0;
+
+            for(int i = 0; i < D; i++){
+
+              T pos = std::abs(it.getNeighbor(i).getValue());
+
+              T neg = std::abs(it.getNeighbor(i+D).getValue());
+
+              if(pos !=  lsDomain<T, D>::POS_VALUE || neg !=  lsDomain<T, D>::POS_VALUE)
+                break;
+              
+              undefined++;
             }
+
+            if(undefined < D){
+                newDomain.getDomainSegment(0).insertNextDefinedPoint(it.getIndices(),
+                                            (it.getCenter().getValue()<0.) ? -largeValue : largeValue);                               
+            }else{
+                newDomain.getDomainSegment(0).insertNextUndefinedPoint(it.getIndices(), 
+                    (it.getCenter().getValue()<0.) ? lsDomain<T, D>::NEG_VALUE : lsDomain<T, D>::POS_VALUE);
+            }
+          }
         }
-        levelSet->deepCopy(newlsDomain);
+        levelSet->deepCopy(newlsDomain);     
     }
 
-    //initialize the narrowband for FMM
-    for(auto p: initialValues){
-        hrleSparseIterator<hrleDomainType> it(levelSet->getDomain());
-        it.goToIndices(p.second);
-        T &currentVal = it.getValue();
-
-        currentVal = p.first;
-
-        minHeap.push(std::make_pair(std::abs(p.first), p.second));
-    }
-
+    std::vector<double> tmp;
+    //initialize the Domain for FMM
     for (hrleSparseIterator<hrleDomainType> it(levelSet->getDomain());
         !it.isFinished(); ++it) {
 
-        if(it.isDefined()){
-            if(interface.find(it.getStartIndices()) != interface.end()){
-                accepted.push_back(2);
-            }else{
-                accepted.push_back(0);     
-            }
-        }
+        if(!it.isDefined())
+          continue;
+
+        if(std::abs(it.getValue()) <= gridDelta){
+            accepted.push_back(2);
+            tmp.push_back(2);
+
+        }else{
+            accepted.push_back(0); 
+            tmp.push_back(0); 
+        }                           
     }
 
+
+    //initialize the narrowband for FMM
+    for (hrleSparseStarIterator<hrleDomainType> it(levelSet->getDomain());
+        !it.isFinished(); ++it) {
+
+        if(!it.getCenter().isDefined() || std::abs(it.getCenter().getValue()) <= gridDelta)
+          continue;
+
+        T dist = calcDistFMM(it, (it.getCenter().getValue() < 0.));   
+
+
+        if ( dist != 0){
+
+            T &currentVal = it.getCenter().getValue();
+
+          	currentVal = dist;
+
+            minHeap.push(std::make_pair(std::abs(dist), it.getIndices()));
+
+        }
+
+    }
+/*
+    auto narrowband1 = lsSmartPointer<lsMesh>::New();
+    std::cout << "Extracting narrowband..." << std::endl;
+    lsToMesh<T, D>(levelSet, narrowband1, true, true, largeValue + 1).apply();
+
+    narrowband1->insertNextScalarData(tmp, "accepted");
+
+    lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "beforMarch" ).apply();
+*/
+    //check min heap
+    march(minHeap);
+/*
+    auto narrowband = lsSmartPointer<lsMesh>::New();
+    std::cout << "Extracting narrowband..." << std::endl;
+    lsToMesh<T, D>(levelSet, narrowband, true, true, largeValue + 1).apply();
+
+    narrowband->insertNextScalarData(tmp, "accepted");
+
+    lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "afterMarch" ).apply();
+*/
+
+    levelSet->getDomain().segment();
+
+    levelSet->finalize(width);
+  }
+
+
+  void applyTest() {
+    if (levelSet == nullptr) {
+      lsMessage::getInstance()
+          .addWarning("No level set was passed to lsEikonalExpand.")
+          .print();
+      return;
+    }
+
+    //currently Eikonal expand is only single core so the ls has to be contained in one segment
+    levelSet->getDomain().desegment();
+
+    accepted.clear();
+
+    //used to keep track of the Interface
+    T largeValue = 1000.;
+
+    //minimum heap for FMM
+    std::vector<std::pair<T, hrleVectorType<hrleIndexType, D>>> container;
+    container.reserve(levelSet->getDomain().getNumberOfPoints() * 10);
+    //std::priority_queue <std::pair<T, hrleVectorType<hrleIndexType, D>>, std::vector<std::pair<T, hrleVectorType<hrleIndexType, D>>>, myCompare> minHeap;
+
+    std::priority_queue <std::pair<T, hrleVectorType<hrleIndexType, D>>, 
+                         std::vector<std::pair<T, hrleVectorType<hrleIndexType, D>>>, 
+                         myCompare> 
+                            minHeap(myCompare(), std::move(container));
+
+    std::vector<std::pair<T, hrleVectorType<hrleIndexType, D>>> initialValues;
+
+    //initialize the Domain for FMM
+    for (hrleSparseIterator<hrleDomainType> it(levelSet->getDomain());
+        !it.isFinished(); ++it) {
+
+        if(!it.isDefined())
+          continue;
+
+        if(it.getValue() <= gridDelta){
+            accepted.push_back(2);
+
+        }else{
+            accepted.push_back(0); 
+            T &currentVal = it.getValue();
+            currentVal = (it.getCenter().getValue()<0.) ? -largeValue : largeValue;
+        }                           
+    }
+
+    //initialize the narrowband for FMM
+    for (hrleSparseStarIterator<hrleDomainType> it(levelSet->getDomain());
+        !it.isFinished(); ++it) {
+
+        if(!it.getCenter().isDefined() && it.getCenter().getValue() > gridDelta)
+          continue;
+
+        T dist = calcDistFMM(it, (it.getCenter().getValue() < 0.));   
+
+        if ( dist != 0){
+
+            T &currentVal = it.getCenter().getValue();
+
+          	currentVal = dist;
+
+            minHeap.push(std::make_pair(std::abs(dist)), it.getCenter().getStartIndices());
+
+        }
+            
+
+    }
 
     march(minHeap);
 
@@ -177,6 +285,8 @@ public:
 
     levelSet->finalize(width);
   }
+
+
 
   private:
 
@@ -294,7 +404,7 @@ public:
       }
 
 
-      //STENCIL CAN ACESS MEMORY THAT IS NOT INITIALZED IN accepted
+      //Take care of undefined points (not in accepted array)
 
       int posAccepted = 0;
       if(starStencil.getNeighbor(i).isDefined() && pos != lsDomain<T, D>::POS_VALUE){
@@ -306,9 +416,6 @@ public:
       if(starStencil.getNeighbor(i+D).isDefined() && neg != lsDomain<T, D>::POS_VALUE){
           negAccepted = accepted[starStencil.getNeighbor(i+D).getPointId()];
       }
-      
-
-
 
       //check if the current point in the stencil is defined (not +/- inf)
 
@@ -390,6 +497,7 @@ public:
         break;
       }
     }    
+
 
     if(inside){
       return -sol;
