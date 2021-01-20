@@ -135,7 +135,7 @@ int main(int argc, char* argv[]) {
 
     int numThreads = 1;
 
-    int numberOfRuns = 10;
+    int numberOfRuns = 100;
 
     std::vector<double> timings;
 
@@ -161,7 +161,7 @@ int main(int argc, char* argv[]) {
     std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets;
 
 
-    NumericType radius = 10.;
+    NumericType radius = 100.;
 
     std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> activePoints;
 
@@ -190,6 +190,8 @@ int main(int argc, char* argv[]) {
     lsEikonalExpand<NumericType, D> expander(levelSets.back(), narrowPoints);
 
     expander.apply(); 
+
+    NumericType tmp=0.;
 //______________________________________________________Start______________________________________________________________
 
     std::cout << "Shape Operator Small Stencil" << std::endl;  
@@ -246,7 +248,8 @@ int main(int argc, char* argv[]) {
                 neighborIt.goToIndices(it.getStartIndices());
                 //std::cout << "TÜ" << std::endl;
                 shapeOperator.calcDerivatives(neighborIt);
-                meanCurveSegment.push_back(shapeOperator.getMeanCurvature());
+                //meanCurveSegment.push_back(shapeOperator.getMeanCurvature());
+                tmp = shapeOperator.getAbsMeanCurvature();
             
             }
 
@@ -329,6 +332,7 @@ int main(int argc, char* argv[]) {
                 //std::cout << "TÜ" << std::endl;
                 generalFormula.calcDerivatives(neighborIt);
                 meanCurveSegment.push_back(generalFormula.getMeanCurvature());
+                tmp = generalFormula.getGaussianCurvature();
             
             }
 
@@ -410,7 +414,7 @@ int main(int argc, char* argv[]) {
                 //std::cout << "TÜ" << std::endl;
                 generalFormula.calcDerivatives(neighborIt);
                 meanCurveSegment.push_back(generalFormula.getMeanCurvature());
-            
+                tmp = generalFormula.getGaussianCurvature();
             }
 
         }
@@ -491,6 +495,7 @@ int main(int argc, char* argv[]) {
                 //std::cout << "TÜ" << std::endl;
                 generalFormula.calcDerivatives(neighborIt);
                 meanCurveSegment.push_back(generalFormula.getMeanCurvature());
+                tmp = generalFormula .getGaussianCurvature();
             
             }
 
@@ -572,6 +577,7 @@ int main(int argc, char* argv[]) {
                 //std::cout << "TÜ" << std::endl;
                 generalFormula.calcDerivatives(neighborIt);
                 meanCurveSegment.push_back(generalFormula.getMeanCurvature());
+                tmp = generalFormula.getGaussianCurvature();
             
             }
 
@@ -653,6 +659,7 @@ int main(int argc, char* argv[]) {
                 //std::cout << "TÜ" << std::endl;
                 generalFormula.calcDerivatives(neighborIt);
                 meanCurveSegment.push_back(generalFormula.getMeanCurvature());
+                tmp = generalFormula.getGaussianCurvature();
             
             }
 

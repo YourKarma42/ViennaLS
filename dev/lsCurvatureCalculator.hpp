@@ -769,6 +769,9 @@ template <class T, int D> class variationOfNormals{
     T GD = 0;
     T twoGD = 0;
 
+    T gDSq = 0;
+    T fourGDsq = 0;
+
     
     std::array<T, 3> centralDiff;
 
@@ -778,12 +781,16 @@ template <class T, int D> class variationOfNormals{
 
     std::array<T, 6> derivativesNeg;
 
+    std::array<T, 9> d;
+
     public:
 
     variationOfNormals(T mGD)
     :  gridDelta(mGD){
         GD = 1./gridDelta;
         twoGD = 1./(2.*gridDelta);
+        gDSq = 1./(gridDelta*gridDelta);
+        fourGDsq = 1./(4.*gridDelta*gridDelta);
     }
 
     /*
@@ -858,6 +865,12 @@ template <class T, int D> class variationOfNormals{
 
             derivativesNeg[i] = (phi_pn- phi_nn)*twoGD; 
             derivativesNeg[i+3] = (phi_np - phi_nn)*twoGD; 
+
+            d[i] = (phi_px - phi_nx)*twoGD;
+
+            d[i+3] = (phi_px - 2.*phi_0 + phi_nx)*gDSq;
+
+            d[i+6] = (phi_pp - phi_pn -phi_np + phi_nn)*fourGDsq;
 
         }
 
@@ -941,6 +954,32 @@ template <class T, int D> class variationOfNormals{
     return true;
         
 
+    }
+
+    T getGaussianCurvature(){
+
+        //TODO: write used formula and paper with reference
+        
+        T norm_grad_sqared = d[0]*d[0] + d[1]*d[1] + d[2]*d[2];
+        norm_grad_sqared = norm_grad_sqared*norm_grad_sqared;
+
+        return 
+        //  - (F_x²(F_yz²-F_yyF_zz)   +     F_y²(F_zx²-F_xxF_zz)     +     F_z²(F_xy²-F_xxFyy) +
+        -(d[0]*d[0]*(d[7]*d[7]-d[4]*d[5]) + d[1]*d[1]*(d[8]*d[8]-d[3]*d[5]) + d[2]*d[2]*(d[6]*d[6]-d[3]*d[4]) +
+
+        //2*[F_xF_y(2F_zzF_xy-2F_zxF_yz) +
+        2.*(d[0]*d[1]*(d[5]*d[6]-d[8]*d[7]) +
+
+        //F_xF_z(2F_yyF_zx-2F_xyF_yz) +
+        d[0]*d[2]*(d[4]*d[8]-d[6]*d[7]) +
+
+        //F_yF_z(2F_xxF_yz-2F_xyF_zx))
+        d[1]*d[2]*(d[3]*d[7]-d[6]*d[8])))
+        
+        // /(F_x² + F_y² + F_z²)²
+        /norm_grad_sqared;
+
+         //(F_x, F_y, F_z, F_xx, F_yy, F_zz, F_xy, F_yz, F_zx)
     }
 
     T getMeanCurvature(){
@@ -1129,7 +1168,7 @@ template <class T, int D> class curvaturGeneralFormulaBigStencil{
 
     }
 
-    T getGaussianCurvature(std::vector<T> d){
+    T getGaussianCurvature(){
 
         //TODO: write used formula and paper with reference
         
