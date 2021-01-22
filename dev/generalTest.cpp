@@ -56,7 +56,6 @@ typedef typename lsDomain<NumericType, D>::DomainType hrleDomainType;
 
 
 lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
-                            std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & lsPoints,
                             std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & narrowPoints){
 
     std::cout << "creating sphere..." << std::endl;
@@ -71,7 +70,6 @@ lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
 
     lsWithGeometry.apply();
 
-    lsPoints = lsWithGeometry.getActivePoints();
     narrowPoints = lsWithGeometry.getNarrowPoints();
 
 
@@ -112,15 +110,13 @@ int main() {
     NumericType radius = 5.;
 
 
-    
-
-    std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> activePoints;
+  
 
     std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> narrowPoints;
 
     
 
-    lsSmartPointer<lsDomain<double, D>> levelSet1 = makeSphere(gridDelta, radius, activePoints, narrowPoints);
+    lsSmartPointer<lsDomain<double, D>> levelSet1 = makeSphere(gridDelta, radius, narrowPoints);
 
     levelSets1.push_back(levelSet1);  
 
@@ -137,8 +133,7 @@ int main() {
     std::cout << "Extracting narrowband after advection..." << std::endl;
     lsToMesh<NumericType, D>(levelSets1.back(), narrowband1, true, false, gridDelta).apply();
 
-    //lsToDiskMesh<NumericType, D>(levelSets1.back(), narrowband).apply(activePoints);
-  
+ 
     //lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "narrowband" ).apply();
     lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "narrowband" ).apply();
 
@@ -156,7 +151,6 @@ int main() {
     std::cout << "Extracting FMM result..." << std::endl;
     lsToMesh<NumericType, D>(levelSets1.back(), narrowband, true, false, gridDelta).apply();
 
-    //lsToDiskMesh<NumericType, D>(levelSets1.back(), narrowband).apply(activePoints);
   
     //lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "narrowband" ).apply();
     lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "narrowbandFMM" ).apply();

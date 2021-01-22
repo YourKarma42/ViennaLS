@@ -51,7 +51,6 @@ typedef typename lsDomain<NumericType, D>::DomainType hrleDomainType;
 
 
 lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
-                            std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & lsPoints,
                             std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & narrowPoints){
 
     std::cout << "creating sphere..." << std::endl;
@@ -66,7 +65,6 @@ lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
 
     lsWithGeometry.apply();
 
-    lsPoints = lsWithGeometry.getActivePoints();
     narrowPoints = lsWithGeometry.getNarrowPoints();
 
 
@@ -453,11 +451,9 @@ int main() {
 
     NumericType radius = 100.;
 
-    std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> activePoints;
-
     std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> narrowPoints;
 
-    lsSmartPointer<lsDomain<double, D>> levelSet = makeSphere(gridDelta, radius, activePoints, narrowPoints);
+    lsSmartPointer<lsDomain<double, D>> levelSet = makeSphere(gridDelta, radius, narrowPoints);
 
     //lsDomain<NumericType,D> levelSet = makeTrench(gridDelta, planeNormal);
 
@@ -486,10 +482,7 @@ int main() {
 
 
 
-    //get the active grid points of the level set
-    activePoints = converter.getActivePoints();
 
-    std::cout << activePoints.size() << std::endl;
 
 */
 
@@ -501,8 +494,6 @@ int main() {
 
     lsEikonalExpandTest<NumericType, D> expander(levelSets.back());
 
-    //lsExpandSphere<NumericType, D> expander(levelSets.back(), activePoints, radius);
-
     expander.apply(); 
 
     auto stop = std::chrono::high_resolution_clock::now(); 
@@ -512,9 +503,6 @@ int main() {
     std::cout << "Calculating Curvatures..." << std::endl;
 
     create_output_Euklid(levelSets.back(), narrowPoints, "/media/sf_shared/narrowband");
-
-
-    //timingTests(levelSets.back(), activePoints);
 
 
     std::cout << "Finished" << std::endl;

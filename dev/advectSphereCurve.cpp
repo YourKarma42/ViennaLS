@@ -51,7 +51,6 @@ typedef typename lsDomain<NumericType, D>::DomainType hrleDomainType;
 
 
 lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
-                            std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & lsPoints,
                             std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & narrowPoints){
 
     std::cout << "creating sphere..." << std::endl;
@@ -66,7 +65,6 @@ lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
 
     lsWithGeometry.apply();
 
-    lsPoints = lsWithGeometry.getActivePoints();
     narrowPoints = lsWithGeometry.getNarrowPoints();
 
 
@@ -355,14 +353,12 @@ int main(int argc, char* argv[]) {
 
    std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets1;
 
-     std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> activePoints;
-
     std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> narrowPoints;
 
 
     NumericType radius = 95.;
 
-    lsSmartPointer<lsDomain<double, D>> levelSet = makeSphere(gridDelta, radius, activePoints, narrowPoints);
+    lsSmartPointer<lsDomain<double, D>> levelSet = makeSphere(gridDelta, radius, narrowPoints);
 
     levelSets1.push_back(levelSet);  
 

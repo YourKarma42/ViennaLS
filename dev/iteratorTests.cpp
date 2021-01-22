@@ -103,7 +103,6 @@ lsSmartPointer<lsDomain<double, D>> makeTrench(double gridDelta, std::vector<Num
 }
 
 lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
-                            std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & lsPoints,
                             std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & narrowPoints){
 
     std::cout << "creating sphere..." << std::endl;
@@ -118,7 +117,6 @@ lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
 
     lsWithGeometry.apply();
 
-    lsPoints = lsWithGeometry.getActivePoints();
     narrowPoints = lsWithGeometry.getNarrowPoints();
 
 
@@ -155,11 +153,9 @@ int main(int argc, char* argv[]) {
 
     NumericType radius = 100.;
 
-    std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> activePoints;
-
     std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> narrowPoints;
 
-    lsSmartPointer<lsDomain<double, D>> levelSet = makeSphere(gridDelta, radius, activePoints, narrowPoints);
+    lsSmartPointer<lsDomain<double, D>> levelSet = makeSphere(gridDelta, radius, narrowPoints);
 
     //lsDomain<NumericType,D> levelSet = makeTrench(gridDelta);
 
@@ -174,8 +170,6 @@ int main(int argc, char* argv[]) {
 
     //converter.apply();
 
-    //get the active grid points of the level set
-    //auto activePoints = converter.getActivePoints();
 
     std::cout << "FMM..." << std::endl;
 
@@ -229,7 +223,7 @@ int main(int argc, char* argv[]) {
                 domain, startVector);
                 it.getStartIndices() < endVector; ++it){
 
-                if (!it.isDefined() || (activePoints.find(it.getStartIndices()) == activePoints.end())) {
+                if (!it.isDefined() || it.getValue() > gridDelta) {
                     continue;
                 }
                 
@@ -261,7 +255,7 @@ int main(int argc, char* argv[]) {
 
     auto narrowband = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<NumericType, D>(levelSet, narrowband, true, true).apply(activePoints);
+    lsToMesh<NumericType, D>(levelSet, narrowband, true, true, gridDelta).apply();
     //lsPoints
 
     narrowband->insertNextScalarData(meanCurvatureGeneralFormula, "general formula");
@@ -297,7 +291,7 @@ int main(int argc, char* argv[]) {
                 domain, startVector);
                 it.getStartIndices() < endVector; ++it){
 
-                if (!it.isDefined() || (activePoints.find(it.getStartIndices()) == activePoints.end())) {
+                if (!it.isDefined() || it.getValue() > gridDelta) {
                     continue;
                 }
 
@@ -319,330 +313,6 @@ int main(int argc, char* argv[]) {
         std::cout << "time Box: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << " "; 
 
     
-
-/*
-
-    double sum = 0.;
-
-    for(auto t : timings){
-        sum += t;
-    }
-
-    timings.clear();
-
-    std::cout << sum/(double)numberOfRUns << std::endl;
-
-
-    std::cout << "Iterator 13 points" << std::endl; 
-
-    for(int i =0; i < numberOfRUns; i++){
-
-        start = std::chrono::high_resolution_clock::now(); 
-
-        auto grid = levelSets.back()->getGrid();
-
-        typename lsDomain<NumericType, D>::DomainType &domain = levelSets.back()->getDomain();
-
-        std::vector<std::unordered_map<hrleVectorType<hrleIndexType, D>, NumericType, typename hrleVectorType<hrleIndexType, D>::hash>> flagsReserve(
-        levelSets.back()->getNumberOfSegments());
-
-
-        double pointsPerSegment =
-        double(2 * levelSets.back()->getDomain().getNumberOfPoints()) /
-        double(levelSets.back()->getLevelSetWidth());
-
-
-#pragma omp parallel num_threads((levelSets.back())->getNumberOfSegments())
-        {
-            int p = 0;
-#ifdef _OPENMP
-            p = omp_get_thread_num();
-#endif
-            hrleCartesianPlaneIterator<typename lsDomain<NumericType, D>::DomainType> neighborIt(domain, 1);
-
-            hrleVectorType<hrleIndexType, D> startVector =
-            (p == 0) ? grid.getMinGridPoint()
-                : domain.getSegmentation()[p - 1];
-
-            hrleVectorType<hrleIndexType, D> endVector =
-            (p != static_cast<int>(domain.getNumberOfSegments() - 1))
-                ? domain.getSegmentation()[p]
-                : grid.incrementIndices(grid.getMaxGridPoint());
-
-
-            for(hrleSparseIterator<typename lsDomain<NumericType, D>::DomainType> it(
-                domain, startVector);
-                it.getStartIndices() < endVector; ++it){
-
-            if (!it.isDefined() || (activePoints.find(it.getStartIndices()) == activePoints.end())) {
-                continue;
-            }
-
-            neighborIt.goToIndices(it.getStartIndices());
-
-            
-            }
-        }
-
-
-
-        stop = std::chrono::high_resolution_clock::now(); 
-
-        timings.push_back(std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count());
-
-        std::cout << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << " "; 
-
-    }
-
-    std::cout << std::endl;
-
-    sum = 0.;
-
-    for(auto t : timings){
-        sum += t;
-    }
-
-    timings.clear();
-
-    std::cout << sum/(double)numberOfRUns << std::endl;
-
-    std::cout << "Iterator 15 points" << std::endl; 
-
-    for(int i =0; i < numberOfRUns; i++){
-
-        start = std::chrono::high_resolution_clock::now(); 
-
-        auto grid = levelSets.back()->getGrid();
-
-        typename lsDomain<NumericType, D>::DomainType &domain = levelSets.back()->getDomain();
-
-        std::vector<std::unordered_map<hrleVectorType<hrleIndexType, D>, NumericType, typename hrleVectorType<hrleIndexType, D>::hash>> flagsReserve(
-        levelSets.back()->getNumberOfSegments());
-
-
-        double pointsPerSegment =
-        double(2 * levelSets.back()->getDomain().getNumberOfPoints()) /
-        double(levelSets.back()->getLevelSetWidth());
-
-
-#pragma omp parallel num_threads((levelSets.back())->getNumberOfSegments())
-        {
-            int p = 0;
-#ifdef _OPENMP
-            p = omp_get_thread_num();
-#endif
-            hrleTestIterator<typename lsDomain<NumericType, D>::DomainType> neighborIt(domain, 1, 15);
-
-            hrleVectorType<hrleIndexType, D> startVector =
-            (p == 0) ? grid.getMinGridPoint()
-                : domain.getSegmentation()[p - 1];
-
-            hrleVectorType<hrleIndexType, D> endVector =
-            (p != static_cast<int>(domain.getNumberOfSegments() - 1))
-                ? domain.getSegmentation()[p]
-                : grid.incrementIndices(grid.getMaxGridPoint());
-
-
-            for(hrleSparseIterator<typename lsDomain<NumericType, D>::DomainType> it(
-                domain, startVector);
-                it.getStartIndices() < endVector; ++it){
-
-            if (!it.isDefined() || (activePoints.find(it.getStartIndices()) == activePoints.end())) {
-                continue;
-            }
-
-            neighborIt.goToIndices(it.getStartIndices());
-
-            
-            }
-        }
-
-
-
-        stop = std::chrono::high_resolution_clock::now(); 
-
-        timings.push_back(std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count());
-
-        std::cout << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << " "; 
-
-    }
-
-    std::cout << std::endl;
-
-    sum = 0.;
-
-    for(auto t : timings){
-        sum += t;
-    }
-
-    timings.clear();
-
-    std::cout << sum/(double)numberOfRUns << std::endl;
-
-    std::cout << "Iterator 19 points" << std::endl; 
-
-    for(int i =0; i < numberOfRUns; i++){
-
-        start = std::chrono::high_resolution_clock::now(); 
-
-        auto grid = levelSets.back()->getGrid();
-
-        typename lsDomain<NumericType, D>::DomainType &domain = levelSets.back()->getDomain();
-
-        std::vector<std::unordered_map<hrleVectorType<hrleIndexType, D>, NumericType, typename hrleVectorType<hrleIndexType, D>::hash>> flagsReserve(
-        levelSets.back()->getNumberOfSegments());
-
-
-        double pointsPerSegment =
-        double(2 * levelSets.back()->getDomain().getNumberOfPoints()) /
-        double(levelSets.back()->getLevelSetWidth());
-
-
-#pragma omp parallel num_threads((levelSets.back())->getNumberOfSegments())
-        {
-            int p = 0;
-#ifdef _OPENMP
-            p = omp_get_thread_num();
-#endif
-            hrleTestIterator<typename lsDomain<NumericType, D>::DomainType> neighborIt(domain, 1, 19);
-
-            hrleVectorType<hrleIndexType, D> startVector =
-            (p == 0) ? grid.getMinGridPoint()
-                : domain.getSegmentation()[p - 1];
-
-            hrleVectorType<hrleIndexType, D> endVector =
-            (p != static_cast<int>(domain.getNumberOfSegments() - 1))
-                ? domain.getSegmentation()[p]
-                : grid.incrementIndices(grid.getMaxGridPoint());
-
-
-            for(hrleSparseIterator<typename lsDomain<NumericType, D>::DomainType> it(
-                domain, startVector);
-                it.getStartIndices() < endVector; ++it){
-
-            if (!it.isDefined() || (activePoints.find(it.getStartIndices()) == activePoints.end())) {
-                continue;
-            }
-
-            neighborIt.goToIndices(it.getStartIndices());
-
-            
-            }
-        }
-
-
-        stop = std::chrono::high_resolution_clock::now(); 
-
-        timings.push_back(std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count());
-
-        std::cout << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << " "; 
-
-    }
-
-    std::cout << std::endl;
-
-    sum = 0.;
-
-    for(auto t : timings){
-        sum += t;
-    }
-
-    timings.clear();
-
-    std::cout << sum/(double)numberOfRUns << std::endl;
-
-
-        std::cout << "Iterator 27 points" << std::endl; 
-
-    for(int i =0; i < numberOfRUns; i++){
-
-        start = std::chrono::high_resolution_clock::now(); 
-
-        auto grid = levelSets.back()->getGrid();
-
-        typename lsDomain<NumericType, D>::DomainType &domain = levelSets.back()->getDomain();
-
-        std::vector<std::unordered_map<hrleVectorType<hrleIndexType, D>, NumericType, typename hrleVectorType<hrleIndexType, D>::hash>> flagsReserve(
-        levelSets.back()->getNumberOfSegments());
-
-
-        double pointsPerSegment =
-        double(2 * levelSets.back()->getDomain().getNumberOfPoints()) /
-        double(levelSets.back()->getLevelSetWidth());
-
-
-#pragma omp parallel num_threads((levelSets.back())->getNumberOfSegments())
-        {
-            int p = 0;
-#ifdef _OPENMP
-            p = omp_get_thread_num();
-#endif
-            hrleTestIterator<typename lsDomain<NumericType, D>::DomainType> neighborIt(domain, 1, 27);
-
-            hrleVectorType<hrleIndexType, D> startVector =
-            (p == 0) ? grid.getMinGridPoint()
-                : domain.getSegmentation()[p - 1];
-
-            hrleVectorType<hrleIndexType, D> endVector =
-            (p != static_cast<int>(domain.getNumberOfSegments() - 1))
-                ? domain.getSegmentation()[p]
-                : grid.incrementIndices(grid.getMaxGridPoint());
-
-
-            for(hrleSparseIterator<typename lsDomain<NumericType, D>::DomainType> it(
-                domain, startVector);
-                it.getStartIndices() < endVector; ++it){
-
-            if (!it.isDefined() || (activePoints.find(it.getStartIndices()) == activePoints.end())) {
-                continue;
-            }
-
-            neighborIt.goToIndices(it.getStartIndices());
-
-            
-            }
-        }
-
-
-        stop = std::chrono::high_resolution_clock::now(); 
-
-        timings.push_back(std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count());
-
-        std::cout << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << " "; 
-
-    }
-
-    std::cout << std::endl;
-
-    sum = 0.;
-
-    for(auto t : timings){
-        sum += t;
-    }
-
-    timings.clear();
-
-    std::cout << sum/(double)numberOfRUns << std::endl;
-
-*/
-
-
-
-
-
-
-    //lsMesh narrowband3;
-    //std::cout << "Extracting narrowband..." << std::endl;
-    //lsToMesh<NumericType, D>(levelSet, narrowband3, true, true).apply(activePoints);
-
-    //TODO: create output function!
-
-    //narrowband.insertNextVectorData(normal, "Normal");
-    //narrowband3.insertNextScalarData(curve, "curvature");
-  
-    //lsVTKWriter(narrowband3, lsFileFormatEnum::VTU , "narrowband" ).apply();
-
-
     std::cout << "Finished" << std::endl;
 
     return 0;

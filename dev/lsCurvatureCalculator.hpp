@@ -14,8 +14,27 @@
 
 namespace lsInternal {
 
+template <class T, int D> class baseCurvature{
+    public:
 
-template <class T, int D> class curvaturGeneralFormula{
+    virtual T getGaussianCurvature() = 0;
+
+    virtual T getMeanCurvature() = 0;
+
+    virtual bool calcDerivatives(hrleSparseBoxIterator<hrleDomain<T, D>> & neighborIterator) = 0;
+
+};
+
+/*
+    T getGaussianCurvature() {return 0;}
+
+    T getMeanCurvature()  {return 0;}
+
+    bool calcDerivatives(hrleSparseBoxIterator<hrleDomain<T, D>> & neighborIterator) {return true;}
+*/
+
+
+template <class T, int D> class curvaturGeneralFormula: public baseCurvature<T, D>{
 
     private:
 
@@ -208,7 +227,7 @@ template <class T, int D> class curvaturGeneralFormula{
 };
 
 
-template <class T, int D> class curvaturShapeDerivatives1{
+template <class T, int D> class curvaturShapeDerivatives1: public baseCurvature<T, D>{
 
     private:
 
@@ -292,7 +311,7 @@ template <class T, int D> class curvaturShapeDerivatives1{
         return result*0.5;
     }
 
-    T getAbsMeanCurvature(){
+    T getGaussianCurvature(){
         T result = 0.;
 
         for(int i=0; i<D ; i++)
@@ -305,7 +324,7 @@ template <class T, int D> class curvaturShapeDerivatives1{
 
 
 
-template <class T, int D> class curvaturShapeDerivatives2{
+template <class T, int D> class curvaturShapeDerivatives2: public baseCurvature<T, D>{
 
     private:
 
@@ -444,7 +463,7 @@ template <class T, int D> class curvaturShapeDerivatives2{
         return result*0.5;
     }
 
-    T getAbsMeanCurvature(){
+    T getGaussianCurvature(){
         T result = 0.;
 
         for(int i=0; i<D ; i++)
@@ -455,7 +474,7 @@ template <class T, int D> class curvaturShapeDerivatives2{
 
 };
 
-template <class T, int D> class curvaturShapeBias{
+template <class T, int D> class curvaturShapeBias: public baseCurvature<T, D>{
 
     private:
 
@@ -758,7 +777,7 @@ template <class T, int D> class curvaturShapeBias{
 };
 
 
-template <class T, int D> class variationOfNormals{
+template <class T, int D> class variationOfNormals: public baseCurvature<T, D>{
 
     private:
 
@@ -1020,7 +1039,7 @@ template <class T, int D> class variationOfNormals{
 
 };
 
-template <class T, int D> class curvaturGeneralFormulaBigStencil{
+template <class T, int D> class curvaturGeneralFormulaBigStencil: public baseCurvature<T, D>{
 
     private:
 
@@ -1224,7 +1243,7 @@ template <class T, int D> class curvaturGeneralFormulaBigStencil{
 
 };
 
-template <class T, int D> class curvaturGeneralFormulaBigStencilBias{
+template <class T, int D> class curvaturGeneralFormulaBigStencilBias: public baseCurvature<T, D>{
 
     private:
 
@@ -1703,7 +1722,7 @@ template <class T, int D> class curvaturGeneralFormulaBigStencilBias{
 
 };
 
-template <class T, int D> class curvaturTest{
+template <class T, int D> class curvaturTest: public baseCurvature<T, D>{
 
     //TODO: Clean up!
 

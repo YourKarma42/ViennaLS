@@ -8,9 +8,13 @@
 
 //TODO: calculate grid delta values in consturctor
 
+template <class T, int D> class baseDerivative{
+    public:
+    virtual T operator()(hrleSparseBoxIterator<hrleDomain<T, D>> & neighborIterator) {return -1;}
+    virtual T operator()(hrleCartesianPlaneIterator<hrleDomain<T, D>> & neighborIterator) {return -1;}
+};
 
-
-template <class T, int D> class curvaturGeneralFormula{
+template <class T, int D> class curvaturGeneralFormula : public baseDerivative<T, D>{
 
     private:
 
@@ -40,9 +44,11 @@ template <class T, int D> class curvaturGeneralFormula{
         phi_nx | phi_0  | phi px
         phi_nn | phi_ny | phi_nn
     */
-    T operator()(hrleSparseBoxIterator<hrleDomain<T, D>> & neighborIterator){
+    T operator()(hrleSparseBoxIterator<hrleDomain<T, D>> & neighborIterator) {
 
         //calculate all needed derivatives in the xy yz and xz plane
+
+
 
         std::array<T, 9> d;
        
@@ -122,13 +128,12 @@ template <class T, int D> class curvaturGeneralFormula{
     }
 
     //T operator()(hrleSparseBoxIterator<hrleDomain<T, D>> & neighborIterator){
-    T operator()(hrleCartesianPlaneIterator<hrleDomain<T, D>> & neighborIterator){
+    T operator()(hrleCartesianPlaneIterator<hrleDomain<T, D>> & neighborIterator) {
 
         //calculate all needed derivatives in the xy yz and xz plane
 
         std::array<T, 9> d;
        
-   
         //get required ls values
 
         for (int i = 0; i < D; i++) {
@@ -212,7 +217,7 @@ template <class T, int D> class curvaturGeneralFormula{
 };
 
 
-template <class T, int D> class curvaturShapeDerivatives1{
+template <class T, int D> class curvaturShapeDerivatives1 : public baseDerivative<T, D>{
 
     private:
 
@@ -234,6 +239,7 @@ template <class T, int D> class curvaturShapeDerivatives1{
         phi_nx | phi_0  | phi px
         phi_nn | phi_ny | phi_nn
     */
+    T operator()(hrleCartesianPlaneIterator<hrleDomain<T, D>> & neighborIterator) {return -1;}
 
     T operator()(hrleConstSparseStarIterator<typename lsDomain<T, D>::DomainType> & neighborIterator){
 
@@ -309,7 +315,7 @@ template <class T, int D> class curvaturShapeDerivatives1{
 
 
 
-template <class T, int D> class curvaturShapeDerivatives2{
+template <class T, int D> class curvaturShapeDerivatives2 : public baseDerivative<T, D>{
 
     private:
 
@@ -454,7 +460,7 @@ template <class T, int D> class curvaturShapeDerivatives2{
 
 };
 
-template <class T, int D> class curvaturShapeBias{
+template <class T, int D> class curvaturShapeBias : public baseDerivative<T, D>{
 
     private:
 
@@ -754,7 +760,7 @@ template <class T, int D> class curvaturShapeBias{
 };
 
 
-template <class T, int D> class variationOfNormals{
+template <class T, int D> class variationOfNormals : public baseDerivative<T, D>{
 
     private:
 
@@ -1005,7 +1011,7 @@ template <class T, int D> class variationOfNormals{
 
 };
 
-template <class T, int D> class curvaturGeneralFormulaBigStencil{
+template <class T, int D> class curvaturGeneralFormulaBigStencil : public baseDerivative<T, D>{
 
     private:
 
@@ -1189,7 +1195,7 @@ template <class T, int D> class curvaturGeneralFormulaBigStencil{
 
 };
 
-template <class T, int D> class curvaturGeneralFormulaBigStencilBias{
+template <class T, int D> class curvaturGeneralFormulaBigStencilBias : public baseDerivative<T, D>{
 
     private:
 
@@ -1646,7 +1652,7 @@ template <class T, int D> class curvaturGeneralFormulaBigStencilBias{
 
 };
 
-template <class T, int D> class curvaturTest{
+template <class T, int D> class curvaturTest : public baseDerivative<T, D>{
 
     //TODO: Clean up!
 

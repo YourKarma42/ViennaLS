@@ -146,9 +146,6 @@ public:
 
 
   //TODO: remove
-  std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash>  getActivePoints(){
-      return activePoints;
-  }
 
   std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash>  getNarrowPoints(){
       return narrowPoints;
@@ -157,8 +154,6 @@ public:
 private:
 
   //TODO:remove rework its stupid that way
-  std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> activePoints;
-
   std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> narrowPoints;
 
 
@@ -192,7 +187,7 @@ private:
 //     TEST start
 
 //TODO: Currently quite stupid!
-
+//for Euler level set
 while(index<endIndex){
     T pointRadius = 0.;
 
@@ -216,81 +211,6 @@ while(index<endIndex){
 
 
 }
-
-
-/*
-    while (index < endIndex) {
-      // take shortest manhatten distance to gridline intersection
-      T distance = std::numeric_limits<T>::max();
-      for (unsigned i = 0; i < D; ++i) {
-        T y = (index[(i + 1) % D] * gridDelta) - origin[(i + 1) % D];
-        T z = 0;
-        if (D == 3)
-          z = (index[(i + 2) % D] * gridDelta) - origin[(i + 2) % D];
-        T x = radius2 - y * y - z * z;
-        if (x < 0.)
-          continue;
-        T dirRadius =
-            std::abs((index[i] * gridDelta) - origin[i]) - std::sqrt(x);
-        if (std::abs(dirRadius) < std::abs(distance))
-          distance = dirRadius;
-      }
-
-      if (std::abs(distance) <= valueLimit + 1e-10) {
-
-        T dist = 0.;
-
-        for(unsigned i = 0; i < D; i++){
-          dist += (index[i]*gridDelta  - origin[i])* (index[i]*gridDelta - origin[i]);
-        }
-
-        dist = std::sqrt(dist);
-
-        pointData.push_back(std::make_pair(index, (dist - radius)));
-
-        narrowPoints.insert(index);
-
-        if(std::abs(distance / gridDelta) < 0.5)
-          activePoints.insert(index);
-      }
-      int dim = 0;
-      for (; dim < D - 1; ++dim) {
-        if (index[dim] < endIndex[dim])
-          break;
-        index[dim] = minIndex[dim];
-      }
-      ++index[dim];
-    }
-
-
-    //currently only works on centered spheres
-    while (index < endIndex) {
-
-      T dist = 0;
-      for(unsigned i = 0; i < D; i++){
-        dist += index[i]*gridDelta * index[i]*gridDelta;
-      }
-
-      dist = std::sqrt(dist);
-
-      if(std::abs(radius - dist) < (std::sqrt(2.*gridDelta*gridDelta)/2.)){
-        pointData.push_back(std::make_pair(index, (dist - radius)));
-        activePoints.insert(index);
-      }
-
-      int dim = 0;
-      for (; dim < D - 1; ++dim) {
-        if (index[dim] < endIndex[dim])
-          break;
-        index[dim] = minIndex[dim];
-      }
-      ++index[dim];
-
-    }
- */
-
-//    Test End
-
 
 
 /*
