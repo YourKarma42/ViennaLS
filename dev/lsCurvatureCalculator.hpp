@@ -299,6 +299,7 @@ template <class T, int D> class curvaturShapeDerivatives1: public baseCurvature<
             scondOrderDerivatives[i] = (phi_px - 2.*phi_0 + phi_nx)*GDSQ;  
 
         }
+        return true;
 
     }
 

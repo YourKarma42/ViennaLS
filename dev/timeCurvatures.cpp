@@ -361,7 +361,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Writig csv file" << std::endl;  
 
-    std::filesystem::create_directory("timings");
+    //std::filesystem::create_directory("timings");
 
     std::ofstream output;
 
