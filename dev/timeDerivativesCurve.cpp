@@ -134,7 +134,7 @@ int main(int argc, char* argv[]) {
 
     int numThreads = 1;
 
-    int numberOfRuns = 10;
+    int numberOfRuns = 100;
 
     std::vector<double> timings;
 
@@ -160,7 +160,7 @@ int main(int argc, char* argv[]) {
     std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets;
 
 
-    NumericType radius = 10.;
+    NumericType radius = 100.;
 
     std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> narrowPoints;
 
@@ -265,7 +265,8 @@ int main(int argc, char* argv[]) {
                 
                 neighborIt.goToIndices(it.getStartIndices());
 
-                meanCurveSegment.push_back(curve->operator()(neighborIt));          
+                meanCurveSegment.push_back(curve->operator()(neighborIt));   
+   
             }
 
         }
@@ -348,7 +349,6 @@ int main(int argc, char* argv[]) {
                 //std::cout << "TÜ" << std::endl;
 
                 meanCurveSegment.push_back(shapeOperator(neighborIt));
-
             
             }
 

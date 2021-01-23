@@ -198,6 +198,25 @@ template <class T, int D> class curvaturGeneralFormula : public baseDerivative<T
                     /(norm_grad_pow3);
         }
 
+                T norm_grad_sqared = d[0]*d[0] + d[1]*d[1] + d[2]*d[2];
+        norm_grad_sqared = norm_grad_sqared*norm_grad_sqared;
+
+      
+        //  - (F_x²(F_yz²-F_yyF_zz)   +     F_y²(F_zx²-F_xxF_zz)     +     F_z²(F_xy²-F_xxFyy) +
+        T gauss = -(d[0]*d[0]*(d[7]*d[7]-d[4]*d[5]) + d[1]*d[1]*(d[8]*d[8]-d[3]*d[5]) + d[2]*d[2]*(d[6]*d[6]-d[3]*d[4]) +
+
+        //2*[F_xF_y(2F_zzF_xy-2F_zxF_yz) +
+        2.*(d[0]*d[1]*(d[5]*d[6]-d[8]*d[7]) +
+
+        //F_xF_z(2F_yyF_zx-2F_xyF_yz) +
+        d[0]*d[2]*(d[4]*d[8]-d[6]*d[7]) +
+
+        //F_yF_z(2F_xxF_yz-2F_xyF_zx))
+        d[1]*d[2]*(d[3]*d[7]-d[6]*d[8])))
+        
+        // /(F_x² + F_y² + F_z²)²
+        /norm_grad_sqared;
+
         //expanded fom of the equation
         return
         //    F_x²(f_yy + F_zz)  +    F_y²(F_xx + F_zz)    +     F_z²(F_xx + F_yy)
@@ -262,7 +281,8 @@ template <class T, int D> class curvaturShapeDerivatives1 : public baseDerivativ
         T result = 0.;
 
         for(int i=0; i<D ; i++)
-            result += scondOrderDerivatives[i];
+            result += std::abs(scondOrderDerivatives[i]);
+           // result += scondOrderDerivatives[i];
         //mean curvature is trace devided by 2
         return result*0.5;
 
@@ -771,12 +791,20 @@ template <class T, int D> class variationOfNormals : public baseDerivative<T, D>
     T GD = 0;
     T twoGD = 0;
 
+
+    T gDSq = 0;
+    T fourGDsq = 0;
+
     public:
 
     variationOfNormals(T mGD)
     :  gridDelta(mGD){
         GD = 1./gridDelta;
         twoGD = 1./(2.*gridDelta);
+
+
+        gDSq = 1./(gridDelta*gridDelta);
+        fourGDsq = 1./(4.*gridDelta*gridDelta);
     }
 
     /*
@@ -801,6 +829,8 @@ template <class T, int D> class variationOfNormals : public baseDerivative<T, D>
         std::array<T, 6> derivativesPos;
 
         std::array<T, 6> derivativesNeg;
+
+        std::array<T, 9> d;
         
 
         for (int i = 0; i < D; i++) {
@@ -861,7 +891,15 @@ template <class T, int D> class variationOfNormals : public baseDerivative<T, D>
             derivativesNeg[i] = (phi_pn- phi_nn)*twoGD; 
             derivativesNeg[i+3] = (phi_np - phi_nn)*twoGD; 
 
+            d[i] = (phi_px - phi_nx)*twoGD;
+
+            d[i+3] = (phi_px - 2.*phi_0 + phi_nx)*gDSq;
+
+            d[i+6] = (phi_pp - phi_pn -phi_np + phi_nn)*fourGDsq;
+
         }
+
+        
 
         T n_x = (oneSidedeDiff[0] /
                 (std::sqrt((oneSidedeDiff[0]*oneSidedeDiff[0]) + 
@@ -892,6 +930,25 @@ template <class T, int D> class variationOfNormals : public baseDerivative<T, D>
                 (std::sqrt((oneSidedeDiff[5]*oneSidedeDiff[5]) + 
                 std::pow((derivativesNeg[2] + centralDiff[0])*0.5, 2) + 
                 std::pow((derivativesNeg[4] + centralDiff[1])*0.5, 2))));
+
+                T norm_grad_sqared = d[0]*d[0] + d[1]*d[1] + d[2]*d[2];
+        norm_grad_sqared = norm_grad_sqared*norm_grad_sqared;
+
+      
+        //  - (F_x²(F_yz²-F_yyF_zz)   +     F_y²(F_zx²-F_xxF_zz)     +     F_z²(F_xy²-F_xxFyy) +
+        T gauss = -(d[0]*d[0]*(d[7]*d[7]-d[4]*d[5]) + d[1]*d[1]*(d[8]*d[8]-d[3]*d[5]) + d[2]*d[2]*(d[6]*d[6]-d[3]*d[4]) +
+
+        //2*[F_xF_y(2F_zzF_xy-2F_zxF_yz) +
+        2.*(d[0]*d[1]*(d[5]*d[6]-d[8]*d[7]) +
+
+        //F_xF_z(2F_yyF_zx-2F_xyF_yz) +
+        d[0]*d[2]*(d[4]*d[8]-d[6]*d[7]) +
+
+        //F_yF_z(2F_xxF_yz-2F_xyF_zx))
+        d[1]*d[2]*(d[3]*d[7]-d[6]*d[8])))
+        
+        // /(F_x² + F_y² + F_z²)²
+        /norm_grad_sqared;
 
                            
         return (n_x + n_y + n_z);
@@ -1101,6 +1158,24 @@ template <class T, int D> class curvaturGeneralFormulaBigStencil : public baseDe
         T norm_grad_pow3 = std::sqrt(d[0]*d[0] + d[1]*d[1] + d[2]*d[2]);
         norm_grad_pow3 = norm_grad_pow3*norm_grad_pow3*norm_grad_pow3;
 
+        T norm_grad_sqared = d[0]*d[0] + d[1]*d[1] + d[2]*d[2];
+        norm_grad_sqared = norm_grad_sqared*norm_grad_sqared;
+
+      
+        //  - (F_x²(F_yz²-F_yyF_zz)   +     F_y²(F_zx²-F_xxF_zz)     +     F_z²(F_xy²-F_xxFyy) +
+        T gauss = -(d[0]*d[0]*(d[7]*d[7]-d[4]*d[5]) + d[1]*d[1]*(d[8]*d[8]-d[3]*d[5]) + d[2]*d[2]*(d[6]*d[6]-d[3]*d[4]) +
+
+        //2*[F_xF_y(2F_zzF_xy-2F_zxF_yz) +
+        2.*(d[0]*d[1]*(d[5]*d[6]-d[8]*d[7]) +
+
+        //F_xF_z(2F_yyF_zx-2F_xyF_yz) +
+        d[0]*d[2]*(d[4]*d[8]-d[6]*d[7]) +
+
+        //F_yF_z(2F_xxF_yz-2F_xyF_zx))
+        d[1]*d[2]*(d[3]*d[7]-d[6]*d[8])))
+        
+        // /(F_x² + F_y² + F_z²)²
+        /norm_grad_sqared;
 
         //expanded fom of the equation
         return
