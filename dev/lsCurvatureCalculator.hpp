@@ -17,11 +17,13 @@ namespace lsInternal {
 template <class T, int D> class baseCurvature{
     public:
 
-    virtual T getGaussianCurvature() = 0;
+    virtual T getGaussianCurvature() {return -1;}
 
-    virtual T getMeanCurvature() = 0;
+    virtual T getMeanCurvature() {return -1;}
 
-    virtual bool calcDerivatives(hrleSparseBoxIterator<hrleDomain<T, D>> & neighborIterator) = 0;
+    virtual bool calcDerivatives(hrleSparseBoxIterator<hrleDomain<T, D>> & neighborIterator) {return false;};
+
+    virtual bool calcDerivatives(hrleCartesianPlaneIterator<hrleDomain<T, D>> & neighborIterator) {return false;};
 
 };
 

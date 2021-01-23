@@ -176,8 +176,123 @@ int main(int argc, char* argv[]) {
     expander.apply(); 
 
 
+//_______________________Prepare stuff___________________________
+    std::vector<lsSmartPointer<lsInternal::baseCurvature<NumericType,D>>> vecDerivatives;
+    //std::vector<baseDerivative<NumericType,D>*> vecDerivatives;
+    std::vector<std::string> names;
+
+    vecDerivatives.push_back(lsSmartPointer<lsInternal::curvaturGeneralFormula<NumericType,D>>::New(gridDelta));
+    names.push_back("General Formula");
+
+    vecDerivatives.push_back(lsSmartPointer<lsInternal::curvaturGeneralFormulaBigStencil<NumericType,D>>::New(gridDelta));
+    names.push_back("General Formula Big Stencil");
+
+    vecDerivatives.push_back(lsSmartPointer<lsInternal::variationOfNormals<NumericType,D>>::New(gridDelta));
+    names.push_back("Variation of Normals");
+
+    vecDerivatives.push_back(lsSmartPointer<lsInternal::curvaturGeneralFormulaBigStencilBias<NumericType,D>>::New(gridDelta));
+    names.push_back("General Formula Bias");
+
+    vecDerivatives.push_back(lsSmartPointer<lsInternal::curvaturShapeDerivatives2<NumericType,D>>::New(gridDelta));
+    names.push_back("Shape Operator Derivatives 2");
+
+    vecDerivatives.push_back(lsSmartPointer<lsInternal::curvaturShapeBias<NumericType,D>>::New(gridDelta));
+    names.push_back("Shape Operator Bias");
+
+
+
+
 
     NumericType tmp=0.;
+
+//______________________________________________________Start______________________________________________________________
+
+    auto namesItr = names.begin();
+
+    for(auto curve: vecDerivatives){
+
+        std::cout << *namesItr << std::endl;  
+
+        csvOutput << *namesItr << std::endl;
+
+        namesItr++;
+   
+        for(int i = 0; i < numberOfRuns; i++){
+
+            lsInternal::curvaturGeneralFormula<NumericType, D> generalFormula(gridDelta);
+
+            auto grid = levelSets.back()->getGrid();
+
+            typename lsDomain<NumericType, D>::DomainType &domain = levelSets.back()->getDomain();
+
+            double pointsPerSegment =
+            double(2 * levelSets.back()->getDomain().getNumberOfPoints()) /
+            double(levelSets.back()->getLevelSetWidth());
+
+            std::vector<std::vector<NumericType>> meanCurvatureReserve(levelSets.back()->getNumberOfSegments());
+
+
+            start = std::chrono::high_resolution_clock::now(); 
+
+
+#pragma omp parallel num_threads((levelSets.back())->getNumberOfSegments())
+        {
+            int p = 0;
+#ifdef _OPENMP
+            p = omp_get_thread_num();
+#endif
+
+            std::vector<NumericType> &meanCurveSegment = meanCurvatureReserve[p];
+            meanCurveSegment.reserve(pointsPerSegment);
+            hrleCartesianPlaneIterator<typename lsDomain<NumericType, D>::DomainType> neighborIt(domain, 1);
+
+            hrleVectorType<hrleIndexType, D> startVector =
+            (p == 0) ? grid.getMinGridPoint()
+                : domain.getSegmentation()[p - 1];
+
+            hrleVectorType<hrleIndexType, D> endVector =
+            (p != static_cast<int>(domain.getNumberOfSegments() - 1))
+                ? domain.getSegmentation()[p]
+                : grid.incrementIndices(grid.getMaxGridPoint());
+
+
+            for(hrleSparseIterator<typename lsDomain<NumericType, D>::DomainType> it(
+                domain, startVector);
+                it.getStartIndices() < endVector; ++it){
+
+                if (!it.isDefined() || std::abs(it.getValue()) > gridDelta) {
+                    continue;
+                }
+                
+                neighborIt.goToIndices(it.getStartIndices());
+                curve->calcDerivatives(neighborIt);
+                meanCurveSegment.push_back(curve->getMeanCurvature());
+                //tmp = curve->getGaussianCurvature();          
+            }
+
+        }
+
+        std::vector<NumericType> meanCurvature;
+
+        meanCurvature.reserve(levelSets.back()->getNumberOfPoints()); 
+
+        for (unsigned i = 0; i < levelSets.back()->getNumberOfSegments(); ++i){ 
+            meanCurvature.insert(meanCurvature.end(), meanCurvatureReserve[i].begin(),
+             meanCurvatureReserve[i].end());
+        }
+
+        stop = std::chrono::high_resolution_clock::now();
+
+        csvOutput << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << ";";
+
+        }
+        csvOutput << std::endl;
+    }
+
+
+
+//______________________________________________________End______________________________________________________________
+
 //______________________________________________________Start______________________________________________________________
 
     std::cout << "Shape Operator Small Stencil" << std::endl;  
@@ -227,15 +342,16 @@ int main(int argc, char* argv[]) {
                 domain, startVector);
                 it.getStartIndices() < endVector; ++it){
 
-                if (!it.isDefined() || it.getValue() > gridDelta) {
+                if (!it.isDefined() || std::abs(it.getValue()) > gridDelta) {
                     continue;
                 }
                 
                 neighborIt.goToIndices(it.getStartIndices());
                 //std::cout << "TÜ" << std::endl;
                 shapeOperator.calcDerivatives(neighborIt);
-                //meanCurveSegment.push_back(shapeOperator.getMeanCurvature());
-                tmp = shapeOperator.getGaussianCurvature();
+                //meanCurveSegment.push_back(shapeOperator.getGaussianCurvature());
+                meanCurveSegment.push_back(shapeOperator.getMeanCurvature());
+
             
             }
 
@@ -259,107 +375,6 @@ int main(int argc, char* argv[]) {
     csvOutput << std::endl;
 
 //______________________________________________________End______________________________________________________________
-
-
-//______________________________________________________Start______________________________________________________________
-
-    std::cout << "General Formula" << std::endl;  
-
-    csvOutput << "General Formula" << std::endl;
-
-    for(int i = 0; i < numberOfRuns; i++){
-
-        lsInternal::curvaturGeneralFormula<NumericType, D> generalFormula(gridDelta);
-
-        auto grid = levelSets.back()->getGrid();
-
-        typename lsDomain<NumericType, D>::DomainType &domain = levelSets.back()->getDomain();
-
-        double pointsPerSegment =
-        double(2 * levelSets.back()->getDomain().getNumberOfPoints()) /
-        double(levelSets.back()->getLevelSetWidth());
-
-        std::vector<std::vector<NumericType>> meanCurvatureReserve(levelSets.back()->getNumberOfSegments());
-
-
-        start = std::chrono::high_resolution_clock::now(); 
-
-
-#pragma omp parallel num_threads((levelSets.back())->getNumberOfSegments())
-        {
-            int p = 0;
-#ifdef _OPENMP
-            p = omp_get_thread_num();
-#endif
-
-            std::vector<NumericType> &meanCurveSegment = meanCurvatureReserve[p];
-            meanCurveSegment.reserve(pointsPerSegment);
-            hrleCartesianPlaneIterator<typename lsDomain<NumericType, D>::DomainType> neighborIt(domain, 1);
-
-            hrleVectorType<hrleIndexType, D> startVector =
-            (p == 0) ? grid.getMinGridPoint()
-                : domain.getSegmentation()[p - 1];
-
-            hrleVectorType<hrleIndexType, D> endVector =
-            (p != static_cast<int>(domain.getNumberOfSegments() - 1))
-                ? domain.getSegmentation()[p]
-                : grid.incrementIndices(grid.getMaxGridPoint());
-
-
-            for(hrleSparseIterator<typename lsDomain<NumericType, D>::DomainType> it(
-                domain, startVector);
-                it.getStartIndices() < endVector; ++it){
-
-                if (!it.isDefined() || it.getValue() > gridDelta) {
-                    continue;
-                }
-                
-                neighborIt.goToIndices(it.getStartIndices());
-                //std::cout << "TÜ" << std::endl;
-                generalFormula.calcDerivatives(neighborIt);
-                meanCurveSegment.push_back(generalFormula.getMeanCurvature());
-                tmp = generalFormula.getGaussianCurvature();
-            
-            }
-
-        }
-
-        std::vector<NumericType> meanCurvature;
-
-        meanCurvature.reserve(levelSets.back()->getNumberOfPoints()); 
-
-        for (unsigned i = 0; i < levelSets.back()->getNumberOfSegments(); ++i){ 
-            meanCurvature.insert(meanCurvature.end(), meanCurvatureReserve[i].begin(),
-             meanCurvatureReserve[i].end());
-        }
-
-        stop = std::chrono::high_resolution_clock::now();
-
-        csvOutput << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << ";";
-
-    }
-
-    csvOutput << std::endl;
-
-//______________________________________________________End______________________________________________________________
-
-    std::cout << "General Formula Big Stencil" << std::endl;  
-
-    csvOutput << "General Formula Big Stencil" << std::endl;
-
-    std::cout << "Variation of Normals" << std::endl;  
-
-    csvOutput << "Variation of Normals" << std::endl;
-
-    std::cout << "General Formula Bias" << std::endl;  
-
-    csvOutput << "General Formula Bias" << std::endl;
-
-    std::cout << "General Formula Mixed" << std::endl;  
-
-    csvOutput << "General Formula Mixed" << std::endl;
-
-    std::cout << "Writig csv file" << std::endl;  
 
     //std::filesystem::create_directory("timings");
 
