@@ -133,7 +133,7 @@ int main(int argc, char* argv[]) {
 
     int numThreads = 1;
 
-    int numberOfRuns = 100;
+    int numberOfRuns = 10;
 
     std::vector<double> timings;
 
@@ -373,6 +373,7 @@ int main(int argc, char* argv[]) {
     }
 
     csvOutput << std::endl;
+    std::cout << "blub" << std::endl;
 
 //______________________________________________________End______________________________________________________________
 
@@ -385,6 +386,8 @@ int main(int argc, char* argv[]) {
     output << csvOutput.rdbuf();
 
     output.close();
+
+    //std::cout << csvOutput.str() << std::endl;
 
     std::cout << "Finished" << std::endl;
 

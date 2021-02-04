@@ -888,11 +888,11 @@ template <class T, int D> class variationOfNormals: public baseCurvature<T, D>{
             derivativesNeg[i] = (phi_pn- phi_nn)*twoGD; 
             derivativesNeg[i+3] = (phi_np - phi_nn)*twoGD; 
 
-            d[i] = (phi_px - phi_nx)*twoGD;
+           // d[i] = (phi_px - phi_nx)*twoGD;
 
-            d[i+3] = (phi_px - 2.*phi_0 + phi_nx)*gDSq;
+           //  d[i+3] = (phi_px - 2.*phi_0 + phi_nx)*gDSq;
 
-            d[i+6] = (phi_pp - phi_pn -phi_np + phi_nn)*fourGDsq;
+           // d[i+6] = (phi_pp - phi_pn -phi_np + phi_nn)*fourGDsq;
 
         }
 
