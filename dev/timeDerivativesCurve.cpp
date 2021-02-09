@@ -134,7 +134,7 @@ int main(int argc, char* argv[]) {
 
     int numThreads = 1;
 
-    int numberOfRuns = 100;
+    int numberOfRuns = 10;
 
     std::vector<double> timings;
 
@@ -151,7 +151,9 @@ int main(int argc, char* argv[]) {
 
     omp_set_num_threads(numThreads);
 
-    NumericType gridDelta = 0.5;
+    NumericType gridDelta = 0.25;
+
+    std::cout << "grid delta is " << gridDelta << std::endl; 
 
     auto start = std::chrono::high_resolution_clock::now(); 
 
@@ -159,8 +161,9 @@ int main(int argc, char* argv[]) {
 
     std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets;
 
-
     NumericType radius = 100.;
+
+    std::cout << "geometry is Sphere with radius: " << radius << std::endl; 
 
     std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> narrowPoints;
 

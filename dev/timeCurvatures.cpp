@@ -150,14 +150,15 @@ int main(int argc, char* argv[]) {
 
     omp_set_num_threads(numThreads);
 
-    NumericType gridDelta = 0.5;
+    NumericType gridDelta = 0.25;
+
+    std::cout << "grid delta is " << gridDelta << std::endl; 
 
     auto start = std::chrono::high_resolution_clock::now(); 
 
     auto stop = std::chrono::high_resolution_clock::now(); 
 
     std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets;
-
 
     NumericType radius = 100.;
 
@@ -168,6 +169,8 @@ int main(int argc, char* argv[]) {
     //lsDomain<NumericType,D> levelSet = makeTrench(gridDelta);
 
     levelSets.push_back(levelSet);  
+
+    std::cout << "geometry is Sphere with radius: " << radius << std::endl; 
 
     std::cout << "FMM..." << std::endl;
 
@@ -265,8 +268,8 @@ int main(int argc, char* argv[]) {
                 }
                 
                 neighborIt.goToIndices(it.getStartIndices());
-                curve->calcDerivatives(neighborIt);
-                meanCurveSegment.push_back(curve->getMeanCurvature());
+                //curve->calcDerivatives(neighborIt);
+                meanCurveSegment.push_back(curve->getMeanCurvature(neighborIt));
                 //tmp = curve->getGaussianCurvature();          
             }
 
@@ -348,9 +351,9 @@ int main(int argc, char* argv[]) {
                 
                 neighborIt.goToIndices(it.getStartIndices());
                 //std::cout << "TÜ" << std::endl;
-                shapeOperator.calcDerivatives(neighborIt);
+                //shapeOperator.calcDerivatives(neighborIt);
                 //meanCurveSegment.push_back(shapeOperator.getGaussianCurvature());
-                meanCurveSegment.push_back(shapeOperator.getMeanCurvature());
+                meanCurveSegment.push_back(shapeOperator.getMeanCurvature(neighborIt));
 
             
             }
