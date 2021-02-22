@@ -14,6 +14,12 @@
 
 #define LS_DOMAIN_SERIALIZATION_VERSION 0
 
+//enum for normalization
+  enum struct lsNormalizations : unsigned{
+    MANHATTEN   = 0,
+    EULER       = 1
+  };
+
 ///  Class containing all information about the level set, including
 ///  the dimensions of the domain, boundary conditions and all data.
 template <class T, int D> class lsDomain {
@@ -29,6 +35,7 @@ public:
   typedef lsPointData PointDataType;
   typedef typename std::vector<bool> VoidPointMarkersType;
 
+
 private:
   // PRIVATE MEMBER VARIABLES
   GridType grid;
@@ -36,6 +43,7 @@ private:
   int levelSetWidth = 1;
   PointDataType pointData;
   VoidPointMarkersType voidPointMarkers;
+  lsNormalizations normalization;
 
 public:
   // STATIC CONSTANTS
@@ -46,7 +54,8 @@ public:
   static constexpr T NEG_VALUE = std::numeric_limits<T>::lowest();
 
   /// initalise an empty infinite lsDomain
-  lsDomain(hrleCoordType gridDelta = 1.0) {
+  lsDomain(hrleCoordType gridDelta = 1.0,
+           lsNormalizations passedNorm = lsNormalizations::MANHATTEN) {
     hrleIndexType gridMin[D], gridMax[D];
     BoundaryType boundaryCons[D];
     for (unsigned i = 0; i < D; ++i) {
@@ -55,29 +64,34 @@ public:
       boundaryCons[i] = BoundaryType::INFINITE_BOUNDARY;
     }
 
+    normalization = passedNorm;
     grid = GridType(gridMin, gridMax, gridDelta, boundaryCons);
     domain.deepCopy(grid, DomainType(grid, T(POS_VALUE)));
   }
 
   lsDomain(hrleCoordType *bounds, BoundaryType *boundaryConditions,
-           hrleCoordType gridDelta = 1.0) {
+           hrleCoordType gridDelta = 1.0,
+           lsNormalizations passedNorm = lsNormalizations::MANHATTEN) {
     hrleIndexType gridMin[D], gridMax[D];
     for (unsigned i = 0; i < D; ++i) {
       gridMin[i] = std::floor(bounds[2 * i] / gridDelta);
       gridMax[i] = std::ceil(bounds[2 * i + 1] / gridDelta);
     }
 
+    normalization = passedNorm;
     grid = GridType(gridMin, gridMax, gridDelta, boundaryConditions);
     domain.deepCopy(grid, DomainType(grid, T(POS_VALUE)));
   }
 
   lsDomain(std::vector<hrleCoordType> bounds,
            std::vector<unsigned> boundaryConditions,
-           hrleCoordType gridDelta = 1.0) {
+           hrleCoordType gridDelta = 1.0,
+           lsNormalizations passedNorm = lsNormalizations::MANHATTEN) {
     BoundaryType boundaryCons[D];
     for (unsigned i = 0; i < D; ++i) {
       boundaryCons[i] = static_cast<BoundaryType>(boundaryConditions[i]);
     }
+    normalization = passedNorm;
     auto newDomain = lsSmartPointer<lsDomain<T, D>>::New(
         bounds.data(), boundaryCons, gridDelta);
     this->deepCopy(newDomain);
@@ -86,7 +100,9 @@ public:
   /// initialise lsDomain with domain size "bounds", filled with point/value
   /// pairs in pointData
   lsDomain(PointValueVectorType pointData, hrleCoordType *bounds,
-           BoundaryType *boundaryConditions, hrleCoordType gridDelta = 1.0) {
+           BoundaryType *boundaryConditions, hrleCoordType gridDelta = 1.0,
+           lsNormalizations passedNorm = lsNormalizations::MANHATTEN) {
+    normalization = passedNorm;
     auto newDomain = lsSmartPointer<lsDomain<T, D>>::New(
         bounds, boundaryConditions, gridDelta);
     this->deepCopy(newDomain);
@@ -94,7 +110,8 @@ public:
                                      T(POS_VALUE));
   }
 
-  lsDomain(GridType passedGrid) : grid(passedGrid) {
+  lsDomain(GridType passedGrid,
+           lsNormalizations passedNorm = lsNormalizations::MANHATTEN) : grid(passedGrid) {
     domain.deepCopy(grid, DomainType(grid, T(POS_VALUE)));
   }
 
@@ -113,6 +130,7 @@ public:
     grid = passedlsDomain->grid;
     domain.deepCopy(grid, passedlsDomain->domain);
     levelSetWidth = passedlsDomain->levelSetWidth;
+    normalization = passedlsDomain->getNormalization();
     pointData = passedlsDomain->pointData;
   }
 
@@ -143,6 +161,8 @@ public:
   /// returns the number of defined points
   unsigned getNumberOfPoints() const { return domain.getNumberOfPoints(); }
 
+  lsNormalizations getNormalization() {return normalization;}
+
   int getLevelSetWidth() const { return levelSetWidth; }
 
   void setLevelSetWidth(int width) { levelSetWidth = width; }
@@ -166,6 +186,11 @@ public:
   void print() {
     std::cout << "Grid pointer: " << &grid << std::endl;
     std::cout << "Domain: " << &domain << std::endl;
+    switch(normalization){
+      case lsNormalizations::MANHATTEN : std::cout << "Manhatten" << std::endl; break;
+      case lsNormalizations::EULER : std::cout << "Euler" << std::endl; break;
+    }
+    //std::cout << "Normalization: " << normalization << std::endl;
     std::cout << "DomainSegments: " << std::endl;
     for (unsigned i = 0; i < getNumberOfSegments(); ++i) {
       std::cout << &(domain.getDomainSegment(i)) << std::endl;

@@ -107,26 +107,26 @@ template <class T, int D> class eulerAdvect {
 
   void rebuildLSEuler() {
 
-    //auto narrowband = lsSmartPointer<lsMesh>::New();
-    //std::cout << "Extracting narrowband..." << std::endl;
-    //lsToMesh<T, D>(levelSets.back(), narrowband, true, true, 5*0.5).apply();
+    auto narrowband = lsSmartPointer<lsMesh>::New();
+    std::cout << "Extracting narrowband..." << std::endl;
+    lsToMesh<T, D>(levelSets.back(), narrowband, true, true, 3).apply();
 
-    //lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "/media/sf_shared/beforeRebuild" ).apply();
+    lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "beforeRebuild" ).apply();
 
-    //std::cout << "Debug: Starting Expand" << std::endl;
+    std::cout << "Debug: Starting Expand" << std::endl;
     //if FMM is done in every time step time step is 3
     lsEikonalExpandTest<T, D>(levelSets.back(), 3).apply();
     //std::cout << "Debug: Expention done" << std::endl;
     lsReduce<T, D>(levelSets.back(), 1, true).apply();
     //std::cout << "Debug: Velocity extention done" << std::endl;
-/*
-    auto narrowband = lsSmartPointer<lsMesh>::New();
+
+    auto narrowband1 = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<T, D>(levelSets.back(), narrowband, true, true, 6).apply();
+    lsToMesh<T, D>(levelSets.back(), narrowband1, true, true, 0.25).apply();
 
-    lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "/media/sf_shared/afterRebuild" ).apply();
-*/
+    lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "afterRebuild" ).apply();
 
+    std::cout << "step finished" << std::endl;
     
 
     //LENZ: TODO: think of how to trancsfare vector data after Velocity extention
@@ -685,11 +685,11 @@ template <class T, int D> class eulerAdvect {
       }
     }
 
-    //auto narrowband = lsSmartPointer<lsMesh>::New();
-    //std::cout << "Extracting narrowband..." << std::endl;
-    //lsToMesh<T, D>(levelSets.back(), narrowband, true, true, 5*0.5).apply();
+    auto narrowband = lsSmartPointer<lsMesh>::New();
+    std::cout << "Extracting narrowband..." << std::endl;
+    lsToMesh<T, D>(levelSets.back(), narrowband, true, true, 5*gridDelta).apply();
 
-    //lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "/media/sf_shared/beforeReduce" ).apply();
+    lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "beforeFirstReduce" ).apply();
 
     //LENZ: euler advection need to change thikness
 
@@ -699,6 +699,12 @@ template <class T, int D> class eulerAdvect {
     // domain segments --> DO NOT CHANGE SEGMENTATION HERE (true parameter)
     lsReduce<T, D>(levelSets.back(), 1, true).apply();
 //std::cout << "Debug: Level set reduction" << std::endl;
+
+    auto narrowband1 = lsSmartPointer<lsMesh>::New();
+    std::cout << "Extracting narrowband..." << std::endl;
+    lsToMesh<T, D>(levelSets.back(), narrowband1, true, true, 5*gridDelta).apply();
+
+    lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "afterFirstReduce" ).apply();
 
     const bool saveVelocities = saveAdvectionVelocities;
     std::vector<std::vector<double>> velocityVectors(
@@ -766,11 +772,11 @@ template <class T, int D> class eulerAdvect {
 //std::cout << "Debug: Advection done" << std::endl;
 
 
-    //auto narrowband1 = lsSmartPointer<lsMesh>::New();
-    //std::cout << "Extracting narrowband..." << std::endl;
-    //lsToMesh<T, D>(levelSets.back(), narrowband1, true, true, 5*gridDelta).apply();
+    auto narrowband2 = lsSmartPointer<lsMesh>::New();
+    std::cout << "Extracting narrowband..." << std::endl;
+    lsToMesh<T, D>(levelSets.back(), narrowband2, true, true, 6).apply();
 
-    //lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "/media/sf_shared/afterMovement" ).apply();
+    lsVTKWriter(narrowband2, lsFileFormatEnum::VTU , "afterIntegrateTime" ).apply();
 
     return maxTimeStep;
   }

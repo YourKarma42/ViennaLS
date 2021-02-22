@@ -186,7 +186,7 @@ private:
 
 //     TEST start
 
-//TODO: Currently quite stupid!
+
 //for Euler level set
 while(index<endIndex){
     T pointRadius = 0.;
@@ -197,7 +197,7 @@ while(index<endIndex){
     }
 
     if(std::abs(std::sqrt(pointRadius) - radius) <= gridDelta){
-        pointData.push_back(std::make_pair(index, (std::sqrt(pointRadius) - radius)));
+        pointData.push_back(std::make_pair(index, (std::sqrt(pointRadius) - radius) ));
         narrowPoints.insert(index);
     }
 

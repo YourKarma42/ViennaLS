@@ -229,7 +229,7 @@ void create_output_Euklid(lsSmartPointer<lsDomain<double, D>> levelSet,
     NumericType gridDelta = levelSet->getGrid().getGridDelta();
 
 
-    lsEikonalExpandTest<NumericType, D> expanderEikonal(levelSet, 3);
+    lsEikonalExpandTest<NumericType, D> expanderEikonal(levelSet, 5);
 
     expanderEikonal.apply(); 
 
@@ -268,7 +268,7 @@ void create_output_Euklid(lsSmartPointer<lsDomain<double, D>> levelSet,
 
         //auto &centerIt = neighborIt.getCenter();
         //if (!centerIt.isDefined() || (lsPoints.find(centerIt.getStartIndices()) == lsPoints.end())) {
-        if (!centerIt.isDefined() || std::abs(centerIt.getValue()) > gridDelta) {
+        if (!centerIt.isDefined() || std::abs(centerIt.getValue()) > gridDelta* 0.5) {
           continue;
         } 
 
@@ -301,7 +301,7 @@ void create_output_Euklid(lsSmartPointer<lsDomain<double, D>> levelSet,
 
     auto narrowband = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<NumericType, D>(levelSet, narrowband, true, true, gridDelta).apply();
+    lsToMesh<NumericType, D>(levelSet, narrowband, true, true, gridDelta*0.5).apply();
     //lsPoints
 
 
@@ -320,19 +320,21 @@ void create_output_Euklid(lsSmartPointer<lsDomain<double, D>> levelSet,
 
 
   }
-class velocityField : public lsVelocityField<double> {
-public:
-  double
-  getScalarVelocity(const std::array<double, 3> & /*coordinate*/,
-                    int /*material*/,
-                    const std::array<double, 3>
-                        & /*normalVector = hrleVectorType<double, 3>(0.)*/) {
-    // Some arbitrary velocity function of your liking
-    // (try changing it and see what happens :)
-    double velocity = 1.;
-    return velocity;
-  }
-};
+
+
+  class velocityField : public lsVelocityField<double> {
+  public:
+    double
+    getScalarVelocity(const std::array<double, 3> & /*coordinate*/,
+                      int /*material*/,
+                      const std::array<double, 3>
+                          & /*normalVector = hrleVectorType<double, 3>(0.)*/) {
+      // Some arbitrary velocity function of your liking
+      // (try changing it and see what happens :)
+      double velocity = 1.;
+      return velocity;
+    }
+  };
 
 
 
@@ -377,7 +379,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "Calculating Curvatures ..." << std::endl;
 
-    create_output_Euklid(levelSet, "advectedEuler");
+    create_output_Euklid(levelSets1.back(), "advectedEuler");
     //create_output_Manhatten(levelSet,"advectedManhatten");
 
 /*

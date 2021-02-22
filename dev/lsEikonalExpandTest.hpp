@@ -252,7 +252,7 @@ public:
 
         }else{
             accepted.push_back(0); 
-            T &currentVal = it.getValue();
+            T &currentVal = it.getCenter().getValue();
             currentVal = (it.getCenter().getValue()<0.) ? -largeValue : largeValue;
         }                           
     }

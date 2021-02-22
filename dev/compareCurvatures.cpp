@@ -58,7 +58,7 @@ lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
     double origin[3] = {0.0, 0.0, 0.0};
     
     auto levelSet =
-        lsSmartPointer<lsDomain<double, D>>::New(gridDelta);
+        lsSmartPointer<lsDomain<double, D>>::New(gridDelta, lsNormalizations::EULER);
 
     auto lsWithGeometry = lsMakeGeometry<double, D>(
       levelSet, lsSmartPointer<lsSphere<double, D>>::New(origin, radius));
@@ -395,7 +395,7 @@ void create_output_Euklid(lsSmartPointer<lsDomain<double, D>> levelSet,
 
     auto narrowband = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<NumericType, D>(levelSet, narrowband, true, true).apply(lsPoints);
+    lsToMesh<NumericType, D>(levelSet, narrowband, true, true, gridDelta).apply();
     //lsPoints
 
 
@@ -424,7 +424,7 @@ int main() {
 
     omp_set_num_threads(1);
 
-    NumericType gridDelta = 0.5;
+    NumericType gridDelta = 0.25;
 
     //______________________________First____________________________________________________________________
 
@@ -449,7 +449,7 @@ int main() {
 
     //lsDomain<NumericType,D> levelSet = makePlane(gridDelta, planeNormal);
 
-    NumericType radius = 100.;
+    NumericType radius = 10.;
 
     std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> narrowPoints;
 
@@ -458,9 +458,7 @@ int main() {
     //lsDomain<NumericType,D> levelSet = makeTrench(gridDelta, planeNormal);
 
 
-
-
-
+ 
     levelSets.push_back(levelSet);  
 
 /*
@@ -492,7 +490,7 @@ int main() {
 
     //lsEikonalExpand<NumericType, D> expander(levelSets.back(), narrowPoints);
 
-    lsEikonalExpandTest<NumericType, D> expander(levelSets.back());
+    lsEikonalExpandTest<NumericType, D> expander(levelSets.back(), 5);
 
     expander.apply(); 
 
@@ -502,8 +500,14 @@ int main() {
 
     std::cout << "Calculating Curvatures..." << std::endl;
 
-    create_output_Euklid(levelSets.back(), narrowPoints, "/media/sf_shared/narrowband");
+    create_output_Euklid(levelSets.back(), narrowPoints, "outputEuklid");
+/*
+    auto narrowband = lsSmartPointer<lsMesh>::New();
+    std::cout << "Extracting narrowband..." << std::endl;
+    lsToMesh<NumericType, D>(levelSets.back(), narrowband, true, true).apply(narrowPoints);
 
+    lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "Sphere" ).apply();
+*/
 
     std::cout << "Finished" << std::endl;
 

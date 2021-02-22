@@ -94,9 +94,9 @@ public:
 int main() {
 
 
-    omp_set_num_threads(4);
+    omp_set_num_threads(1);
 
-    NumericType gridDelta = 0.5;
+    NumericType gridDelta = 0.25;
 
     //______________________________First____________________________________________________________________
 
@@ -141,7 +141,7 @@ int main() {
 
     std::cout << "Fast Marching..." << std::endl;
 
-    lsEikonalExpandTest<NumericType, D> expanderEikonal(levelSets1.back(), 3);
+    lsEikonalExpandTest<NumericType, D> expanderEikonal(levelSets1.back(), 5);
 
     //lsEikonalExpand<NumericType, D> expanderEikonal(levelSets1.back(), narrowPoints);
 
@@ -173,8 +173,8 @@ int main() {
     for(hrleConstSparseIterator<hrleDomainType> centerIt(levelSets1.back()->getDomain());
       !centerIt.isFinished(); ++centerIt){
 
-        if (!centerIt.isDefined() || std::abs(centerIt.getValue()) > gridDelta * 0.5 ) {
-        //if (!centerIt.isDefined() || std::abs(centerIt.getValue()) > (gridDelta*0.5)) {
+        
+        if (!centerIt.isDefined() || std::abs(centerIt.getValue()) > (gridDelta*0.5)) {
           continue;
         } 
 

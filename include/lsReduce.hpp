@@ -25,7 +25,9 @@ public:
   lsReduce() {}
 
   lsReduce(lsSmartPointer<lsDomain<T, D>> passedlsDomain)
-      : levelSet(passedlsDomain){};
+      : levelSet(passedlsDomain){
+        //TODO: set value limit here!
+      };
 
   lsReduce(lsSmartPointer<lsDomain<T, D>> passedlsDomain, int passedWidth,
            bool passedNoNewSegment = false)
@@ -33,7 +35,7 @@ public:
         noNewSegment(passedNoNewSegment){
         //TODO: check LS type
         lsValLimit = levelSet->getGrid().getGridDelta();
-
+        
   };
 
   void setLevelSet(lsSmartPointer<lsDomain<T, D>> passedlsDomain) {
