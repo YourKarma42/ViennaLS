@@ -50,7 +50,7 @@
 
 //____________testing end___________________________
 
-constexpr int D = 2;
+constexpr int D = 3;
 typedef double NumericType;
 typedef typename lsDomain<NumericType, D>::DomainType hrleDomainType;
 
@@ -96,7 +96,7 @@ int main() {
 
     omp_set_num_threads(1);
 
-    NumericType gridDelta = 0.25;
+    NumericType gridDelta = 0.5;
 
     //______________________________First____________________________________________________________________
 
@@ -107,7 +107,7 @@ int main() {
 
     std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets1;
 
-    NumericType radius = 5.;
+    NumericType radius = 15.;
 
 
   
@@ -161,6 +161,8 @@ int main() {
 
     std::vector<NumericType> meanCurvatureG;
 
+    std::vector<NumericType> calculatedRadius;
+
 
     hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType> neighborStarIterator(levelSets1.back()->getDomain());
 
@@ -174,7 +176,7 @@ int main() {
       !centerIt.isFinished(); ++centerIt){
 
         
-        if (!centerIt.isDefined() || std::abs(centerIt.getValue()) > (gridDelta*0.5)) {
+        if (!centerIt.isDefined() || std::abs(centerIt.getValue()) > 0.5) {
           continue;
         } 
 
@@ -192,7 +194,7 @@ int main() {
         for (int i = 0; i < D; i++) {
           NumericType pos = neighborStarIterator.getNeighbor(i).getValue();
           NumericType neg = neighborStarIterator.getNeighbor(i + D).getValue();
-          n[i] = (pos - neg) / (2.*gridDelta);//* 0.5;
+          n[i] = (pos - neg) * 0.5;
           denominator += n[i] * n[i];
         }
 
@@ -206,6 +208,16 @@ int main() {
           }
         }
 
+        auto indices = centerIt.getStartIndices();
+
+        double r = 0;
+
+        for (unsigned i = 0; i < D; ++i) {
+          r += indices[i] * gridDelta * indices[i] * gridDelta ;
+        }
+
+        calculatedRadius.push_back(std::sqrt(r) - centerIt.getValue()*gridDelta);
+
         meanCurvatureSD1.push_back(shape1(neighborStarIterator));
 
         meanCurvatureG.push_back(generalFormula(neighborIterator));
@@ -216,12 +228,14 @@ int main() {
 
     auto narrowband2 = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<NumericType, D>(levelSets1.back(), narrowband2, true, true, gridDelta*0.5).apply();
+    lsToMesh<NumericType, D>(levelSets1.back(), narrowband2, true, true, 0.5).apply();
     //lsPoints
 
 
 
     narrowband2->insertNextVectorData(grad1, "Normals");
+
+    narrowband2->insertNextScalarData(calculatedRadius, "radius");
 
     narrowband2->insertNextScalarData(meanCurvatureSD1, "curve");
 

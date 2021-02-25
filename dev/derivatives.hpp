@@ -64,22 +64,22 @@ template <class T, int D> class curvaturGeneralFormula : public baseDerivative<T
 
             int second_pos = (i+1) % D;
 
-            T phi_0 = neighborIterator.getCenter().getValue();
+            T phi_0 = neighborIterator.getCenter().getValue()*gridDelta;
 
-            T phi_px = neighborIterator.getNeighbor(posUnit).getValue();
-            T phi_nx = neighborIterator.getNeighbor(negUnit).getValue();
+            T phi_px = neighborIterator.getNeighbor(posUnit).getValue()*gridDelta;
+            T phi_nx = neighborIterator.getNeighbor(negUnit).getValue()*gridDelta;
 
             posUnit[second_pos] = 1;
             negUnit[second_pos] = 1;
 
-            T phi_pp = neighborIterator.getNeighbor(posUnit).getValue();
-            T phi_np = neighborIterator.getNeighbor(negUnit).getValue();
+            T phi_pp = neighborIterator.getNeighbor(posUnit).getValue()*gridDelta;
+            T phi_np = neighborIterator.getNeighbor(negUnit).getValue()*gridDelta;
 
             posUnit[second_pos] = -1;
             negUnit[second_pos] = -1;
 
-            T phi_pn = neighborIterator.getNeighbor(posUnit).getValue();
-            T phi_nn = neighborIterator.getNeighbor(negUnit).getValue();
+            T phi_pn = neighborIterator.getNeighbor(posUnit).getValue()*gridDelta;
+            T phi_nn = neighborIterator.getNeighbor(negUnit).getValue()*gridDelta;
 
             posUnit[i] = 0;
             negUnit[i] = 0;
@@ -270,10 +270,10 @@ template <class T, int D> class curvaturShapeDerivatives1 : public baseDerivativ
             hrleVectorType<hrleIndexType, D> negUnit(0);
         
             //get required ls values
-            T phi_0 = neighborIterator.getCenter().getValue();
+            T phi_0 = neighborIterator.getCenter().getValue()*gridDelta;
 
-            T phi_px = neighborIterator.getNeighbor(i).getValue();
-            T phi_nx = neighborIterator.getNeighbor(i+D).getValue();
+            T phi_px = neighborIterator.getNeighbor(i).getValue()*gridDelta;
+            T phi_nx = neighborIterator.getNeighbor(i+D).getValue()*gridDelta;
 
             scondOrderDerivatives[i] = (phi_px - 2.*phi_0 + phi_nx)*GDSQ;  
         }
@@ -310,10 +310,10 @@ template <class T, int D> class curvaturShapeDerivatives1 : public baseDerivativ
             negUnit[first_pos] = -1;
         
             //get required ls values
-            T phi_0 = neighborIterator.getCenter().getValue();
+            T phi_0 = neighborIterator.getCenter().getValue()*gridDelta;
 
-            T phi_px = neighborIterator.getNeighbor(posUnit).getValue();
-            T phi_nx = neighborIterator.getNeighbor(negUnit).getValue();
+            T phi_px = neighborIterator.getNeighbor(posUnit).getValue()*gridDelta;
+            T phi_nx = neighborIterator.getNeighbor(negUnit).getValue()*gridDelta;
 
 
             //central

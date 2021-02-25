@@ -197,7 +197,7 @@ while(index<endIndex){
     }
 
     if(std::abs(std::sqrt(pointRadius) - radius) <= gridDelta){
-        pointData.push_back(std::make_pair(index, (std::sqrt(pointRadius) - radius) ));
+        pointData.push_back(std::make_pair(index, (std::sqrt(pointRadius) - radius)/gridDelta ));
         narrowPoints.insert(index);
     }
 

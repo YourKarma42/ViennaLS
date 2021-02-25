@@ -153,7 +153,7 @@ public:
         if(!it.isDefined())
           continue;
 
-        if(std::abs(it.getValue()) <= gridDelta){
+        if(std::abs(it.getValue()) <= 1.){
             accepted.push_back(2);
             tmp.push_back(2);
 
@@ -168,7 +168,7 @@ public:
     for (hrleSparseStarIterator<hrleDomainType> it(levelSet->getDomain());
         !it.isFinished(); ++it) {
 
-        if(!it.getCenter().isDefined() || std::abs(it.getCenter().getValue()) <= gridDelta)
+        if(!it.getCenter().isDefined() || std::abs(it.getCenter().getValue()) <= 1.)
           continue;
 
         T dist = calcDistFMM(it, (it.getCenter().getValue() < 0.));   
@@ -247,7 +247,7 @@ public:
         if(!it.isDefined())
           continue;
 
-        if(it.getValue() <= gridDelta){
+        if(it.getValue() <= 1){
             accepted.push_back(2);
 
         }else{
@@ -261,7 +261,7 @@ public:
     for (hrleSparseStarIterator<hrleDomainType> it(levelSet->getDomain());
         !it.isFinished(); ++it) {
 
-        if(!it.getCenter().isDefined() && it.getCenter().getValue() > gridDelta)
+        if(!it.getCenter().isDefined() && it.getCenter().getValue() > 1)
           continue;
 
         T dist = calcDistFMM(it, (it.getCenter().getValue() < 0.));   
@@ -321,7 +321,7 @@ public:
             
 
               //break the loop if the narrowband has expanded far enough for application
-              if(currentPoint.first > width*gridDelta)
+              if(currentPoint.first > width)
                 break;
 
               accepted[neighborStarIterator.getCenter().getPointId()] = 2;
@@ -392,9 +392,9 @@ public:
     //find the maximum values in the stencil
     for(int i = 0; i < D; i++){
 
-      T pos = starStencil.getNeighbor(i).getValue();
+      T pos = starStencil.getNeighbor(i).getValue() * gridDelta;
 
-      T neg = starStencil.getNeighbor(i+D).getValue();
+      T neg = starStencil.getNeighbor(i+D).getValue() * gridDelta;
 
 
       //change the sign to make fast marching on the inside correct
@@ -500,9 +500,9 @@ public:
 
 
     if(inside){
-      return -sol;
+      return -sol/gridDelta;
     }else{
-      return sol;
+      return sol/gridDelta;
     }
     
   }
@@ -520,9 +520,9 @@ public:
     //find the maximum values in the stencil
     for(int i = 0; i < D; i++){
 
-      T pos = starStencil.getNeighbor(i).getValue();
+      T pos = starStencil.getNeighbor(i).getValue() * gridDelta;
 
-      T neg = starStencil.getNeighbor(i+D).getValue();
+      T neg = starStencil.getNeighbor(i+D).getValue() * gridDelta;
 
       //change the sign to make fast marching on the inside correct
       if(inside){
@@ -607,9 +607,9 @@ public:
     }    
 
     if(inside){
-      return -sol;
+      return -sol/gridDelta;
     }else{
-      return sol;
+      return sol/gridDelta;
     }
     
   }

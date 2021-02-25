@@ -362,7 +362,7 @@ void create_output_Euklid(lsSmartPointer<lsDomain<double, D>> levelSet,
 
         //auto &centerIt = neighborIt.getCenter();
         //if (!centerIt.isDefined() || (lsPoints.find(centerIt.getStartIndices()) == lsPoints.end())) {
-        if (!centerIt.isDefined() || std::abs(centerIt.getValue()) > gridDelta) {
+        if (!centerIt.isDefined() || std::abs(centerIt.getValue()) > 1) {
           continue;
         } 
 
@@ -395,7 +395,7 @@ void create_output_Euklid(lsSmartPointer<lsDomain<double, D>> levelSet,
 
     auto narrowband = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<NumericType, D>(levelSet, narrowband, true, true, gridDelta).apply();
+    lsToMesh<NumericType, D>(levelSet, narrowband, true, true, 1).apply();
     //lsPoints
 
 

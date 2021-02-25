@@ -74,8 +74,8 @@ public:
     typename lsDomain<T, D>::DomainType &newDomain = newlsDomain->getDomain();
     typename lsDomain<T, D>::DomainType &domain = levelSet->getDomain();
 
-    const T valueLimit = width * lsValLimit;
-    //const T valueLimit = width * 0.5;
+    //const T valueLimit = width * lsValLimit;
+    const T valueLimit = width * 0.5;
 
     newDomain.initialize(domain.getNewSegmentation(), domain.getAllocation());
 

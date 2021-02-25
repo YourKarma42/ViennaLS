@@ -134,7 +134,7 @@ public:
         T neg = neighborIterator.getCenter().getValue() -
                 neighborIterator.getNeighbor(i + D).getValue();
         //Lenz: change for euler
-        normalVector[i] = (pos + neg) / (2.*gridDelta); // *0.5; //= 0;
+        normalVector[i] = (pos + neg) * 0.5; //= 0;
         denominator += normalVector[i] * normalVector[i];
       }
       denominator = std::sqrt(denominator);
