@@ -119,7 +119,7 @@ template <class T, int D> class eulerAdvect {
     //if FMM is done in every time step time step is 3
     lsEikonalExpandTest<T, D>(levelSets.back(), 3).apply();
     //std::cout << "Debug: Expention done" << std::endl;
-    lsReduce<T, D>(levelSets.back(), 1, true).apply();
+    lsReduce<T, D>(levelSets.back(), 2, true).apply();
     //std::cout << "Debug: Velocity extention done" << std::endl;
 /*
     auto narrowband1 = lsSmartPointer<lsMesh>::New();
@@ -591,7 +591,8 @@ template <class T, int D> class eulerAdvect {
            it.getStartIndices() < endVector; ++it) {
 
         //Lenz: Euler advection
-        if (!it.isDefined() || std::abs(it.getValue()) > 0.5)
+        //probably use 1 for euler advect? and 0.5 for manhatten?
+        if (!it.isDefined() || std::abs(it.getValue()) > 1.)
           continue;
 
         T value = it.getValue();
@@ -700,7 +701,7 @@ template <class T, int D> class eulerAdvect {
 
     // reduce to one layer thickness and apply new values directly to the
     // domain segments --> DO NOT CHANGE SEGMENTATION HERE (true parameter)
-    lsReduce<T, D>(levelSets.back(), 1, true).apply();
+    lsReduce<T, D>(levelSets.back(), 2, true).apply();
 //std::cout << "Debug: Level set reduction" << std::endl;
 
 /*

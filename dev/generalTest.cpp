@@ -204,7 +204,7 @@ int main() {
             n[i] = 0.;
         } else {
           for (unsigned i = 0; i < D; ++i) {
-            n[i] /= denominator;
+            //n[i] /= denominator;
           }
         }
 

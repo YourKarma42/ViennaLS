@@ -84,7 +84,7 @@ template <class T, int D> class silvacoLikeFlagging{
         for (hrleConstSparseIterator<hrleDomainType> it(levelSet->getDomain());
           !it.isFinished(); ++it) {
 
-          if (!it.isDefined() || (activePoints.find(it.getStartIndices()) == activePoints.end())) {
+          if (!it.isDefined() || std::abs(it.getValue()) < 0.5 ) {
               continue;
           }
 
@@ -100,16 +100,12 @@ template <class T, int D> class silvacoLikeFlagging{
     }
 
 
-    void apply(std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & activePoints){
-
-      //TODO: remove
-      std::vector<std::array<T,D>> outputNormals;
-      
-      //hrleConstSparseStarIterator<typename lsDomain<T, D>::DomainType> neighborIt(levelSet->getDomain());
+    void apply(){
 
       std::unordered_map<hrleVectorType<hrleIndexType,D>, std::array<T, D>, typename hrleVectorType<hrleIndexType, D>::hash> normals;
 
-      normals.reserve(activePoints.size());
+      //change
+      normals.reserve(levelSet->getNumberOfPoints());
 
 
       auto grid = levelSet->getGrid();
@@ -156,13 +152,15 @@ template <class T, int D> class silvacoLikeFlagging{
             domain, startVector);
             it.getStartIndices() < endVector; ++it){
 
-          if (!it.isDefined() || (activePoints.find(it.getStartIndices()) == activePoints.end())) {
+          if (!it.isDefined() || std::abs(it.getValue()) < 0.5) {
             continue;
           }
 
           neighborIt.goToIndices(it.getStartIndices());
 
           std::array<T, D> n;
+
+          T norm = 0.;
 
           for (int i = 0; i < D; i++) {
           
@@ -171,15 +169,19 @@ template <class T, int D> class silvacoLikeFlagging{
             T neg1 = neighborIt.getNeighbor(i + D).getValue();
 
             n[i] = (pos1 - neg1) * 0.5;
+
+            norm += n[i]*n[i];
           
           }
 
+          norm = std::sqrt(norm);
+
+          for(int j = 0; j < D; j++)
+            n[j] = n[j]/norm;
+                 
+
           //push normals into a hash map
           normalsSegment[neighborIt.getCenter().getStartIndices()] = n;
-
-          //outputNormals.push_back(n);
-
-          //add to list of normal vectors;
 
         }
 #pragma omp critical
@@ -189,31 +191,17 @@ template <class T, int D> class silvacoLikeFlagging{
 
 #pragma omp barrier
 
-//#pragma omp single
-//{
-
-
-//}
-
         for(hrleSparseIterator<typename lsDomain<T, D>::DomainType> it(
             domain, startVector);
             it.getStartIndices() < endVector; ++it){
 
-          if (!it.isDefined() || (activePoints.find(it.getStartIndices()) == activePoints.end())) {
+          if (!it.isDefined() || std::abs(it.getValue()) < 0.5) {
               continue;
           } 
 
           //neighborIterator.goToIndicesSequential(it.getStartIndices());
 
           std::array<T, D> centerNormal = normals[it.getStartIndices()];
-
-          T normCenterNormal = 0.;
-
-          for(int j= 0; j < D; j++)
-            normCenterNormal += centerNormal[j] * centerNormal[j];
-
-
-          normCenterNormal = std::sqrt(normCenterNormal);
 
           for(auto dir: combinations){
 
@@ -222,20 +210,14 @@ template <class T, int D> class silvacoLikeFlagging{
               std::array<T, D> currentNormal = normals[it.getStartIndices() + dir];
 
               T skp = 0.;
-              T normCurrentNormal = 0.;
 
               //calculate scalar product
               for(int j = 0; j < D; j++){
-
                 skp += currentNormal[j]*centerNormal[j];
-
-                normCurrentNormal += currentNormal[j]*currentNormal[j]; 
-
               }
 
-              normCurrentNormal = std::sqrt(normCurrentNormal);
-                            
-              if((normCurrentNormal * normCenterNormal * cosAngleTreshold - skp) >= 0.){
+              //vectors are normlized so skp = cos(alpha)          
+              if((cosAngleTreshold - skp) >= 0.){
                 
                 flagsSegment[it.getStartIndices()] = 1;
 
@@ -252,7 +234,6 @@ template <class T, int D> class silvacoLikeFlagging{
 
       for (unsigned i = 0; i < levelSet->getNumberOfSegments(); ++i) 
         flaggedCells.insert(flagsReserve[i].begin(), flagsReserve[i].end());
-      //levelSet->getPointData().insertNextVectorData(outputNormals, "normals");
 
     }
 

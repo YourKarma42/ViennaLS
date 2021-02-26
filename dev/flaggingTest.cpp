@@ -17,7 +17,7 @@
 
 
 #include <lsConvertEuclid.hpp>
-#include <lsEikonalExpand.hpp>
+#include <../dev/lsEikonalExpandTest.hpp>
 
 #include <../dev/silvacoLikeFlagging.hpp>
 #include <../dev/myFlagging.hpp>
@@ -131,7 +131,17 @@ int main(int argc, char* argv[]) {
 
     omp_set_num_threads(numThreads);
 
-    NumericType gridDelta = 0.125;
+    int numRuns = 10;
+
+    NumericType gridDelta = 0.5;
+
+    NumericType radius = 20.;
+
+    std::stringstream csvOutput;
+
+    csvOutput << numRuns << std::endl;
+
+    csvOutput << numThreads << std::endl;
 
     auto start = std::chrono::high_resolution_clock::now(); 
 
@@ -139,11 +149,13 @@ int main(int argc, char* argv[]) {
 
     std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets;
 
-    //lsDomain<NumericType,D> levelSet = makeSphere(gridDelta, 50.);
+    //___________________________START GEOMETRY INPUT
 
-    std::vector<NumericType> planeNormal = {0. , 0. , 1.};
+    lsSmartPointer<lsDomain<double, D>> levelSet = makeSphere(gridDelta, radius);
 
-    lsSmartPointer<lsDomain<double, D>> levelSet = makeTrench(gridDelta, planeNormal);
+    //std::vector<NumericType> planeNormal = {0. , 0. , 1.};
+
+    //lsSmartPointer<lsDomain<double, D>> levelSet = makeTrench(gridDelta, planeNormal);
 
     levelSets.push_back(levelSet);  
 
@@ -153,21 +165,11 @@ int main(int argc, char* argv[]) {
     //lsToDiskMesh<NumericType, D>(*(levelSets.back()), mesh).apply();
     //lsVTKWriter(mesh, lsFileFormatEnum::VTU , "mesh").apply();
 
-
-
-    //convert level set
-    std::cout << "Converting..." << std::endl;
-
-    lsConvertEuclid<NumericType, D>  converter(levelSets.back());
-
-    converter.apply();
-
-    //get the active grid points of the level set
-    auto activePoints = converter.getActivePoints();
+    //___________________________END GEOMETRY INPUT
 
     std::cout << "FMM..." << std::endl;
 
-    lsEikonalExpand<NumericType, D> expander(levelSets.back(), activePoints);
+    lsEikonalExpandTest<NumericType, D> expander(levelSets.back());
 
     expander.apply(); 
 
@@ -175,56 +177,99 @@ int main(int argc, char* argv[]) {
 
     myFlagging<NumericType, D> myFlagger(levelSets.back(), 1e-3);
 
+    std::cout << "Flagging Tests Shape Operator" << std::endl;
 
-    for(int i =0; i < 10; i++){
+    csvOutput << "Shape Operator" << std::endl;
+
+    for(int i =0; i < numRuns; i++){
 
         start = std::chrono::high_resolution_clock::now(); 
 
-        myFlagger.apply(activePoints);
+        myFlagger.apply(0);
 
         stop = std::chrono::high_resolution_clock::now(); 
 
         std::cout << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << " "; 
 
+        csvOutput << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << ";";
+
     }
+    csvOutput << std::endl;
     std::cout << std::endl;
 
-    myFlagger.createFlagsOutput(activePoints);
+    std::cout << "My Flagging Shape: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << std::endl; 
 
+    //myFlagger.createFlagsOutput();
 
+    myFlagging<NumericType, D> myFlagger2(levelSets.back(), 1e-3);
 
-    std::cout << "My Flagging: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << std::endl; 
+    std::cout << "Flagging Tests General Formula" << std::endl;
 
-    silvacoLikeFlagging<NumericType,D> silvacoFlagger(levelSets.back(), 0.34906585039887);
+    csvOutput << "General Formula" << std::endl;
 
-    for(int i =0; i < 10; i++){
+    for(int i =0; i < numRuns; i++){
 
         start = std::chrono::high_resolution_clock::now(); 
 
-        silvacoFlagger.apply(activePoints);
+        myFlagger2.apply(1);
 
         stop = std::chrono::high_resolution_clock::now(); 
 
         std::cout << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << " "; 
 
+        csvOutput << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << ";";
+
     }
+    csvOutput << std::endl;
+    std::cout << std::endl;
+
+    std::cout << "My Flagging General: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << std::endl; 
+
+    std::cout << "Flagging Test Normals" << std::endl;
+
+    csvOutput << "Normal Flagging" << std::endl;
+
+    silvacoLikeFlagging<NumericType,D> silvacoFlagger(levelSets.back(), 0.16);
+
+    for(int i =0; i < numRuns; i++){
+
+        start = std::chrono::high_resolution_clock::now(); 
+
+        silvacoFlagger.apply();
+
+        stop = std::chrono::high_resolution_clock::now(); 
+
+        std::cout << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << " "; 
+
+        csvOutput << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << ";";
+
+    }
+    csvOutput << std::endl;
     std::cout << std::endl;
     
-    silvacoFlagger.createFlagsOutput(activePoints);
+    //silvacoFlagger.createFlagsOutput();
 
     std::cout << "Silvaco Flagging: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << std::endl; 
 
+    std::ofstream output;
 
-    auto narrowband3 = lsSmartPointer<lsMesh>::New();
-    std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<NumericType, D>(levelSet, narrowband3).apply(activePoints);
+    output.open("timings/timingsFlagging" + std::to_string(numThreads) + ".csv");
+
+    output << csvOutput.rdbuf();
+
+    output.close();
+
+
+    //auto narrowband3 = lsSmartPointer<lsMesh>::New();
+    //std::cout << "Extracting narrowband..." << std::endl;
+    //lsToMesh<NumericType, D>(levelSet, narrowband3).apply(activePoints);
 
     //TODO: create output function!
 
     //narrowband.insertNextVectorData(normal, "Normal");
     //narrowband3.insertNextScalarData(curve, "curvature");
   
-    lsVTKWriter(narrowband3, lsFileFormatEnum::VTU , "narrowband" ).apply();
+    //lsVTKWriter(narrowband3, lsFileFormatEnum::VTU , "narrowband" ).apply();
 
 
     std::cout << "Finished" << std::endl;

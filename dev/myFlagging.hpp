@@ -7,6 +7,7 @@
 #include <chrono>
 
 #include <../dev/derivatives.hpp>
+#include <../dev/hrleTestIterator.hpp>
 
 
 
@@ -34,7 +35,7 @@ template <class T, int D> class myFlagging{
 
     }
 
-    void createFlagsOutput(std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & activePoints){
+    void createFlagsOutput(){
 
         std::vector<T> flags;
 
@@ -43,7 +44,7 @@ template <class T, int D> class myFlagging{
         for (hrleConstSparseIterator<hrleDomainType> it(levelSet->getDomain());
             !it.isFinished(); ++it) {
 
-            if (!it.isDefined() || (activePoints.find(it.getStartIndices()) == activePoints.end())) {
+            if (!it.isDefined() || std::abs(it.getValue() < 0.5)) {
                 continue;
             }
 
@@ -60,8 +61,8 @@ template <class T, int D> class myFlagging{
         //levelSet->getPointData().insertNextScalarData(curveOutput, "curvature");
     }
 
-
-    void apply(std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & activePoints){
+    //0 shape operator; 1 general formula
+    void apply(int method){
         
 
         auto grid = levelSet->getGrid();
@@ -76,6 +77,9 @@ template <class T, int D> class myFlagging{
         double(2 * levelSet->getDomain().getNumberOfPoints()) /
         double(levelSet->getLevelSetWidth());
 
+        //shape
+        if(method == 0){
+
 
 #pragma omp parallel num_threads((levelSet)->getNumberOfSegments())
         {
@@ -85,64 +89,97 @@ template <class T, int D> class myFlagging{
 #endif
 
 
-            curvaturGeneralFormula<T, D> curvatureCalculator(levelSet->getGrid().getGridDelta());
+                curvaturShapeDerivatives1<T, D> curvatureCalculator(levelSet->getGrid().getGridDelta());
 
-            hrleSparseBoxIterator<hrleDomain<T, D>> boxIterator(levelSet->getDomain(), 1);
-
-            //curvaturGeneralFormulaBigStencilBias <T, D> curvatureCalculator(levelSet->getGrid().getGridDelta());
-
-            //hrleConstSparseStarIterator<typename lsDomain<T, D>::DomainType> neighborIt(domain);
-
-            //curvaturShapeDerivatives1<T, D> curvatureCalculator(levelSet->getGrid().getGridDelta());
+                hrleConstSparseStarIterator<typename lsDomain<T, D>::DomainType> neighborStarIt(domain);
 
 
-            std::unordered_map<hrleVectorType<hrleIndexType, D>, T, typename hrleVectorType<hrleIndexType, D>::hash> &flagsSegment = 
-            flagsReserve[p];
-            flagsSegment.reserve(pointsPerSegment);
+                std::unordered_map<hrleVectorType<hrleIndexType, D>, T, typename hrleVectorType<hrleIndexType, D>::hash> &flagsSegment = 
+                flagsReserve[p];
+                flagsSegment.reserve(pointsPerSegment);
 
-            hrleVectorType<hrleIndexType, D> startVector =
-            (p == 0) ? grid.getMinGridPoint()
-                : domain.getSegmentation()[p - 1];
+                hrleVectorType<hrleIndexType, D> startVector =
+                (p == 0) ? grid.getMinGridPoint()
+                    : domain.getSegmentation()[p - 1];
 
-            hrleVectorType<hrleIndexType, D> endVector =
-            (p != static_cast<int>(domain.getNumberOfSegments() - 1))
-                ? domain.getSegmentation()[p]
-                : grid.incrementIndices(grid.getMaxGridPoint());
+                hrleVectorType<hrleIndexType, D> endVector =
+                (p != static_cast<int>(domain.getNumberOfSegments() - 1))
+                    ? domain.getSegmentation()[p]
+                    : grid.incrementIndices(grid.getMaxGridPoint());
 
-            for(hrleSparseIterator<typename lsDomain<T, D>::DomainType> it(
-               domain, startVector);
-                it.getStartIndices() < endVector; ++it){
+                for(hrleSparseIterator<typename lsDomain<T, D>::DomainType> it(
+                domain, startVector);
+                    it.getStartIndices() < endVector; ++it){
 
-            //for(hrleConstSparseIterator<hrleDomainType> it(levelSet->getDomain());
-             //   !it.isFinished(); ++it){
+                    if (!it.isDefined() || std::abs(it.getValue()) < 0.5) {
+                        continue;
+                    } 
 
-                if (!it.isDefined() || (activePoints.find(it.getStartIndices()) == activePoints.end())) {
-                    continue;
+                    neighborStarIt.goToIndices(it.getStartIndices());
+
+                    T curve = curvatureCalculator(neighborStarIt);
+
+                    if(std::abs(curve) > flatBoundary){
+                        flagsSegment[it.getStartIndices()] = 1;
+                    }
+                    
                 } 
 
-                //neighborIt.goToIndices(it.getStartIndices());
+            }
+        //general Formula
+        }else if(method == 1){
 
-                //T curve = curvatureCalculator(neighborIt);
 
-                boxIterator.goToIndices(it.getStartIndices());
+#pragma omp parallel num_threads((levelSet)->getNumberOfSegments())
+            {
+                int p = 0;
+#ifdef _OPENMP
+                p = omp_get_thread_num();
+#endif
 
-                T curve = curvatureCalculator(boxIterator);
+                curvaturGeneralFormula<T, D> curvatureCalculator(levelSet->getGrid().getGridDelta());
 
-                //curveOutput.push_back(curve);
+                hrleCartesianPlaneIterator<hrleDomain<T, D>> planeIterator(levelSet->getDomain(), 1);
 
-                if(std::abs(curve) > flatBoundary){
-                    //flagsSegment.insert({it.getStartIndices(), 1});
-                    flagsSegment[it.getStartIndices()] = 1;
-                }
-                
-            } 
+                std::unordered_map<hrleVectorType<hrleIndexType, D>, T, typename hrleVectorType<hrleIndexType, D>::hash> &flagsSegment = 
+                flagsReserve[p];
+                flagsSegment.reserve(pointsPerSegment);
 
+                hrleVectorType<hrleIndexType, D> startVector =
+                (p == 0) ? grid.getMinGridPoint()
+                    : domain.getSegmentation()[p - 1];
+
+                hrleVectorType<hrleIndexType, D> endVector =
+                (p != static_cast<int>(domain.getNumberOfSegments() - 1))
+                    ? domain.getSegmentation()[p]
+                    : grid.incrementIndices(grid.getMaxGridPoint());
+
+                for(hrleSparseIterator<typename lsDomain<T, D>::DomainType> it(
+                domain, startVector);
+                    it.getStartIndices() < endVector; ++it){
+
+                    if (!it.isDefined() || std::abs(it.getValue()) < 0.5) {
+                        continue;
+                    } 
+
+                    planeIterator.goToIndices(it.getStartIndices());
+
+                    T curve = curvatureCalculator(planeIterator);
+
+                    //curveOutput.push_back(curve);
+
+                    if(std::abs(curve) > flatBoundary){
+                        flagsSegment[it.getStartIndices()] = 1;
+                    }
+                    
+                } 
+
+            }
         }
 
         for (unsigned i = 0; i < levelSet->getNumberOfSegments(); ++i) 
             flaggedCells.insert(flagsReserve[i].begin(), flagsReserve[i].end());
       
-   // }
 
     }
 

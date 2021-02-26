@@ -392,9 +392,9 @@ public:
     //find the maximum values in the stencil
     for(int i = 0; i < D; i++){
 
-      T pos = starStencil.getNeighbor(i).getValue() * gridDelta;
+      T pos = starStencil.getNeighbor(i).getValue(); // * gridDelta;
 
-      T neg = starStencil.getNeighbor(i+D).getValue() * gridDelta;
+      T neg = starStencil.getNeighbor(i+D).getValue(); // * gridDelta;
 
 
       //change the sign to make fast marching on the inside correct
@@ -459,7 +459,7 @@ public:
       if(dim == 1){
           for(int i = 0; i < D; i++)
               sol += stencilMin[i];
-          sol += gridDelta;
+          sol += 1; //gridDelta;
           break;
       }
 
@@ -473,7 +473,7 @@ public:
 
       T a = T(dim);
       T b = -2*sumT;
-      T c = sumTsq - gridDeltaSqared;
+      T c = sumTsq - 1; //gridDeltaSqared;
       T q = b*b - 4*a*c;
       
       //discriminant is negative must perform a lower dimensional update
@@ -500,9 +500,9 @@ public:
 
 
     if(inside){
-      return -sol/gridDelta;
+      return -sol; ///gridDelta;
     }else{
-      return sol/gridDelta;
+      return sol; ///gridDelta;
     }
     
   }
@@ -520,9 +520,9 @@ public:
     //find the maximum values in the stencil
     for(int i = 0; i < D; i++){
 
-      T pos = starStencil.getNeighbor(i).getValue() * gridDelta;
+      T pos = starStencil.getNeighbor(i).getValue(); // * gridDelta;
 
-      T neg = starStencil.getNeighbor(i+D).getValue() * gridDelta;
+      T neg = starStencil.getNeighbor(i+D).getValue(); // * gridDelta;
 
       //change the sign to make fast marching on the inside correct
       if(inside){
@@ -567,7 +567,7 @@ public:
       if(dim == 1){
           for(int i = 0; i < D; i++)
               sol += stencilMin[i];
-          sol += gridDelta;
+          sol += 1; //gridDelta;
           break;
       }
 
@@ -581,7 +581,7 @@ public:
 
       T a = T(dim);
       T b = -2*sumT;
-      T c = sumTsq - gridDeltaSqared;
+      T c = sumTsq - 1;//gridDeltaSqared;
       T q = b*b - 4*a*c;
       
       //discriminant is negative must perform a lower dimensional update
@@ -607,9 +607,9 @@ public:
     }    
 
     if(inside){
-      return -sol/gridDelta;
+      return -sol; ///gridDelta;
     }else{
-      return sol/gridDelta;
+      return sol; ///gridDelta;
     }
     
   }
