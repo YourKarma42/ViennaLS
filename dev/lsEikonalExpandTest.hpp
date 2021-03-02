@@ -349,7 +349,7 @@ public:
                               currentValue = dist;
                               minHeap.push(std::make_pair(std::abs(dist), currentNeighbor.getOffsetIndices()));                           
                           }                 
-
+                          //TODO ERROR?
                           accepted[currentNeighbor.getPointId()] == 1;
                           
                       }

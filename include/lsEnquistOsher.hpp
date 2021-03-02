@@ -29,11 +29,16 @@ template <class T, int D, int order> class lsEnquistOsher {
 
 public:
   static void prepareLS(lsSmartPointer<lsDomain<T, D>> passedlsDomain) {
-    //TODO: CURRENTLY ONLY WORKING WITH EULER
+
     //the level set needs to have a width of order + 2 to have enough values for finite differences 
-    lsEikonalExpandTest<T, D>(passedlsDomain, order + 2).apply();
-    //assert(order == 1 || order == 2);
-    //lsExpand<T, D>(passedlsDomain, 2 * order + 1).apply();
+    if(passedlsDomain->getNormalization() == lsNormalizations::MANHATTEN){
+       assert(order == 1 || order == 2);
+      lsExpand<T, D>(passedlsDomain, 2 * order + 1).apply();
+    }else{
+      lsEikonalExpandTest<T, D>(passedlsDomain, order + 2).apply();
+    }
+    
+
   }
 
   lsEnquistOsher(lsSmartPointer<lsDomain<T, D>> passedlsDomain,

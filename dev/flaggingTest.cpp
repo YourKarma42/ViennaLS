@@ -14,7 +14,7 @@
 
 #include <unordered_set>
 
-
+#include <lsReader.hpp>
 
 #include <lsConvertEuclid.hpp>
 #include <../dev/lsEikonalExpandTest.hpp>
@@ -74,12 +74,12 @@ lsSmartPointer<lsDomain<double, D>> makeTrench(double gridDelta, std::vector<Num
         auto trench = lsSmartPointer<lsDomain<double, D>>::New(bounds, boundaryCons, gridDelta);
 
         if(D == 3){
-          double minCorner[3] = {-extent - 1, -extent / 4., -15.};
+          double minCorner[3] = {-extent - 1, -extent / 4., -50.};
           double maxCorner[3] = {extent + 1, extent / 4., 1.0};
           auto box = lsSmartPointer<lsBox<double, D>>::New(minCorner, maxCorner);
           lsMakeGeometry<double, D>(trench, box).apply();
         }else{
-          double minCorner[2] = {-extent / 4., -15.};
+          double minCorner[2] = {-extent / 4., -50.};
           double maxCorner[2] = {extent / 4., 1.0};
           auto box = lsSmartPointer<lsBox<double, D>>::New(minCorner, maxCorner);
           lsMakeGeometry<double, D>(trench, box).apply();
@@ -133,9 +133,9 @@ int main(int argc, char* argv[]) {
 
     int numRuns = 10;
 
-    NumericType gridDelta = 0.5;
+    NumericType gridDelta = 0.125;
 
-    NumericType radius = 20.;
+    NumericType radius = 100.;
 
     std::stringstream csvOutput;
 
@@ -151,11 +151,15 @@ int main(int argc, char* argv[]) {
 
     //___________________________START GEOMETRY INPUT
 
-    lsSmartPointer<lsDomain<double, D>> levelSet = makeSphere(gridDelta, radius);
+    //lsSmartPointer<lsDomain<double, D>> levelSet = makeSphere(gridDelta, radius);
 
-    //std::vector<NumericType> planeNormal = {0. , 0. , 1.};
+    std::vector<NumericType> planeNormal = {0. , 0. , 1.};
 
-    //lsSmartPointer<lsDomain<double, D>> levelSet = makeTrench(gridDelta, planeNormal);
+    lsSmartPointer<lsDomain<double, D>> levelSet = makeTrench(gridDelta, planeNormal);
+
+    //lsSmartPointer<lsDomain<double, D>> levelSet;
+    
+    //lsReader<NumericType, D>(levelSet, "../data/rawLS4-14.lvst").apply();
 
     levelSets.push_back(levelSet);  
 
@@ -169,7 +173,9 @@ int main(int argc, char* argv[]) {
 
     std::cout << "FMM..." << std::endl;
 
-    lsEikonalExpandTest<NumericType, D> expander(levelSets.back());
+    //lsEikonalExpandTest<NumericType, D> expander(levelSets.back());
+
+    lsExpand<NumericType, D> expander(levelSets.back(), 5);
 
     expander.apply(); 
 
@@ -199,9 +205,9 @@ int main(int argc, char* argv[]) {
 
     std::cout << "My Flagging Shape: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << std::endl; 
 
-    //myFlagger.createFlagsOutput();
+    //myFlagger.createFlagsOutput(0);
 
-    myFlagging<NumericType, D> myFlagger2(levelSets.back(), 1e-3);
+    myFlagging<NumericType, D> myFlagger2(levelSets.back(), 1e-4);
 
     std::cout << "Flagging Tests General Formula" << std::endl;
 
@@ -224,6 +230,8 @@ int main(int argc, char* argv[]) {
     std::cout << std::endl;
 
     std::cout << "My Flagging General: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << std::endl; 
+
+    //myFlagger2.createFlagsOutput(1);
 
     std::cout << "Flagging Test Normals" << std::endl;
 
@@ -262,14 +270,14 @@ int main(int argc, char* argv[]) {
 
     //auto narrowband3 = lsSmartPointer<lsMesh>::New();
     //std::cout << "Extracting narrowband..." << std::endl;
-    //lsToMesh<NumericType, D>(levelSet, narrowband3).apply(activePoints);
+    //lsToMesh<NumericType, D>(levelSet, narrowband3, true, true, 0.5).apply();
 
     //TODO: create output function!
 
     //narrowband.insertNextVectorData(normal, "Normal");
     //narrowband3.insertNextScalarData(curve, "curvature");
   
-    //lsVTKWriter(narrowband3, lsFileFormatEnum::VTU , "narrowband" ).apply();
+    //lsVTKWriter(narrowband3, lsFileFormatEnum::VTU , "Flags" ).apply();
 
 
     std::cout << "Finished" << std::endl;

@@ -186,65 +186,64 @@ private:
 
 //     TEST start
 
+    if(levelSet->getNormalization() == lsNormalizations::EULER){
+      //for Euler level set
+      while(index<endIndex){
+          T pointRadius = 0.;
 
-//for Euler level set
-while(index<endIndex){
-    T pointRadius = 0.;
+          for(int i = 0; i < D; i++){
+              //std::cout << neighborIt.getIndices()[i] << std::endl;
+              pointRadius += ( gridDelta * index[i] - origin[i]) * ( gridDelta * index[i] - origin[i]);
+          }
 
-    for(int i = 0; i < D; i++){
-        //std::cout << neighborIt.getIndices()[i] << std::endl;
-        pointRadius += ( gridDelta * index[i] - origin[i]) * ( gridDelta * index[i] - origin[i]);
-    }
+          if(std::abs(std::sqrt(pointRadius) - radius) <= gridDelta){
+              pointData.push_back(std::make_pair(index, (std::sqrt(pointRadius) - radius)/gridDelta ));
+              narrowPoints.insert(index);
+          }
 
-    if(std::abs(std::sqrt(pointRadius) - radius) <= gridDelta){
-        pointData.push_back(std::make_pair(index, (std::sqrt(pointRadius) - radius)/gridDelta ));
-        narrowPoints.insert(index);
-    }
-
-    int dim = 0;
-    for (; dim < D - 1; ++dim) {
-      if (index[dim] < endIndex[dim])
-        break;
-      index[dim] = minIndex[dim];
-    }
-    ++index[dim];
-
-
-}
+          int dim = 0;
+          for (; dim < D - 1; ++dim) {
+            if (index[dim] < endIndex[dim])
+              break;
+            index[dim] = minIndex[dim];
+          }
+          ++index[dim];
 
 
-/*
-    while (index < endIndex) {
-      // take shortest manhatten distance to gridline intersection
-      T distance = std::numeric_limits<T>::max();
-      for (unsigned i = 0; i < D; ++i) {
-        T y = (index[(i + 1) % D] * gridDelta) - origin[(i + 1) % D];
-        T z = 0;
-        if (D == 3)
-          z = (index[(i + 2) % D] * gridDelta) - origin[(i + 2) % D];
-        T x = radius2 - y * y - z * z;
-        if (x < 0.)
-          continue;
-        T dirRadius =
-            std::abs((index[i] * gridDelta) - origin[i]) - std::sqrt(x);
-        if (std::abs(dirRadius) < std::abs(distance))
-          distance = dirRadius;
+      }
+    }else if(levelSet->getNormalization() == lsNormalizations::MANHATTEN){
+
+      while (index < endIndex) {
+        // take shortest manhatten distance to gridline intersection
+        T distance = std::numeric_limits<T>::max();
+        for (unsigned i = 0; i < D; ++i) {
+          T y = (index[(i + 1) % D] * gridDelta) - origin[(i + 1) % D];
+          T z = 0;
+          if (D == 3)
+            z = (index[(i + 2) % D] * gridDelta) - origin[(i + 2) % D];
+          T x = radius2 - y * y - z * z;
+          if (x < 0.)
+            continue;
+          T dirRadius =
+              std::abs((index[i] * gridDelta) - origin[i]) - std::sqrt(x);
+          if (std::abs(dirRadius) < std::abs(distance))
+            distance = dirRadius;
+        }
+
+        if (std::abs(distance) <= valueLimit + 1e-10) {
+          pointData.push_back(std::make_pair(index, distance / gridDelta));
+        }
+        int dim = 0;
+        for (; dim < D - 1; ++dim) {
+          if (index[dim] < endIndex[dim])
+            break;
+          index[dim] = minIndex[dim];
+        }
+        ++index[dim];
       }
 
-      if (std::abs(distance) <= valueLimit + 1e-10) {
-        pointData.push_back(std::make_pair(index, distance / gridDelta));
-      }
-      int dim = 0;
-      for (; dim < D - 1; ++dim) {
-        if (index[dim] < endIndex[dim])
-          break;
-        index[dim] = minIndex[dim];
-      }
-      ++index[dim];
     }
 
-
-*/
     // Mirror indices correctly into domain, unless boundary conditions
     // are ignored
     if (!ignoreBoundaryConditions) {

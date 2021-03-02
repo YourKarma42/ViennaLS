@@ -16,6 +16,8 @@
 #include <lsVTKWriter.hpp>
 #include <lsAdvect.hpp>
 
+#include <lsWriter.hpp>
+
 #include <lsCalculateNormalVectors.hpp>
 
 #include "derivatives.hpp"
@@ -196,9 +198,12 @@ void writeSurfaces(std::deque<lsSmartPointer<lsDomain<NumericType, D>>>& domains
       std::string pointName = "points-m" + std::to_string(i) + "-" + std::to_string(outputNum) + ".vtk";
       lsVTKWriter(pointMesh, path + pointName).apply();
     }
+
+    std::string levelSetName = "rawLS" + std::to_string(i) + "-" + std::to_string(outputNum) + ".lvst";
+    lsWriter<NumericType, D>(domains[i], path + levelSetName).apply();
   }
 
-  writeFeaturOutput(domains);
+  //writeFeaturOutput(domains);
   numMat = (domains.size()<numMat)?numMat:domains.size();
   // increase count
   ++outputNum;

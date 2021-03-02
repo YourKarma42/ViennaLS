@@ -478,10 +478,6 @@ int main() {
 
     converter.apply();
 
-
-
-
-
 */
 
     auto start = std::chrono::high_resolution_clock::now(); 
@@ -501,6 +497,8 @@ int main() {
     std::cout << "Calculating Curvatures..." << std::endl;
 
     create_output_Euklid(levelSets.back(), narrowPoints, "outputEuklid");
+
+
 /*
     auto narrowband = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;

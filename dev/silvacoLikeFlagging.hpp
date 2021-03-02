@@ -21,7 +21,9 @@ template <class T, int D> class silvacoLikeFlagging{
     std::vector<hrleVectorType<hrleIndexType, D>> combinations;
 
 
-    std::unordered_map<hrleVectorType<hrleIndexType,D>, T, typename hrleVectorType<hrleIndexType, D>::hash> flaggedCells;
+    std::vector<T> flaggedCells;
+
+    std::vector<std::array<T, D>> normals;
 
     public:
 
@@ -75,34 +77,43 @@ template <class T, int D> class silvacoLikeFlagging{
 
     }
 
-    void createFlagsOutput(std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & activePoints){
+    void createFlagsOutput(){
 
-        std::vector<T> flags;
+        // insert into pointData of levelSet
+        auto &pointData = levelSet->getPointData();
+        auto vectorDataPointer = pointData.getScalarData("Angle");
+        // if it does not exist, insert new normals vector
+        if (vectorDataPointer == nullptr) {
+            pointData.insertNextScalarData(flaggedCells, "Angle");
+        } else {
+        // if it does exist, just swap the old with the new values
+            *vectorDataPointer = std::move(flaggedCells);
+        }
 
-        flags.reserve(levelSet->getNumberOfPoints());
+
+        std::vector<std::array<T,D>> outputNormals;
 
         for (hrleConstSparseIterator<hrleDomainType> it(levelSet->getDomain());
           !it.isFinished(); ++it) {
-
-          if (!it.isDefined() || std::abs(it.getValue()) < 0.5 ) {
-              continue;
+          if (!it.isDefined() || std::abs(it.getValue()) > 0.5) {
+            continue;
           }
-
-          if (flaggedCells.find(it.getStartIndices()) == flaggedCells.end()) {
-            flags.push_back(0);
-          }else{
-            flags.push_back(1);
-          }
-        
+          outputNormals.push_back(normals[it.getPointId()]);
         }
 
-        levelSet->getPointData().insertNextScalarData(flags, "Flags Silvaco");
+        pointData.insertNextVectorData(outputNormals, "normals");
+
+
     }
 
 
     void apply(){
 
-      std::unordered_map<hrleVectorType<hrleIndexType,D>, std::array<T, D>, typename hrleVectorType<hrleIndexType, D>::hash> normals;
+      //std::unordered_map<hrleVectorType<hrleIndexType,D>, std::array<T, D>, typename hrleVectorType<hrleIndexType, D>::hash> normals;
+
+      std::vector<std::vector<std::array<T, D>>> normalsVector(
+      levelSet->getNumberOfSegments());
+
 
       //change
       normals.reserve(levelSet->getNumberOfPoints());
@@ -112,7 +123,7 @@ template <class T, int D> class silvacoLikeFlagging{
 
       typename lsDomain<T, D>::DomainType &domain = levelSet->getDomain();
 
-      std::vector<std::unordered_map<hrleVectorType<hrleIndexType, D>, T, typename hrleVectorType<hrleIndexType, D>::hash>> flagsReserve(
+      std::vector<std::vector<T>> flagsReserve(
       levelSet->getNumberOfSegments());
 
 
@@ -127,15 +138,17 @@ template <class T, int D> class silvacoLikeFlagging{
 #ifdef _OPENMP
             p = omp_get_thread_num();
 #endif
+        
+        std::array<T,D> zeroVector;
+
+        for(int i = 0; i<D; i++){
+          zeroVector[i] = 0.;
+        }
 
         hrleConstSparseStarIterator<typename lsDomain<T, D>::DomainType> neighborIt(domain);
 
-        std::unordered_map<hrleVectorType<hrleIndexType, D>, std::array<T, D>, typename hrleVectorType<hrleIndexType, D>::hash> normalsSegment;
+        auto &normalsSegment = normalsVector[p];
         normalsSegment.reserve(pointsPerSegment);
-
-        std::unordered_map<hrleVectorType<hrleIndexType, D>, T, typename hrleVectorType<hrleIndexType, D>::hash> &flagsSegment = 
-        flagsReserve[p];
-        flagsSegment.reserve(pointsPerSegment);
 
         hrleVectorType<hrleIndexType, D> startVector =
         (p == 0) ? grid.getMinGridPoint()
@@ -152,8 +165,11 @@ template <class T, int D> class silvacoLikeFlagging{
             domain, startVector);
             it.getStartIndices() < endVector; ++it){
 
-          if (!it.isDefined() || std::abs(it.getValue()) < 0.5) {
-            continue;
+          if (!it.isDefined()){
+              continue;
+          }else if(std::abs(it.getValue()) >= 0.5) {
+              normalsSegment.push_back(zeroVector);
+              continue;
           }
 
           neighborIt.goToIndices(it.getStartIndices());
@@ -181,34 +197,72 @@ template <class T, int D> class silvacoLikeFlagging{
                  
 
           //push normals into a hash map
-          normalsSegment[neighborIt.getCenter().getStartIndices()] = n;
+          normalsSegment.push_back(n);
 
         }
-#pragma omp critical
-{
-        normals.insert(normalsSegment.begin(), normalsSegment.end());
-}
+      }
 
-#pragma omp barrier
+
+      for (unsigned i = 0; i < levelSet->getNumberOfSegments(); ++i) 
+        normals.insert(normals.end(), normalsVector[i].begin(), normalsVector[i].end());
+
+
+#pragma omp parallel num_threads((levelSet)->getNumberOfSegments())
+        {
+            int p = 0;
+#ifdef _OPENMP
+            p = omp_get_thread_num();
+#endif
+
+        std::array<T,D> zeroVector;
+
+        for(int i = 0; i<D; i++){
+          zeroVector[i] = 0.;
+        }
+
+        std::vector<T> &flagsSegment = flagsReserve[p];
+        flagsSegment.reserve(pointsPerSegment);
+
+        hrleVectorType<hrleIndexType, D> startVector =
+        (p == 0) ? grid.getMinGridPoint()
+            : domain.getSegmentation()[p - 1];
+
+        hrleVectorType<hrleIndexType, D> endVector =
+        (p != static_cast<int>(domain.getNumberOfSegments() - 1))
+            ? domain.getSegmentation()[p]
+            : grid.incrementIndices(grid.getMaxGridPoint());
+
+        hrleSparseBoxIterator<hrleDomain<T, D>> boxIterator(domain, 1);
+
+        //hrleConstSparseStarIterator<typename lsDomain<T, D>::DomainType> boxIterator(domain);
+
 
         for(hrleSparseIterator<typename lsDomain<T, D>::DomainType> it(
             domain, startVector);
             it.getStartIndices() < endVector; ++it){
 
-          if (!it.isDefined() || std::abs(it.getValue()) < 0.5) {
+          if (!it.isDefined() || std::abs(it.getValue()) >= 0.5) {
               continue;
           } 
 
-          //neighborIterator.goToIndicesSequential(it.getStartIndices());
+          std::array<T, D> centerNormal = normals[it.getPointId()];
 
-          std::array<T, D> centerNormal = normals[it.getStartIndices()];
+          boxIterator.goToIndices(it.getStartIndices());
+          //std::cout << it.getValue() << std::endl;
+          bool flag = false;
 
-          for(auto dir: combinations){
+         for(unsigned dir = 0; dir < 27; dir++){
+          // for(auto dir: combinations){
+            //std::cout << boxIterator.getNeighbor(dir).getValue() << std::endl;
+            std::array<T, D> currentNormal;
+            if(boxIterator.getNeighbor(dir).isDefined()){
+              std::array<T, D> currentNormal = normals[boxIterator.getNeighbor(dir).getPointId()];
+            }else{
+              continue;
+            }
 
-            if(normals.find(it.getStartIndices() + dir) != normals.end()){
+            if(currentNormal != zeroVector){
             
-              std::array<T, D> currentNormal = normals[it.getStartIndices() + dir];
-
               T skp = 0.;
 
               //calculate scalar product
@@ -217,23 +271,24 @@ template <class T, int D> class silvacoLikeFlagging{
               }
 
               //vectors are normlized so skp = cos(alpha)          
-              if((cosAngleTreshold - skp) >= 0.){
-                
-                flagsSegment[it.getStartIndices()] = 1;
-
-                for(auto dir1: combinations){
-                  flagsSegment[it.getStartIndices() + dir1] = 1;
-                }
-
-                break;
+              if((skp - cosAngleTreshold) >= 0.){
+                  flag = true;
+                  break;
               }
+
             }
+          }
+
+          if(flag){
+            flagsSegment.push_back(1);
+          }else{
+            flagsSegment.push_back(0);
           }
         }
       }
-
+     
       for (unsigned i = 0; i < levelSet->getNumberOfSegments(); ++i) 
-        flaggedCells.insert(flagsReserve[i].begin(), flagsReserve[i].end());
+          flaggedCells.insert(flaggedCells.end(),flagsReserve[i].begin(), flagsReserve[i].end());
 
     }
 

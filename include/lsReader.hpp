@@ -29,7 +29,7 @@ public:
 
   void apply() {
     // check mesh
-    if (levelSet == nullptr) {
+ /*   if (levelSet == nullptr) {
       lsMessage::getInstance()
           .addWarning("No mesh was passed to lsReader. Not writing.")
           .print();
@@ -47,7 +47,7 @@ public:
           .addWarning("File name does not end in '.lvst', appending it.")
           .print();
       fileName.append(".lvst");
-    }
+    }*/
 
     // Open file for writing and save serialized level set in it
     std::ifstream fin(fileName);

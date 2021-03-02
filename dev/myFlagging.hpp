@@ -21,7 +21,7 @@ template <class T, int D> class myFlagging{
 
     T flatBoundary = 0.;
 
-    std::unordered_map<hrleVectorType<hrleIndexType,D>, T, typename hrleVectorType<hrleIndexType, D>::hash> flaggedCells;
+    std::vector<T> flaggedCells;
 
     std::vector<T> curveOutput;
 
@@ -35,30 +35,29 @@ template <class T, int D> class myFlagging{
 
     }
 
-    void createFlagsOutput(){
+    void createFlagsOutput(int method){
 
-        std::vector<T> flags;
+        std::string name; 
 
-        flaggedCells.reserve(levelSet->getNumberOfPoints());   
-
-        for (hrleConstSparseIterator<hrleDomainType> it(levelSet->getDomain());
-            !it.isFinished(); ++it) {
-
-            if (!it.isDefined() || std::abs(it.getValue() < 0.5)) {
-                continue;
-            }
-
-            if (flaggedCells.find(it.getStartIndices()) == flaggedCells.end()) {
-                flags.push_back(0);
-            }else{
-                flags.push_back(1);
-            }
-        
+        if(method == 0){
+            name = "Shape";
+            std::cout << "Shape" << std::endl;
+        }else{
+            name = "General";
+            std::cout << "General" << std::endl;
         }
 
-        levelSet->getPointData().insertNextScalarData(flags, "Flags");
+        // insert into pointData of levelSet
+        auto &pointData = levelSet->getPointData();
+        auto vectorDataPointer = pointData.getScalarData(name);
+        // if it does not exist, insert new normals vector
+        if (vectorDataPointer == nullptr) {
+            pointData.insertNextScalarData(flaggedCells, name);
+        } else {
+        // if it does exist, just swap the old with the new values
+            *vectorDataPointer = std::move(flaggedCells);
+        }
 
-        //levelSet->getPointData().insertNextScalarData(curveOutput, "curvature");
     }
 
     //0 shape operator; 1 general formula
@@ -69,7 +68,7 @@ template <class T, int D> class myFlagging{
 
         typename lsDomain<T, D>::DomainType &domain = levelSet->getDomain();
 
-        std::vector<std::unordered_map<hrleVectorType<hrleIndexType, D>, T, typename hrleVectorType<hrleIndexType, D>::hash>> flagsReserve(
+        std::vector<std::vector<T>> flagsReserve(
         levelSet->getNumberOfSegments());
 
 
@@ -94,8 +93,7 @@ template <class T, int D> class myFlagging{
                 hrleConstSparseStarIterator<typename lsDomain<T, D>::DomainType> neighborStarIt(domain);
 
 
-                std::unordered_map<hrleVectorType<hrleIndexType, D>, T, typename hrleVectorType<hrleIndexType, D>::hash> &flagsSegment = 
-                flagsReserve[p];
+                auto &flagsSegment = flagsReserve[p];
                 flagsSegment.reserve(pointsPerSegment);
 
                 hrleVectorType<hrleIndexType, D> startVector =
@@ -111,7 +109,10 @@ template <class T, int D> class myFlagging{
                 domain, startVector);
                     it.getStartIndices() < endVector; ++it){
 
-                    if (!it.isDefined() || std::abs(it.getValue()) < 0.5) {
+                    if (!it.isDefined()){
+                        continue;
+                    }else if(std::abs(it.getValue()) > 0.5) {
+                        //flagsSegment.push_back(0);
                         continue;
                     } 
 
@@ -120,7 +121,9 @@ template <class T, int D> class myFlagging{
                     T curve = curvatureCalculator(neighborStarIt);
 
                     if(std::abs(curve) > flatBoundary){
-                        flagsSegment[it.getStartIndices()] = 1;
+                        flagsSegment.push_back(1);
+                    }else{
+                        flagsSegment.push_back(0);
                     }
                     
                 } 
@@ -141,8 +144,7 @@ template <class T, int D> class myFlagging{
 
                 hrleCartesianPlaneIterator<hrleDomain<T, D>> planeIterator(levelSet->getDomain(), 1);
 
-                std::unordered_map<hrleVectorType<hrleIndexType, D>, T, typename hrleVectorType<hrleIndexType, D>::hash> &flagsSegment = 
-                flagsReserve[p];
+                auto &flagsSegment = flagsReserve[p];
                 flagsSegment.reserve(pointsPerSegment);
 
                 hrleVectorType<hrleIndexType, D> startVector =
@@ -158,7 +160,10 @@ template <class T, int D> class myFlagging{
                 domain, startVector);
                     it.getStartIndices() < endVector; ++it){
 
-                    if (!it.isDefined() || std::abs(it.getValue()) < 0.5) {
+                    if (!it.isDefined()){
+                        continue;
+                    }else if(std::abs(it.getValue()) > 0.5) {
+                        //flagsSegment.push_back(0);
                         continue;
                     } 
 
@@ -169,7 +174,9 @@ template <class T, int D> class myFlagging{
                     //curveOutput.push_back(curve);
 
                     if(std::abs(curve) > flatBoundary){
-                        flagsSegment[it.getStartIndices()] = 1;
+                        flagsSegment.push_back(1);
+                    }else{
+                        flagsSegment.push_back(0);
                     }
                     
                 } 
@@ -178,7 +185,7 @@ template <class T, int D> class myFlagging{
         }
 
         for (unsigned i = 0; i < levelSet->getNumberOfSegments(); ++i) 
-            flaggedCells.insert(flagsReserve[i].begin(), flagsReserve[i].end());
+            flaggedCells.insert(flaggedCells.end(),flagsReserve[i].begin(), flagsReserve[i].end());
       
 
     }
