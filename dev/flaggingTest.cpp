@@ -74,8 +74,8 @@ lsSmartPointer<lsDomain<double, D>> makeTrench(double gridDelta, std::vector<Num
         auto trench = lsSmartPointer<lsDomain<double, D>>::New(bounds, boundaryCons, gridDelta);
 
         if(D == 3){
-          double minCorner[3] = {-extent - 1, -extent / 4., -50.};
-          double maxCorner[3] = {extent + 1, extent / 4., 1.0};
+          double minCorner[3] = {-extent / 4., -extent - 1, -50.};
+          double maxCorner[3] = { extent / 4., extent + 1, 1.0};
           auto box = lsSmartPointer<lsBox<double, D>>::New(minCorner, maxCorner);
           lsMakeGeometry<double, D>(trench, box).apply();
         }else{
@@ -94,6 +94,8 @@ lsSmartPointer<lsDomain<double, D>> makeTrench(double gridDelta, std::vector<Num
                                       lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
         .apply();
     }
+
+    levelSet->getDomain().segment();
 
     return levelSet;
     
@@ -131,9 +133,9 @@ int main(int argc, char* argv[]) {
 
     omp_set_num_threads(numThreads);
 
-    int numRuns = 10;
+    int numRuns = 20;
 
-    NumericType gridDelta = 0.125;
+    NumericType gridDelta = 0.05;
 
     NumericType radius = 100.;
 
@@ -171,13 +173,17 @@ int main(int argc, char* argv[]) {
 
     //___________________________END GEOMETRY INPUT
 
+    std::cout << "num segments: " << levelSets.back()->getNumberOfSegments() << std::endl;
+
     std::cout << "FMM..." << std::endl;
 
     //lsEikonalExpandTest<NumericType, D> expander(levelSets.back());
 
-    lsExpand<NumericType, D> expander(levelSets.back(), 5);
+    lsExpand<NumericType, D> expander(levelSets.back(), 3);
 
     expander.apply(); 
+
+    std::cout << "num segments: " << levelSets.back()->getNumberOfSegments() << std::endl;
 
     std::cout << "Flagging Tests" << std::endl; 
 
@@ -189,15 +195,15 @@ int main(int argc, char* argv[]) {
 
     for(int i =0; i < numRuns; i++){
 
-        start = std::chrono::high_resolution_clock::now(); 
+        //start = std::chrono::high_resolution_clock::now(); 
 
-        myFlagger.apply(0);
+        double time = myFlagger.apply(0);
 
-        stop = std::chrono::high_resolution_clock::now(); 
+        //stop = std::chrono::high_resolution_clock::now(); 
 
-        std::cout << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << " "; 
+        std::cout << time << " "; 
 
-        csvOutput << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << ";";
+        csvOutput << time << ";";
 
     }
     csvOutput << std::endl;
@@ -205,7 +211,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "My Flagging Shape: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << std::endl; 
 
-    //myFlagger.createFlagsOutput(0);
+/*    myFlagger.createFlagsOutput(0);
 
     myFlagging<NumericType, D> myFlagger2(levelSets.back(), 1e-4);
 
@@ -255,10 +261,10 @@ int main(int argc, char* argv[]) {
     csvOutput << std::endl;
     std::cout << std::endl;
     
-    //silvacoFlagger.createFlagsOutput();
+    silvacoFlagger.createFlagsOutput();
 
     std::cout << "Silvaco Flagging: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << std::endl; 
-
+*/
     std::ofstream output;
 
     output.open("timings/timingsFlagging" + std::to_string(numThreads) + ".csv");
@@ -268,18 +274,18 @@ int main(int argc, char* argv[]) {
     output.close();
 
 
-    //auto narrowband3 = lsSmartPointer<lsMesh>::New();
-    //std::cout << "Extracting narrowband..." << std::endl;
-    //lsToMesh<NumericType, D>(levelSet, narrowband3, true, true, 0.5).apply();
+/*    auto narrowband3 = lsSmartPointer<lsMesh>::New();
+    std::cout << "Extracting narrowband..." << std::endl;
+    lsToMesh<NumericType, D>(levelSet, narrowband3, true, true, 0.5).apply();
 
     //TODO: create output function!
 
     //narrowband.insertNextVectorData(normal, "Normal");
     //narrowband3.insertNextScalarData(curve, "curvature");
   
-    //lsVTKWriter(narrowband3, lsFileFormatEnum::VTU , "Flags" ).apply();
+    lsVTKWriter(narrowband3, lsFileFormatEnum::VTU , "Flags" ).apply();
 
-
+*/
     std::cout << "Finished" << std::endl;
 
     return 0;

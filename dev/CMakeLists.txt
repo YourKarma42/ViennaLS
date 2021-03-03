@@ -61,5 +61,9 @@ add_executable(timeDerivativesCurve timeDerivativesCurve.cpp)
 target_include_directories(timeDerivativesCurve PUBLIC ${VIENNALS_INCLUDE_DIRS})
 target_link_libraries(timeDerivativesCurve PRIVATE ${VIENNALS_LIBRARIES})
 
+add_executable(saveLoadLevelSet saveLoadLevelSet.cpp)
+target_include_directories(saveLoadLevelSet PUBLIC ${VIENNALS_INCLUDE_DIRS})
+target_link_libraries(saveLoadLevelSet PRIVATE ${VIENNALS_LIBRARIES})
+
 
 

@@ -73,8 +73,6 @@ template <class T, int D> class silvacoLikeFlagging{
       combinations.push_back(hrleVectorType<hrleIndexType, D>(1,-1,1));
       combinations.push_back(hrleVectorType<hrleIndexType, D>(1,1,-1));
 
-      flaggedCells.reserve(levelSet->getNumberOfPoints());
-
     }
 
     void createFlagsOutput(){
@@ -109,14 +107,18 @@ template <class T, int D> class silvacoLikeFlagging{
 
     void apply(){
 
+      //clear results from previous run
+      normals.clear();
+      flaggedCells.clear();
+
       //std::unordered_map<hrleVectorType<hrleIndexType,D>, std::array<T, D>, typename hrleVectorType<hrleIndexType, D>::hash> normals;
 
       std::vector<std::vector<std::array<T, D>>> normalsVector(
       levelSet->getNumberOfSegments());
 
 
-      //change
       normals.reserve(levelSet->getNumberOfPoints());
+      flaggedCells.reserve(levelSet->getNumberOfPoints());
 
 
       auto grid = levelSet->getGrid();
@@ -258,6 +260,7 @@ template <class T, int D> class silvacoLikeFlagging{
             if(boxIterator.getNeighbor(dir).isDefined()){
               std::array<T, D> currentNormal = normals[boxIterator.getNeighbor(dir).getPointId()];
             }else{
+              std::cout << "bad" << std::endl;
               continue;
             }
 

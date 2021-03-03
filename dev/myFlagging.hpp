@@ -31,7 +31,7 @@ template <class T, int D> class myFlagging{
       : levelSet(passedLevelSet), flatBoundary(passedBoundary){
         //flags.reserve(levelSet->getNumberOfPoints());
 
-        curveOutput.reserve(levelSet->getNumberOfPoints());
+        //curveOutput.reserve(levelSet->getNumberOfPoints());
 
     }
 
@@ -61,7 +61,14 @@ template <class T, int D> class myFlagging{
     }
 
     //0 shape operator; 1 general formula
-    void apply(int method){
+    double apply(int method){
+
+        
+        auto start = std::chrono::high_resolution_clock::now(); 
+        auto stop = std::chrono::high_resolution_clock::now(); 
+
+        flaggedCells.clear();
+        flaggedCells.reserve(levelSet->getNumberOfPoints());
         
 
         auto grid = levelSet->getGrid();
@@ -75,10 +82,15 @@ template <class T, int D> class myFlagging{
         double pointsPerSegment =
         double(2 * levelSet->getDomain().getNumberOfPoints()) /
         double(levelSet->getLevelSetWidth());
+        
+        double time = 0.;
+
 
         //shape
         if(method == 0){
 
+
+        start = std::chrono::high_resolution_clock::now(); 
 
 #pragma omp parallel num_threads((levelSet)->getNumberOfSegments())
         {
@@ -90,7 +102,7 @@ template <class T, int D> class myFlagging{
 
                 curvaturShapeDerivatives1<T, D> curvatureCalculator(levelSet->getGrid().getGridDelta());
 
-                hrleConstSparseStarIterator<typename lsDomain<T, D>::DomainType> neighborStarIt(domain);
+                //hrleConstSparseStarIterator<typename lsDomain<T, D>::DomainType> neighborStarIt(domain);
 
 
                 auto &flagsSegment = flagsReserve[p];
@@ -105,20 +117,21 @@ template <class T, int D> class myFlagging{
                     ? domain.getSegmentation()[p]
                     : grid.incrementIndices(grid.getMaxGridPoint());
 
-                for(hrleSparseIterator<typename lsDomain<T, D>::DomainType> it(
-                domain, startVector);
-                    it.getStartIndices() < endVector; ++it){
 
-                    if (!it.isDefined()){
+                for (hrleConstSparseStarIterator<typename lsDomain<T, D>::DomainType>
+                    neighborIt(levelSet->getDomain(), startVector);
+                    neighborIt.getIndices() < endVector; neighborIt.next()) {
+
+                    if (!neighborIt.getCenter().isDefined()){
                         continue;
-                    }else if(std::abs(it.getValue()) > 0.5) {
+                    }else if(std::abs(neighborIt.getCenter().getValue()) > 0.5) {
                         //flagsSegment.push_back(0);
                         continue;
                     } 
 
-                    neighborStarIt.goToIndices(it.getStartIndices());
+                    //neighborStarIt.goToIndicesSequential(it.getStartIndices());
 
-                    T curve = curvatureCalculator(neighborStarIt);
+                    T curve = curvatureCalculator(neighborIt);
 
                     if(std::abs(curve) > flatBoundary){
                         flagsSegment.push_back(1);
@@ -126,9 +139,12 @@ template <class T, int D> class myFlagging{
                         flagsSegment.push_back(0);
                     }
                     
-                } 
+                }     
+        }
 
-            }
+        stop = std::chrono::high_resolution_clock::now(); 
+
+        time = std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count();
         //general Formula
         }else if(method == 1){
 
@@ -186,6 +202,8 @@ template <class T, int D> class myFlagging{
 
         for (unsigned i = 0; i < levelSet->getNumberOfSegments(); ++i) 
             flaggedCells.insert(flaggedCells.end(),flagsReserve[i].begin(), flagsReserve[i].end());
+
+        return time;
       
 
     }

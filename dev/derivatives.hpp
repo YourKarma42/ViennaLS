@@ -260,6 +260,34 @@ template <class T, int D> class curvaturShapeDerivatives1 : public baseDerivativ
     */
     T operator()(hrleCartesianPlaneIterator<hrleDomain<T, D>> & neighborIterator) {return -1;}
 
+    T operator()(hrleSparseStarIterator<typename lsDomain<T, D>::DomainType> & neighborIterator){
+
+        std::array<T, 3> scondOrderDerivatives;
+       
+        for (int i = 0; i < D; i++) {
+
+            hrleVectorType<hrleIndexType, D> posUnit(0);
+            hrleVectorType<hrleIndexType, D> negUnit(0);
+        
+            //get required ls values
+            T phi_0 = neighborIterator.getCenter().getValue()*gridDelta;
+
+            T phi_px = neighborIterator.getNeighbor(i).getValue()*gridDelta;
+            T phi_nx = neighborIterator.getNeighbor(i+D).getValue()*gridDelta;
+
+            scondOrderDerivatives[i] = (phi_px - 2.*phi_0 + phi_nx)*GDSQ;  
+        }
+
+        T result = 0.;
+
+        for(int i=0; i<D ; i++)
+            result += std::abs(scondOrderDerivatives[i]);
+           // result += scondOrderDerivatives[i];
+        //mean curvature is trace devided by 2
+        return result*0.5;
+
+    }
+
     T operator()(hrleConstSparseStarIterator<typename lsDomain<T, D>::DomainType> & neighborIterator){
 
         std::array<T, 3> scondOrderDerivatives;
