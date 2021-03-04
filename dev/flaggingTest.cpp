@@ -183,6 +183,7 @@ int main(int argc, char* argv[]) {
 
     expander.apply(); 
 
+
     double timeSum = 0.;
 
     std::cout << "num segments: " << levelSets.back()->getNumberOfSegments() << std::endl;
@@ -215,7 +216,7 @@ int main(int argc, char* argv[]) {
 
     std::cout << "My Flagging Shape AVG: " << timeSum/numRuns << std::endl; 
 
-    myFlagger.createFlagsOutput(0);
+    //myFlagger.createFlagsOutput(0);
 
     myFlagging<NumericType, D> myFlagger2(levelSets.back(), 1e-4);
 
@@ -247,7 +248,15 @@ int main(int argc, char* argv[]) {
 
     //myFlagger2.createFlagsOutput(1);
 
-/*    std::cout << "Flagging Test Normals" << std::endl;
+    std::cout << "Flagging Test Normals" << std::endl;
+
+    std::cout << "increas ls size" << std::endl;
+    //normal flaggin requires a bigger stencil
+    expander.setWidth(4);
+
+    expander.apply(); 
+
+    timeSum = 0;
 
     csvOutput << "Normal Flagging" << std::endl;
 
@@ -257,22 +266,24 @@ int main(int argc, char* argv[]) {
 
         start = std::chrono::high_resolution_clock::now(); 
 
-        silvacoFlagger.apply();
+        double time = silvacoFlagger.apply();
 
         stop = std::chrono::high_resolution_clock::now(); 
 
-        std::cout << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << " "; 
+        std::cout << time << " "; 
 
-        csvOutput << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << ";";
+        csvOutput << time << ";";
+
+        timeSum += time;
 
     }
     csvOutput << std::endl;
     std::cout << std::endl;
     
-    silvacoFlagger.createFlagsOutput();
+    //silvacoFlagger.createFlagsOutput();
 
-    std::cout << "Silvaco Flagging: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << std::endl; 
-*/
+    std::cout << "Silvaco like Flagging AVG: " << timeSum/numRuns << std::endl; 
+
     std::ofstream output;
 
     output.open("timings/timingsFlagging" + std::to_string(numThreads) + ".csv");
@@ -281,8 +292,8 @@ int main(int argc, char* argv[]) {
 
     output.close();
 
-
-/*    auto narrowband3 = lsSmartPointer<lsMesh>::New();
+/*
+    auto narrowband3 = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
     lsToMesh<NumericType, D>(levelSet, narrowband3, true, true, 0.5).apply();
 

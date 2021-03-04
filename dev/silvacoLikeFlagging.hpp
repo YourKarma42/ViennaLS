@@ -105,7 +105,11 @@ template <class T, int D> class silvacoLikeFlagging{
     }
 
 
-    void apply(){
+    double apply(){
+
+
+      auto start = std::chrono::high_resolution_clock::now(); 
+      auto stop = std::chrono::high_resolution_clock::now(); 
 
       //clear results from previous run
       normals.clear();
@@ -133,6 +137,7 @@ template <class T, int D> class silvacoLikeFlagging{
       double(2 * levelSet->getDomain().getNumberOfPoints()) /
       double(levelSet->getLevelSetWidth());
 
+      start = std::chrono::high_resolution_clock::now(); 
 
 #pragma omp parallel num_threads((levelSet)->getNumberOfSegments())
         {
@@ -147,8 +152,6 @@ template <class T, int D> class silvacoLikeFlagging{
           zeroVector[i] = 0.;
         }
 
-        hrleConstSparseStarIterator<typename lsDomain<T, D>::DomainType> neighborIt(domain);
-
         auto &normalsSegment = normalsVector[p];
         normalsSegment.reserve(pointsPerSegment);
 
@@ -162,19 +165,16 @@ template <class T, int D> class silvacoLikeFlagging{
             : grid.incrementIndices(grid.getMaxGridPoint());
 
 
+        for (hrleConstSparseStarIterator<typename lsDomain<T, D>::DomainType>
+            neighborIt(levelSet->getDomain(), startVector);
+            neighborIt.getIndices() < endVector; neighborIt.next()) {
 
-        for(hrleSparseIterator<typename lsDomain<T, D>::DomainType> it(
-            domain, startVector);
-            it.getStartIndices() < endVector; ++it){
-
-          if (!it.isDefined()){
+          if (!neighborIt.getCenter().isDefined()){
               continue;
-          }else if(std::abs(it.getValue()) >= 0.5) {
+          }else if(std::abs(neighborIt.getCenter().getValue()) >= 0.5) {
               normalsSegment.push_back(zeroVector);
               continue;
           }
-
-          neighborIt.goToIndices(it.getStartIndices());
 
           std::array<T, D> n;
 
@@ -195,7 +195,7 @@ template <class T, int D> class silvacoLikeFlagging{
           norm = std::sqrt(norm);
 
           for(int j = 0; j < D; j++)
-            n[j] = n[j]/norm;
+            n[j] /=norm;
                  
 
           //push normals into a hash map
@@ -234,36 +234,25 @@ template <class T, int D> class silvacoLikeFlagging{
             ? domain.getSegmentation()[p]
             : grid.incrementIndices(grid.getMaxGridPoint());
 
-        hrleSparseBoxIterator<hrleDomain<T, D>> boxIterator(domain, 1);
+        for (hrleSparseBoxIterator<typename lsDomain<T, D>::DomainType>
+            neighborIt(levelSet->getDomain(), startVector, 1);
+            neighborIt.getIndices() < endVector; neighborIt.next()) {
 
-        //hrleConstSparseStarIterator<typename lsDomain<T, D>::DomainType> boxIterator(domain);
-
-
-        for(hrleSparseIterator<typename lsDomain<T, D>::DomainType> it(
-            domain, startVector);
-            it.getStartIndices() < endVector; ++it){
-
-          if (!it.isDefined() || std::abs(it.getValue()) >= 0.5) {
+          if (!neighborIt.getCenter().isDefined() || std::abs(neighborIt.getCenter().getValue()) >= 0.5) {
               continue;
           } 
 
-          std::array<T, D> centerNormal = normals[it.getPointId()];
+          std::array<T, D> centerNormal = normals[neighborIt.getCenter().getPointId()];
 
-          boxIterator.goToIndices(it.getStartIndices());
           //std::cout << it.getValue() << std::endl;
           bool flag = false;
 
          for(unsigned dir = 0; dir < 27; dir++){
           // for(auto dir: combinations){
             //std::cout << boxIterator.getNeighbor(dir).getValue() << std::endl;
-            std::array<T, D> currentNormal;
-            if(boxIterator.getNeighbor(dir).isDefined()){
-              std::array<T, D> currentNormal = normals[boxIterator.getNeighbor(dir).getPointId()];
-            }else{
-              std::cout << "bad" << std::endl;
-              continue;
-            }
 
+            std::array<T, D> currentNormal = normals[neighborIt.getNeighbor(dir).getPointId()];
+ 
             if(currentNormal != zeroVector){
             
               T skp = 0.;
@@ -274,7 +263,7 @@ template <class T, int D> class silvacoLikeFlagging{
               }
 
               //vectors are normlized so skp = cos(alpha)          
-              if((skp - cosAngleTreshold) >= 0.){
+              if((cosAngleTreshold - skp) >= 0.){
                   flag = true;
                   break;
               }
@@ -289,9 +278,13 @@ template <class T, int D> class silvacoLikeFlagging{
           }
         }
       }
+
+      stop = std::chrono::high_resolution_clock::now(); 
      
       for (unsigned i = 0; i < levelSet->getNumberOfSegments(); ++i) 
           flaggedCells.insert(flaggedCells.end(),flagsReserve[i].begin(), flagsReserve[i].end());
+
+      return std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count();
 
     }
 
