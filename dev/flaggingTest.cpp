@@ -133,7 +133,7 @@ int main(int argc, char* argv[]) {
 
     omp_set_num_threads(numThreads);
 
-    int numRuns = 20;
+    int numRuns = 10;
 
     NumericType gridDelta = 0.05;
 
@@ -183,6 +183,8 @@ int main(int argc, char* argv[]) {
 
     expander.apply(); 
 
+    double timeSum = 0.;
+
     std::cout << "num segments: " << levelSets.back()->getNumberOfSegments() << std::endl;
 
     std::cout << "Flagging Tests" << std::endl; 
@@ -205,15 +207,19 @@ int main(int argc, char* argv[]) {
 
         csvOutput << time << ";";
 
+        timeSum += time;
+
     }
     csvOutput << std::endl;
     std::cout << std::endl;
 
-    std::cout << "My Flagging Shape: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << std::endl; 
+    std::cout << "My Flagging Shape AVG: " << timeSum/numRuns << std::endl; 
 
-/*    myFlagger.createFlagsOutput(0);
+    myFlagger.createFlagsOutput(0);
 
     myFlagging<NumericType, D> myFlagger2(levelSets.back(), 1e-4);
+
+    timeSum = 0;
 
     std::cout << "Flagging Tests General Formula" << std::endl;
 
@@ -221,25 +227,27 @@ int main(int argc, char* argv[]) {
 
     for(int i =0; i < numRuns; i++){
 
-        start = std::chrono::high_resolution_clock::now(); 
+        //start = std::chrono::high_resolution_clock::now(); 
 
-        myFlagger2.apply(1);
+        double time = myFlagger2.apply(1);
 
-        stop = std::chrono::high_resolution_clock::now(); 
+        //stop = std::chrono::high_resolution_clock::now(); 
 
-        std::cout << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << " "; 
+        std::cout << time << " "; 
 
-        csvOutput << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << ";";
+        csvOutput << time << ";";
+
+        timeSum += time;
 
     }
     csvOutput << std::endl;
     std::cout << std::endl;
 
-    std::cout << "My Flagging General: " << std::chrono::duration_cast<std::chrono::microseconds>(stop-start).count() << std::endl; 
+    std::cout << "My Flagging General AVG: " << timeSum/numRuns << std::endl; 
 
     //myFlagger2.createFlagsOutput(1);
 
-    std::cout << "Flagging Test Normals" << std::endl;
+/*    std::cout << "Flagging Test Normals" << std::endl;
 
     csvOutput << "Normal Flagging" << std::endl;
 

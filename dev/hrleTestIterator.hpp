@@ -20,6 +20,13 @@
 /// 0 1 2               5  6  7  8  9
 ///                     0  1  2  3  4
 /// center: 4           center: 12
+
+//CURRENT PLANE ITERATOR IMPLEMENTATION:
+//ONLY WORKS IN 3D!!!!!
+//Create a Box iterator 
+//Create a planeCords array that contains the indices of the cartesian planes
+//Only increment the iterators with indices in the planeCoords array
+
 template <class hrleDomain> class hrleCartesianPlaneIterator {
 
   typedef typename std::conditional<std::is_const<hrleDomain>::value,
@@ -82,8 +89,10 @@ template <class hrleDomain> class hrleCartesianPlaneIterator {
     return index;
   }
 
-  /// push offset iterators lexicographically into std::vector from -order to
-  /// +order
+  //CURRENT PLANE ITERATOR IMPLEMENTATION:
+  //Create a Box iterator 
+  //Create a planeCords array that contains the indices of the cartesian planes
+  //Only increment the iterators with indices in the planeCoords array
   template <class V> void initializeNeigbors(const V &v) {
     const unsigned numNeighbors = unsigned(std::pow((1 + 2 * order), D));
 
@@ -153,30 +162,33 @@ public:
   }
 
   void next() {
-    const int numNeighbors = int(neighborIterators.size());
-    std::vector<bool> increment(numNeighbors + 1, false);
-    increment[numNeighbors] = true;
+    const int numPlaneNeighbours = int(planeCoords.size());
+    std::vector<bool> increment(numPlaneNeighbours + 1, false);
+    increment[numPlaneNeighbours] = true;
 
     hrleVectorType<hrleIndexType, D> end_coords =
         neighborIterators[centerIndex].getEndIndices();
-    for (int i = 0; i < numNeighbors; i++) {
-      if (i == centerIndex)
+
+    //itearte over plane coords
+    for (int i = 0; i < numPlaneNeighbours; i++) {
+      if (planeCoords[i] == centerIndex)
         continue;
 
-      switch (compare(end_coords, neighborIterators[i].getEndIndices())) {
+      switch (compare(end_coords, neighborIterators[planeCoords[i]].getEndIndices())) {
       case 1:
-        end_coords = neighborIterators[i].getEndIndices();
-        increment = std::vector<bool>(numNeighbors + 1, false);
+        end_coords = neighborIterators[planeCoords[i]].getEndIndices();
+        increment = std::vector<bool>(numPlaneNeighbours + 1, false);
       case 0:
         increment[i] = true;
       }
     }
 
-    if (increment[numNeighbors])
+    if (increment[numPlaneNeighbours])
       neighborIterators[centerIndex].next();
-    for (int i = 0; i < numNeighbors; i++)
+
+    for (int i = 0; i < numPlaneNeighbours; i++)
       if (increment[i])
-        neighborIterators[i].next();
+        neighborIterators[planeCoords[i]].next();
 
     currentCoords = domain.getGrid().incrementIndices(end_coords);
   }
@@ -199,7 +211,7 @@ public:
         decrement[i] = true;
       }
     }
-
+    
     if (decrement[numNeighbors])
       neighborIterators[centerIndex].previous();
     for (int i = 0; i < numNeighbors; i++)
