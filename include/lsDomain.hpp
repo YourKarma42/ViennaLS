@@ -43,7 +43,7 @@ private:
   int levelSetWidth = 1;
   PointDataType pointData;
   VoidPointMarkersType voidPointMarkers;
-  lsNormalizations normalization;
+  lsNormalizations normalization = lsNormalizations::MANHATTEN;
 
 public:
   // STATIC CONSTANTS
@@ -166,6 +166,8 @@ public:
   int getLevelSetWidth() const { return levelSetWidth; }
 
   void setLevelSetWidth(int width) { levelSetWidth = width; }
+
+  void setLevelSetNormalization(lsNormalizations newNorm){normalization = newNorm; }
 
   // clear all additional data
   void clearMetaData() { pointData.clear(); }

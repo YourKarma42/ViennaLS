@@ -24,7 +24,7 @@
 
 constexpr int D = 3;
 using NumericType = double;
-constexpr NumericType gridDelta = 0.5;
+constexpr NumericType gridDelta = 0.49999999;
 unsigned outputNum = 0;
 
 typedef typename lsDomain<NumericType, D>::DomainType hrleDomainType;
@@ -143,7 +143,7 @@ void writeFeaturOutput(std::deque<lsSmartPointer<lsDomain<NumericType, D>>>& dom
     
     if(i < domains.size()) {
 
-      lsExpand<NumericType, D>(domains[i], 7).apply();
+      lsExpand<NumericType, D>(domains[i], 4).apply();
 
       //lsCalculateNormalVectors<NumericType, D>(domains[i]).apply();
       lsToDiskMesh<NumericType, D>(domains[i], pointMesh).apply();
@@ -199,11 +199,11 @@ void writeSurfaces(std::deque<lsSmartPointer<lsDomain<NumericType, D>>>& domains
       lsVTKWriter(pointMesh, path + pointName).apply();
     }
 
-    std::string levelSetName = "rawLS" + std::to_string(i) + "-" + std::to_string(outputNum) + ".lvst";
-    lsWriter<NumericType, D>(domains[i], path + levelSetName).apply();
+    //std::string levelSetName = "rawLS" + std::to_string(i) + "-" + std::to_string(outputNum) + ".lvst";
+    //lsWriter<NumericType, D>(domains[i], path + levelSetName).apply();
   }
 
-  //writeFeaturOutput(domains);
+  writeFeaturOutput(domains);
   numMat = (domains.size()<numMat)?numMat:domains.size();
   // increase count
   ++outputNum;

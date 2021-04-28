@@ -42,7 +42,7 @@ template <class hrleDomain> class hrleCartesianPlaneIterator {
   const hrleIndexType sliceArea;
   const hrleIndexType centerIndex;
   hrleVectorType<hrleIndexType, D> currentCoords;
-  std::vector<hrleSparseOffsetIterator<hrleDomain>> neighborIterators;
+  std::vector<std::unique_ptr<hrleSparseOffsetIterator<hrleDomain>>> neighborIterators;
   std::vector<unsigned> planeCoords;
 
   bool isDefined() const {
@@ -75,6 +75,7 @@ template <class hrleDomain> class hrleCartesianPlaneIterator {
   }
 
   template <class V> hrleIndexType coordinateToIndex(V coordinate) const {
+    //TODO: Beachte empty indices
     // shift to the middle
     for (unsigned i = 0; i < D; ++i)
       coordinate[i] += order;
@@ -104,18 +105,23 @@ template <class hrleDomain> class hrleCartesianPlaneIterator {
 
     for (unsigned i = 0; i < numNeighbors; ++i) {
       hrleVectorType<hrleIndexType, D> offset = indexToCoordinate(i);
-      neighborIterators.push_back(
-          hrleSparseOffsetIterator<hrleDomain>(domain, offset, v));
       //get coordinates that only lie in planes    
       int coords = 0;
       for(int j = 0; j < D; j++){
         if(offset[j] != 0)
           coords++;
       }
-      if(coords < 3)
+      //if more than 2 coordinates are not equal to 0 the point lies not in a cartesian plane
+      if(coords < 3){
+        neighborIterators.push_back(
+        std::unique_ptr<hrleSparseOffsetIterator<hrleDomain>> 
+        (new hrleSparseOffsetIterator<hrleDomain>(domain, offset, v)));
         planeCoords.push_back(i);
-
+      }else{
+        neighborIterators.push_back(nullptr);
+      }
     }
+
   }
 
   // make post in/decrement private, since they should not be used, due to the
@@ -167,16 +173,16 @@ public:
     increment[numPlaneNeighbours] = true;
 
     hrleVectorType<hrleIndexType, D> end_coords =
-        neighborIterators[centerIndex].getEndIndices();
+        neighborIterators[centerIndex]->getEndIndices();
 
     //itearte over plane coords
     for (int i = 0; i < numPlaneNeighbours; i++) {
       if (planeCoords[i] == centerIndex)
         continue;
 
-      switch (compare(end_coords, neighborIterators[planeCoords[i]].getEndIndices())) {
+      switch (compare(end_coords, neighborIterators[planeCoords[i]]->getEndIndices())) {
       case 1:
-        end_coords = neighborIterators[planeCoords[i]].getEndIndices();
+        end_coords = neighborIterators[planeCoords[i]]->getEndIndices();
         increment = std::vector<bool>(numPlaneNeighbours + 1, false);
       case 0:
         increment[i] = true;
@@ -184,58 +190,60 @@ public:
     }
 
     if (increment[numPlaneNeighbours])
-      neighborIterators[centerIndex].next();
+      neighborIterators[centerIndex]->next();
 
     for (int i = 0; i < numPlaneNeighbours; i++)
       if (increment[i])
-        neighborIterators[planeCoords[i]].next();
+        neighborIterators[planeCoords[i]]->next();
 
     currentCoords = domain.getGrid().incrementIndices(end_coords);
   }
 
   void previous() {
-    const int numNeighbors = neighborIterators.size();
-    std::vector<bool> decrement(numNeighbors + 1, false);
-    decrement[numNeighbors] = true;
+    const int numPlaneNeighbours = int(planeCoords.size());
+    std::vector<bool> decrement(numPlaneNeighbours + 1, false);
+    decrement[numPlaneNeighbours] = true;
 
     hrleVectorType<hrleIndexType, D> start_coords =
-        neighborIterators[centerIndex].getStartIndices();
-    for (int i = 0; i < numNeighbors; i++) {
+        neighborIterators[centerIndex]->getStartIndices();
+    for (int i = 0; i < numPlaneNeighbours; i++) {
       if (i == centerIndex)
         continue;
-      switch (compare(start_coords, neighborIterators[i].getStartIndices())) {
+
+      switch (compare(start_coords, neighborIterators[planeCoords[i]]->getStartIndices())) {
       case -1:
-        start_coords = neighborIterators[i].getStartIndices();
-        decrement = std::vector<bool>(numNeighbors + 1, false);
+        start_coords = neighborIterators[planeCoords[i]]->getStartIndices();
+        decrement = std::vector<bool>(numPlaneNeighbours + 1, false);
       case 0:
         decrement[i] = true;
       }
     }
     
-    if (decrement[numNeighbors])
-      neighborIterators[centerIndex].previous();
-    for (int i = 0; i < numNeighbors; i++)
+    if (decrement[numPlaneNeighbours])
+      neighborIterators[centerIndex]->previous();
+    for (int i = 0; i < numPlaneNeighbours; i++)
       if (decrement[i])
-        neighborIterators[i].previous();
+        neighborIterators[planeCoords[i]]->previous();
 
     currentCoords = domain.getGrid().decrementIndices(start_coords);
   }
 
+  
   hrleSparseOffsetIterator<hrleDomain> &getNeighbor(int index) {
-    return neighborIterators[index];
+    return *(neighborIterators[planeCoords[index]]);
   }
 
   hrleSparseOffsetIterator<hrleDomain> &getNeighbor(unsigned index) {
-    return neighborIterators[index];
+    return *(neighborIterators[planeCoords[index]]);
   }
 
   template <class V>
   hrleSparseOffsetIterator<hrleDomain> &getNeighbor(V relativeCoordinate) {
-    return neighborIterators[coordinateToIndex(relativeCoordinate)];
+    return  *(neighborIterators[coordinateToIndex(relativeCoordinate)]);
   }
 
   hrleSparseOffsetIterator<hrleDomain> &getCenter() {
-    return neighborIterators[centerIndex];
+    return *(neighborIterators[centerIndex]);
   }
 
   const hrleVectorType<hrleIndexType, D> &getIndices() { return currentCoords; }
@@ -250,11 +258,10 @@ public:
   template <class V> void goToIndices(V &v) {
     const unsigned numPlaneNeighbours = planeCoords.size();
     getCenter().goToIndices(v);
-    for (int i = 0; i < int(order); ++i) {
-      for (int j = 0; j < numPlaneNeighbours; ++j) {
-        neighborIterators[planeCoords[j]].goToIndices(v);
-      }
+    for (int j = 0; j < numPlaneNeighbours; ++j) {
+      neighborIterators[planeCoords[j]]->goToIndices(v);
     }
+    
   }
 
   /// Advances the iterator to position v.

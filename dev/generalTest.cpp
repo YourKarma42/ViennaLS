@@ -56,14 +56,16 @@ typedef typename lsDomain<NumericType, D>::DomainType hrleDomainType;
 
 
 lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
-                            std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> & narrowPoints){
+                            std::unordered_set<hrleVectorType<hrleIndexType, D>, 
+                            typename hrleVectorType<hrleIndexType, D>::hash> & narrowPoints,
+                            lsNormalizations normalization){
 
     std::cout << "creating sphere..." << std::endl;
 
     double origin[3] = {0.0, 0.0, 0.0};
     
     auto levelSet =
-        lsSmartPointer<lsDomain<double, D>>::New(gridDelta);
+        lsSmartPointer<lsDomain<double, D>>::New(gridDelta, normalization);
 
     auto lsWithGeometry = lsMakeGeometry<double, D>(
       levelSet, lsSmartPointer<lsSphere<double, D>>::New(origin, radius));
@@ -107,7 +109,7 @@ int main() {
 
     std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets1;
 
-    NumericType radius = 15.;
+    NumericType radius = 100.;
 
 
   
@@ -116,7 +118,7 @@ int main() {
 
     
 
-    lsSmartPointer<lsDomain<double, D>> levelSet1 = makeSphere(gridDelta, radius, narrowPoints);
+    lsSmartPointer<lsDomain<double, D>> levelSet1 = makeSphere(gridDelta, radius, narrowPoints, lsNormalizations::MANHATTEN);
 
     levelSets1.push_back(levelSet1);  
 
@@ -124,10 +126,10 @@ int main() {
     auto velocities = lsSmartPointer<velocityField>::New();
 
     std::cout << "Advecting levelset..." << std::endl;
-    eulerAdvect<NumericType, D> advectionKernel(levelSets1, velocities);
+    //eulerAdvect<NumericType, D> advectionKernel(levelSets1, velocities);
 
-    advectionKernel.setAdvectionTime(5.);
-    advectionKernel.apply();
+    //advectionKernel.setAdvectionTime(5.);
+    //advectionKernel.apply();
 
     auto narrowband1 = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband after advection..." << std::endl;
@@ -141,11 +143,15 @@ int main() {
 
     std::cout << "Fast Marching..." << std::endl;
 
-    lsEikonalExpandTest<NumericType, D> expanderEikonal(levelSets1.back(), 5);
+    //lsEikonalExpandTest<NumericType, D> expanderEikonal(levelSets1.back(), 5);
 
     //lsEikonalExpand<NumericType, D> expanderEikonal(levelSets1.back(), narrowPoints);
 
-    expanderEikonal.apply(); 
+    //expanderEikonal.apply(); 
+
+    lsExpand<NumericType, D>expender(levelSets1.back(), 5);
+
+    expender.apply();
 
     auto narrowband = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting FMM result..." << std::endl;

@@ -133,9 +133,9 @@ int main(int argc, char* argv[]) {
 
     omp_set_num_threads(numThreads);
 
-    int numRuns = 10;
+    int numRuns = 1;
 
-    NumericType gridDelta = 0.05;
+    NumericType gridDelta = 0.5;
 
     NumericType radius = 100.;
 
@@ -292,7 +292,7 @@ int main(int argc, char* argv[]) {
 
     output.close();
 
-/*
+
     auto narrowband3 = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
     lsToMesh<NumericType, D>(levelSet, narrowband3, true, true, 0.5).apply();
@@ -304,7 +304,7 @@ int main(int argc, char* argv[]) {
   
     lsVTKWriter(narrowband3, lsFileFormatEnum::VTU , "Flags" ).apply();
 
-*/
+
     std::cout << "Finished" << std::endl;
 
     return 0;
