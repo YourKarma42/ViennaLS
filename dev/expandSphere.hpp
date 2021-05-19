@@ -29,17 +29,13 @@ template <class T, int D> class lsExpandSphere {
 
   hrleVectorType<T, D> origin;
 
-  //TOD: make call by reference (problem with initialization)
-  std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash>  activePoints;
-
 
 public:
   lsExpandSphere() {}
 
   lsExpandSphere(lsSmartPointer<lsDomain<T, D>> passedLevelSet, 
-      std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash>  passedActivePoints, 
       T passedRadius, hrleVectorType<T, D> passedOrigin)
-      : levelSet(passedLevelSet), activePoints(passedActivePoints), radius(passedRadius), origin(passedOrigin){
+      : levelSet(passedLevelSet), radius(passedRadius), origin(passedOrigin){
         //TODO: check if level set is euler normalized and give error if not
       gridDelta = levelSet->getGrid().getGridDelta();
   }
@@ -48,9 +44,7 @@ public:
     levelSet = &passedLevelSet;
   }
 
-  void setActivePoints(std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash>  passedActivePoints) {
-    activePoints = passedActivePoints;
-  }
+
 
   void apply() {
     if (levelSet == nullptr) {
@@ -81,9 +75,6 @@ public:
         newDomain.initialize(domain.getNewSegmentation(),
                             domain.getAllocation() * allocationFactor);
 
-        std::cout << "min index " << grid.getMinIndex() << std::endl;
-
-        std::cout << "max index " << grid.getMaxIndex() << std::endl;
 
 //#pragma omp parallel num_threads(newDomain.getNumberOfSegments())
         {
@@ -142,8 +133,7 @@ public:
                 }
 
                 //TODO: why was there an error when not using second condition?
-                if(numUndefined == D && 
-                  (activePoints.find(centerIt.getStartIndices()) == activePoints.end())){
+                if(numUndefined == D ){
 
                   domainSegment.insertNextUndefinedPoint(neighborIt.getIndices(), 
                     (centerIt.getValue()<0.) ? lsDomain<T, D>::NEG_VALUE : lsDomain<T, D>::POS_VALUE);
@@ -157,7 +147,7 @@ public:
 
                   pointRadius = std::sqrt(pointRadius);
 
-                  T dist = pointRadius - radius;                       
+                  T dist = (pointRadius - radius)/gridDelta;                       
       
                   domainSegment.insertNextDefinedPoint(neighborIt.getIndices(), dist);
 

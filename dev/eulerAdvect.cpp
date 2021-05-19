@@ -107,7 +107,7 @@ template <class T, int D> class eulerAdvect {
 
   void rebuildLSEuler() {
   
-/*  
+  
     auto narrowband = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
     lsToMesh<T, D>(levelSets.back(), narrowband, true, true, 3).apply();
@@ -115,13 +115,13 @@ template <class T, int D> class eulerAdvect {
     lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "beforeRebuild" ).apply();
 
     std::cout << "Debug: Starting Expand" << std::endl;
-*/
+
     //if FMM is done in every time step time step is 3
     lsEikonalExpandTest<T, D>(levelSets.back(), 3).apply();
     //std::cout << "Debug: Expention done" << std::endl;
     lsReduce<T, D>(levelSets.back(), 2, true).apply();
     //std::cout << "Debug: Velocity extention done" << std::endl;
-/*
+
     auto narrowband1 = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
     lsToMesh<T, D>(levelSets.back(), narrowband1, true, true, 0.25).apply();
@@ -129,7 +129,7 @@ template <class T, int D> class eulerAdvect {
     lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "afterRebuild" ).apply();
 
     std::cout << "step finished" << std::endl;
-*/    
+   
 
     //LENZ: TODO: think of how to trancsfare vector data after Velocity extention
 
@@ -543,6 +543,12 @@ template <class T, int D> class eulerAdvect {
     //Lenz: needed for euler advection
     T gridDelta = grid.getGridDelta();
 
+    auto narrowband3 = lsSmartPointer<lsMesh>::New();
+    std::cout << "Extracting narrowband..." << std::endl;
+    lsToMesh<T, D>(levelSets.back(), narrowband3, true, true, 5*gridDelta).apply();
+
+    lsVTKWriter(narrowband3, lsFileFormatEnum::VTU , "beforeAdvectionStep" ).apply();
+
     std::vector<std::vector<std::pair<T, T>>> totalTempRates;
     totalTempRates.resize((levelSets.back())->getNumberOfSegments());
 
@@ -591,8 +597,9 @@ template <class T, int D> class eulerAdvect {
            it.getStartIndices() < endVector; ++it) {
 
         //Lenz: Euler advection
+        //We need to advect the whole narrowband when using Eulernormalization thus > 1
         //probably use 1 for euler advect? and 0.5 for manhatten?
-        if (!it.isDefined() || std::abs(it.getValue()) > 1.)
+        if (!it.isDefined() || std::abs(it.getValue()) > 1)
           continue;
 
         T value = it.getValue();
@@ -688,29 +695,28 @@ template <class T, int D> class eulerAdvect {
       }
     }
 
-/*
+
     auto narrowband = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<T, D>(levelSets.back(), narrowband, true, true, 5*gridDelta).apply();
+    lsToMesh<T, D>(levelSets.back(), narrowband, true, true, 3).apply();
 
     lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "beforeFirstReduce" ).apply();
-*/
-    //LENZ: euler advection need to change thikness
 
-    //TODO: curreently 0.5 griddelta hardcoded
+    //LENZ: euler advection need to change thikness
 
     // reduce to one layer thickness and apply new values directly to the
     // domain segments --> DO NOT CHANGE SEGMENTATION HERE (true parameter)
+    //Euler advection needs narrowband so 2 *0.5 = 1
     lsReduce<T, D>(levelSets.back(), 2, true).apply();
-//std::cout << "Debug: Level set reduction" << std::endl;
 
-/*
+
+
     auto narrowband1 = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<T, D>(levelSets.back(), narrowband1, true, true, 5*gridDelta).apply();
+    lsToMesh<T, D>(levelSets.back(), narrowband1, true, true, 2).apply();
 
     lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "afterFirstReduce" ).apply();
-*/
+
     const bool saveVelocities = saveAdvectionVelocities;
     std::vector<std::vector<double>> velocityVectors(
         levelSets.back()->getNumberOfSegments());
@@ -761,7 +767,9 @@ template <class T, int D> class eulerAdvect {
         // advance the TempStopRates iterator by one
         ++itRS;
       }
+      
     }
+
 
     if (saveVelocities) {
       typename lsPointData::ScalarDataType pointData;

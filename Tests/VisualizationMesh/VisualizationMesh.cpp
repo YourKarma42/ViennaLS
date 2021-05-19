@@ -64,7 +64,7 @@ int main() {
   lsVTKWriter(mesh, "surface_1.vtk").apply();
   lsToSurfaceMesh<NumericType, D>(secondSphere, mesh).apply();
   lsVTKWriter(mesh, "surface_2.vtk").apply();
-
+/*
   auto visualizeMesh =
       lsSmartPointer<lsWriteVisualizationMesh<NumericType, D>>::New();
   visualizeMesh->insertNextLevelSet(secondSphere);
@@ -73,7 +73,7 @@ int main() {
   visualizeMesh->setFileName("myFile");
 
   visualizeMesh->apply();
-
+*/
   //   lsBooleanOperation<NumericType, D>(substrate, secondSphere,
   //                                      lsBooleanOperationEnum::UNION)
   //       .apply();

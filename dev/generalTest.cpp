@@ -50,14 +50,12 @@
 
 //____________testing end___________________________
 
-constexpr int D = 3;
+constexpr int D = 2;
 typedef double NumericType;
 typedef typename lsDomain<NumericType, D>::DomainType hrleDomainType;
 
 
 lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
-                            std::unordered_set<hrleVectorType<hrleIndexType, D>, 
-                            typename hrleVectorType<hrleIndexType, D>::hash> & narrowPoints,
                             lsNormalizations normalization){
 
     std::cout << "creating sphere..." << std::endl;
@@ -71,8 +69,6 @@ lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
       levelSet, lsSmartPointer<lsSphere<double, D>>::New(origin, radius));
 
     lsWithGeometry.apply();
-
-    narrowPoints = lsWithGeometry.getNarrowPoints();
 
 
     return levelSet;
@@ -109,27 +105,25 @@ int main() {
 
     std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets1;
 
-    NumericType radius = 100.;
+    NumericType radius = 9.;
 
 
-  
 
-    std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> narrowPoints;
+    //GEOMETRY CREATION
+  //lsNormalizations::MANHATTEN
 
-    
-
-    lsSmartPointer<lsDomain<double, D>> levelSet1 = makeSphere(gridDelta, radius, narrowPoints, lsNormalizations::MANHATTEN);
+    lsSmartPointer<lsDomain<double, D>> levelSet1 = makeSphere(gridDelta, radius, lsNormalizations::EULER);
 
     levelSets1.push_back(levelSet1);  
 
-
+    //ADVECTION
     auto velocities = lsSmartPointer<velocityField>::New();
 
     std::cout << "Advecting levelset..." << std::endl;
-    //eulerAdvect<NumericType, D> advectionKernel(levelSets1, velocities);
+    eulerAdvect<NumericType, D> advectionKernel(levelSets1, velocities);
 
-    //advectionKernel.setAdvectionTime(5.);
-    //advectionKernel.apply();
+    advectionKernel.setAdvectionTime(1.);
+    advectionKernel.apply();
 
     auto narrowband1 = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband after advection..." << std::endl;
@@ -139,23 +133,33 @@ int main() {
     //lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "narrowband" ).apply();
     lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "narrowband" ).apply();
 
+    //FMM
+
     start = std::chrono::high_resolution_clock::now(); 
 
     std::cout << "Fast Marching..." << std::endl;
 
-    //lsEikonalExpandTest<NumericType, D> expanderEikonal(levelSets1.back(), 5);
+    //Hard coded
 
-    //lsEikonalExpand<NumericType, D> expanderEikonal(levelSets1.back(), narrowPoints);
+    //hrleVectorType<NumericType, D> origin(0.0, 0.0, 0.0);
 
-    //expanderEikonal.apply(); 
+    //lsExpandSphere<NumericType, D>(levelSets1.back(), radius, origin).apply();
 
-    lsExpand<NumericType, D>expender(levelSets1.back(), 5);
+    //Euler
 
-    expender.apply();
+    lsEikonalExpandTest<NumericType, D> expanderEikonal(levelSets1.back(), 5);
+
+    expanderEikonal.apply(); 
+
+    //Manhatten
+
+    //lsExpand<NumericType, D>expender(levelSets1.back(), 5);
+
+    //expender.apply();
 
     auto narrowband = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting FMM result..." << std::endl;
-    lsToMesh<NumericType, D>(levelSets1.back(), narrowband, true, false, gridDelta).apply();
+    lsToMesh<NumericType, D>(levelSets1.back(), narrowband, true, true, 4).apply();
 
   
     //lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "narrowband" ).apply();
@@ -248,7 +252,7 @@ int main() {
     narrowband2->insertNextScalarData(meanCurvatureG, "general");
 
   
-    lsVTKWriter(narrowband2, lsFileFormatEnum::VTU, "normals" ).apply();
+    lsVTKWriter(narrowband2, lsFileFormatEnum::VTU, "generalTestOutput" ).apply();
 
 
 

@@ -117,7 +117,7 @@ lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
 
     lsWithGeometry.apply();
 
-    narrowPoints = lsWithGeometry.getNarrowPoints();
+    //narrowPoints = lsWithGeometry.getNarrowPoints();
 
 
     return levelSet;

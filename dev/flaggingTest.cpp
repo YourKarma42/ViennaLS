@@ -74,8 +74,8 @@ lsSmartPointer<lsDomain<double, D>> makeTrench(double gridDelta, std::vector<Num
         auto trench = lsSmartPointer<lsDomain<double, D>>::New(bounds, boundaryCons, gridDelta);
 
         if(D == 3){
-          double minCorner[3] = {-extent / 4., -extent - 1, -50.};
-          double maxCorner[3] = { extent / 4., extent + 1, 1.0};
+          double minCorner[3] = {-extent - 1, -extent / 4., -50.};
+          double maxCorner[3] = { extent + 1, extent / 4., 1.0};
           auto box = lsSmartPointer<lsBox<double, D>>::New(minCorner, maxCorner);
           lsMakeGeometry<double, D>(trench, box).apply();
         }else{
@@ -135,7 +135,7 @@ int main(int argc, char* argv[]) {
 
     int numRuns = 1;
 
-    NumericType gridDelta = 0.5;
+    NumericType gridDelta = 0.05;
 
     NumericType radius = 100.;
 
@@ -280,7 +280,7 @@ int main(int argc, char* argv[]) {
     csvOutput << std::endl;
     std::cout << std::endl;
     
-    //silvacoFlagger.createFlagsOutput();
+    silvacoFlagger.createFlagsOutput();
 
     std::cout << "Silvaco like Flagging AVG: " << timeSum/numRuns << std::endl; 
 

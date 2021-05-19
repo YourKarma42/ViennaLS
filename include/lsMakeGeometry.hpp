@@ -145,16 +145,8 @@ public:
   }
 
 
-  //TODO: remove
-
-  std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash>  getNarrowPoints(){
-      return narrowPoints;
-  }
 
 private:
-
-  //TODO:remove rework its stupid that way
-  std::unordered_set<hrleVectorType<hrleIndexType, D>, typename hrleVectorType<hrleIndexType, D>::hash> narrowPoints;
 
 
   void makeSphere(hrleVectorType<T, D> origin, T radius, int width = 2) {
@@ -198,7 +190,7 @@ private:
 
           if(std::abs(std::sqrt(pointRadius) - radius) <= gridDelta){
               pointData.push_back(std::make_pair(index, (std::sqrt(pointRadius) - radius)/gridDelta ));
-              narrowPoints.insert(index);
+             
           }
 
           int dim = 0;
