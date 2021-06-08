@@ -17,7 +17,7 @@
 //enum for normalization
   enum struct lsNormalizations : unsigned{
     MANHATTEN   = 0,
-    EULER       = 1
+    EUCLID       = 1
   };
 
 ///  Class containing all information about the level set, including
@@ -111,7 +111,8 @@ public:
   }
 
   lsDomain(GridType passedGrid,
-           lsNormalizations passedNorm = lsNormalizations::MANHATTEN) : grid(passedGrid) {
+           lsNormalizations passedNorm = lsNormalizations::MANHATTEN) : 
+           grid(passedGrid), normalization(passedNorm) {
     domain.deepCopy(grid, DomainType(grid, T(POS_VALUE)));
   }
 
@@ -130,7 +131,7 @@ public:
     grid = passedlsDomain->grid;
     domain.deepCopy(grid, passedlsDomain->domain);
     levelSetWidth = passedlsDomain->levelSetWidth;
-    normalization = passedlsDomain->getNormalization();
+    normalization = passedlsDomain->getLevelSetNormalization();
     pointData = passedlsDomain->pointData;
   }
 
@@ -161,7 +162,7 @@ public:
   /// returns the number of defined points
   unsigned getNumberOfPoints() const { return domain.getNumberOfPoints(); }
 
-  lsNormalizations getNormalization() {return normalization;}
+  lsNormalizations getLevelSetNormalization() {return normalization;}
 
   int getLevelSetWidth() const { return levelSetWidth; }
 
@@ -190,7 +191,7 @@ public:
     std::cout << "Domain: " << &domain << std::endl;
     switch(normalization){
       case lsNormalizations::MANHATTEN : std::cout << "Manhatten" << std::endl; break;
-      case lsNormalizations::EULER : std::cout << "Euler" << std::endl; break;
+      case lsNormalizations::EUCLID : std::cout << "Euclid" << std::endl; break;
     }
     //std::cout << "Normalization: " << normalization << std::endl;
     std::cout << "DomainSegments: " << std::endl;

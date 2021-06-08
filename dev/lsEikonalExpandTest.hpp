@@ -32,6 +32,7 @@ template <class T, int D> class lsEikonalExpandTest {
 
   lsSmartPointer<lsDomain<T, D>> levelSet = nullptr;
 
+  //These values are set in the applay function
   T gridDeltaSqared = 0.;
   T gridDelta = 0.;
 
@@ -45,10 +46,7 @@ public:
   lsEikonalExpandTest(lsSmartPointer<lsDomain<T, D>> passedLevelSet, 
                       int passedWidth = 3)
       : levelSet(passedLevelSet), width(passedWidth) {
-        //TODO: check if level set is euler normalized and give error if not
-      gridDeltaSqared = levelSet->getGrid().getGridDelta() * levelSet->getGrid().getGridDelta();
-      gridDelta = levelSet->getGrid().getGridDelta();
-      //TODO:discuss if +1 sufficiant
+      width = width*2;
       order = width + 2;
   }
 
@@ -63,6 +61,104 @@ public:
         return (a.first > b.first);
     }
   };
+ 
+  //velocity extention
+  void apply(std::vector<double> &velocities) {
+
+    //the velocity is dependend on the grid resolution
+    gridDeltaSqared = levelSet->getGrid().getGridDelta() * levelSet->getGrid().getGridDelta();
+    gridDelta = levelSet->getGrid().getGridDelta();
+
+    std::vector<std::pair<T, hrleVectorType<hrleIndexType, D>>> container;
+    container.reserve(levelSet->getDomain().getNumberOfPoints());
+
+    std::priority_queue <std::pair<T, hrleVectorType<hrleIndexType, D>>, 
+                         std::vector<std::pair<T, hrleVectorType<hrleIndexType, D>>>, myCompare> 
+                          minHeap(myCompare(), std::move(container));
+
+    //collect all grid points needed for velocity extention
+      for (hrleSparseStarIterator<hrleDomainType> it(levelSet->getDomain());
+        !it.isFinished(); ++it) {
+
+        if(!it.getCenter().isDefined() || std::abs(velocities[it.getCenter().getPointId()]) != 1000)
+          continue;
+
+        std::array<T, D> stencilMin;
+
+        //find the min values in the stencil
+        for(int i = 0; i < D; i++){
+
+          T pos = it.getNeighbor(i).getValue(); // * gridDelta;
+
+          T neg = it.getNeighbor(i+D).getValue(); // * gridDelta;
+
+          //change the sign to make fast marching on the inside correct
+          if(it.getCenter().getValue() < 0.){
+            pos = pos * -1.;
+            neg = neg * -1.;
+          }
+
+          if(pos < neg){
+            stencilMin[i] = pos;
+          }else{
+            stencilMin[i] = neg;
+          }
+
+        }
+
+        T dist = solveEikonal(stencilMin, D);
+      
+        minHeap.push(std::make_pair(std::abs(dist), it.getIndices()));
+   
+     }
+
+     hrleSparseStarIterator<typename lsDomain<T, D>::DomainType> neighborStarIterator(levelSet->getDomain());
+
+     while(!minHeap.empty()){
+
+        auto currentPoint = minHeap.top();
+
+        minHeap.pop();
+
+        neighborStarIterator.goToIndices(currentPoint.second);
+
+        std::array<T, D> stencilMin;
+
+        //find the min values in the stencil
+        for(int i = 0; i < D; i++){
+
+          T pos = neighborStarIterator.getNeighbor(i).getValue(); // * gridDelta;
+
+          T neg = neighborStarIterator.getNeighbor(i+D).getValue(); // * gridDelta;
+
+          //change the sign to make fast marching on the inside correct
+          if(neighborStarIterator.getCenter().getValue() < 0.){
+            pos = pos * -1.;
+            neg = neg * -1.;
+          }
+
+          if(pos < neg){
+            stencilMin[i] = velocities[neighborStarIterator.getNeighbor(i).getPointId()];
+          }else{
+            stencilMin[i] = velocities[neighborStarIterator.getNeighbor(i+D).getPointId()];
+          }
+
+        }
+
+        T dist = solveEikonal(stencilMin, D);
+
+        velocities[neighborStarIterator.getCenter().getPointId()] = dist;
+
+        /*if(neighborStarIterator.getCenter().getValue() < 0.){
+          velocities[neighborStarIterator.getCenter().getPointId()] = -dist;
+        }else{
+          velocities[neighborStarIterator.getCenter().getPointId()] = dist;
+        }*/
+
+                  
+     }
+  }
+
 
   void apply() {
     if (levelSet == nullptr) {
@@ -71,6 +167,10 @@ public:
           .print();
       return;
     }
+
+    //LS values are normalized between 0 and 1
+    gridDelta = 1;
+    gridDeltaSqared = 1;
 
     //currently Eikonal expand is only single core so the ls has to be contained in one segment
     levelSet->getDomain().desegment();
@@ -90,13 +190,13 @@ public:
                          myCompare> 
                             minHeap(myCompare(), std::move(container));
 
-    std::vector<std::pair<T, hrleVectorType<hrleIndexType, D>>> initialValues;
+    //std::vector<std::pair<T, hrleVectorType<hrleIndexType, D>>> initialValues;
 
     //expand the domain for FMM
     for(int runs = 0; runs < order; runs++){
 
         auto &grid = levelSet->getGrid();
-        auto newlsDomain = lsSmartPointer<lsDomain<T, D>>::New(grid);
+        auto newlsDomain = lsSmartPointer<lsDomain<T, D>>::New(grid, lsNormalizations::EUCLID);
         typename lsDomain<T, D>::DomainType &newDomain = newlsDomain->getDomain();
         typename lsDomain<T, D>::DomainType &domain = levelSet->getDomain();
 
@@ -142,8 +242,16 @@ public:
             }
           }
         }
+        if(runs == 0)
+          largeValue = largeValue+100;
         levelSet->deepCopy(newlsDomain);     
     }
+
+    auto narrowband0 = lsSmartPointer<lsMesh>::New();
+    std::cout << "Extracting narrowband..." << std::endl;
+    lsToMesh<T, D>(levelSet, narrowband0, true, true, 2*largeValue+10).apply();
+
+    lsVTKWriter(narrowband0, lsFileFormatEnum::VTU , "afterExpansion" ).apply();
 
     std::vector<double> tmp;
     //initialize the Domain for FMM
@@ -153,7 +261,7 @@ public:
         if(!it.isDefined())
           continue;
 
-        if(std::abs(it.getValue()) <= 1.){
+        if(std::abs(it.getValue()) <= largeValue-100){
             accepted.push_back(2);
             tmp.push_back(2);
 
@@ -168,38 +276,41 @@ public:
     for (hrleSparseStarIterator<hrleDomainType> it(levelSet->getDomain());
         !it.isFinished(); ++it) {
 
-        if(!it.getCenter().isDefined() || std::abs(it.getCenter().getValue()) <= 1.)
+        if(!it.getCenter().isDefined() || std::abs(it.getCenter().getValue()) != (largeValue-100))
           continue;
+       
 
-        T dist = calcDistFMM(it, (it.getCenter().getValue() < 0.));   
-
-
-        if ( dist != 0){
+        //TODO: calc dist only accepted
+        T dist = calcDistAccepted(it, (it.getCenter().getValue() < 0.));   
+       
+        if (dist != 0){
 
             T &currentVal = it.getCenter().getValue();
-
           	currentVal = dist;
 
             minHeap.push(std::make_pair(std::abs(dist), it.getIndices()));
-
+            accepted[it.getCenter().getPointId()] = 1;
+            tmp[it.getCenter().getPointId()] = 1;
         }
 
     }
+
 /*
     auto narrowband1 = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<T, D>(levelSet, narrowband1, true, true, largeValue + 1).apply();
+    lsToMesh<T, D>(levelSet, narrowband1, true, true, largeValue).apply();
 
     narrowband1->insertNextScalarData(tmp, "accepted");
 
     lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "beforMarch" ).apply();
 */
-    //check min heap
+
     march(minHeap);
+
 /*
     auto narrowband = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<T, D>(levelSet, narrowband, true, true, largeValue + 1).apply();
+    lsToMesh<T, D>(levelSet, narrowband, true, true, 1000).apply();
 
     narrowband->insertNextScalarData(tmp, "accepted");
 
@@ -210,83 +321,6 @@ public:
 
     levelSet->finalize(width);
   }
-
-
-  void applyTest() {
-    if (levelSet == nullptr) {
-      lsMessage::getInstance()
-          .addWarning("No level set was passed to lsEikonalExpand.")
-          .print();
-      return;
-    }
-
-    //currently Eikonal expand is only single core so the ls has to be contained in one segment
-    levelSet->getDomain().desegment();
-
-    accepted.clear();
-
-    //used to keep track of the Interface
-    T largeValue = 1000.;
-
-    //minimum heap for FMM
-    std::vector<std::pair<T, hrleVectorType<hrleIndexType, D>>> container;
-    container.reserve(levelSet->getDomain().getNumberOfPoints() * 10);
-    //std::priority_queue <std::pair<T, hrleVectorType<hrleIndexType, D>>, std::vector<std::pair<T, hrleVectorType<hrleIndexType, D>>>, myCompare> minHeap;
-
-    std::priority_queue <std::pair<T, hrleVectorType<hrleIndexType, D>>, 
-                         std::vector<std::pair<T, hrleVectorType<hrleIndexType, D>>>, 
-                         myCompare> 
-                            minHeap(myCompare(), std::move(container));
-
-    std::vector<std::pair<T, hrleVectorType<hrleIndexType, D>>> initialValues;
-
-    //initialize the Domain for FMM
-    for (hrleSparseIterator<hrleDomainType> it(levelSet->getDomain());
-        !it.isFinished(); ++it) {
-
-        if(!it.isDefined())
-          continue;
-
-        if(it.getValue() <= 1){
-            accepted.push_back(2);
-
-        }else{
-            accepted.push_back(0); 
-            T &currentVal = it.getCenter().getValue();
-            currentVal = (it.getCenter().getValue()<0.) ? -largeValue : largeValue;
-        }                           
-    }
-
-    //initialize the narrowband for FMM
-    for (hrleSparseStarIterator<hrleDomainType> it(levelSet->getDomain());
-        !it.isFinished(); ++it) {
-
-        if(!it.getCenter().isDefined() && it.getCenter().getValue() > 1)
-          continue;
-
-        T dist = calcDistFMM(it, (it.getCenter().getValue() < 0.));   
-
-        if ( dist != 0){
-
-            T &currentVal = it.getCenter().getValue();
-
-          	currentVal = dist;
-
-            minHeap.push(std::make_pair(std::abs(dist)), it.getCenter().getStartIndices());
-
-        }
-            
-
-    }
-
-    march(minHeap);
-
-    levelSet->getDomain().segment();
-
-    levelSet->finalize(width);
-  }
-
-
 
   private:
 
@@ -312,11 +346,7 @@ public:
 
           neighborStarIterator.goToIndices(currentPoint.second);
 
-          //std::cout << neighborStarIterator.getCenter().isDefined() << " " << 
-          //neighborStarIterator.getCenter().getValue() << " " << neighborStarIterator.getCenter().getPointId()<< std::endl; 
-
           //is the current value already accepted
-          //if(accepted.at(neighborStarIterator.getCenter().getPointId()) <= 1){
           if(accepted[neighborStarIterator.getCenter().getPointId()] <= 1){
             
 
@@ -333,7 +363,8 @@ public:
 
                   //if curretn neighbour is undefined skip (points at the border of the domain)
                   if(currentNeighbor.isDefined()){
-                  
+
+                      //if current point is accepted skip it
                       if(accepted[currentNeighbor.getPointId()] <= 1){
 
                           T &currentValue = currentNeighbor.getValue();
@@ -344,13 +375,13 @@ public:
                           T dist = calcDistFMM(starItEikonal, (currentNeighbor.getValue() < 0.));   
 
 
-                          if(abs(dist) < abs(currentValue)){
+                          if(std::abs(dist) < std::abs(currentValue)){
 
                               currentValue = dist;
                               minHeap.push(std::make_pair(std::abs(dist), currentNeighbor.getOffsetIndices()));                           
                           }                 
                           //TODO ERROR?
-                          accepted[currentNeighbor.getPointId()] == 1;
+                          accepted[currentNeighbor.getPointId()] = 1;
                           
                       }
 
@@ -363,32 +394,13 @@ public:
 
   }
 
-  T calcDistFMM(hrleSparseStarIterator<typename lsDomain<T, D>::DomainType>& starStencil, bool inside){
+  T calcDistAccepted(hrleSparseStarIterator<typename lsDomain<T, D>::DomainType>& starStencil, bool inside){
 
-    //TODO: write eikonal equation somwhere
-
-    T stencilMin[D];
+    std::array<T,D> stencilMin;
 
     int dim = 0;
     int undefined = 0;
-/*
 
-      hrleVectorType<hrleIndexType, D> stopVec(-25,16);
-
-    if(starStencil.getCenter().getStartIndices() == stopVec){
-        auto narrowband = lsSmartPointer<lsMesh>::New();
-        std::cout << "Extracting FMM result..." << std::endl;
-        lsToMesh<T, D>(levelSet, narrowband, true, false, 20).apply();
-
-        std::vector<T> acceptedT(accepted.begin(), accepted.end());
-
-        narrowband->insertNextScalarData(acceptedT, "accepted");
-        lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "/media/sf_shared/duringFMM" ).apply();
-
-        std::cout << "pause" <<std::endl;
-    }
-
-*/
     //find the maximum values in the stencil
     for(int i = 0; i < D; i++){
 
@@ -403,6 +415,79 @@ public:
         neg = neg * -1.;
       }
 
+      //Take care of undefined points (not in accepted array)
+
+      int posAccepted = 0;
+      if(starStencil.getNeighbor(i).isDefined() && pos != lsDomain<T, D>::POS_VALUE){
+          posAccepted = accepted[starStencil.getNeighbor(i).getPointId()];
+      }
+
+
+      int negAccepted = 0;
+      if(starStencil.getNeighbor(i+D).isDefined() && neg != lsDomain<T, D>::POS_VALUE){
+          negAccepted = accepted[starStencil.getNeighbor(i+D).getPointId()];
+      }
+
+      if(posAccepted == 2){        
+        if(negAccepted == 2){
+            if(pos < neg){
+              stencilMin[i] = pos;
+            }else{
+              stencilMin[i] = neg;
+            }
+        }else{
+          stencilMin[i] = pos;
+        }
+        dim++;
+      }else if(negAccepted == 2){
+        stencilMin[i] = neg;
+        dim++;
+      }else{
+        undefined++;
+        stencilMin[i] = 0.;
+      }
+
+    }
+
+    //all points in the stencil are undefined return 0. (infinity)
+    if(undefined == D)
+      return 0.;
+
+    //solve Eikonal equation
+    T sol = solveEikonal(stencilMin, dim);
+
+    if(inside){
+      return -sol; ///gridDelta;
+    }else{
+      return sol; ///gridDelta;
+    }
+
+  }
+
+
+
+  T calcDistFMM(hrleSparseStarIterator<typename lsDomain<T, D>::DomainType>& starStencil, bool inside){
+
+    //TODO: write eikonal equation somwhere
+
+    std::array<T,D> stencilMin;
+
+    int dim = 0;
+    int undefined = 0;
+
+    //find the maximum values in the stencil
+    for(int i = 0; i < D; i++){
+
+      T pos = starStencil.getNeighbor(i).getValue(); // * gridDelta;
+
+      T neg = starStencil.getNeighbor(i+D).getValue(); // * gridDelta;
+
+
+      //change the sign to make fast marching on the inside correct
+      if(inside){
+        pos = pos * -1.;
+        neg = neg * -1.;
+      }
 
       //Take care of undefined points (not in accepted array)
 
@@ -452,52 +537,8 @@ public:
     if(undefined == D)
       return 0.;
 
-    T sol = 0.;
-    
-    for(int run = D; run > 0; run--){
-      //perform one dimensional update
-      if(dim == 1){
-          for(int i = 0; i < D; i++)
-              sol += stencilMin[i];
-          sol += 1; //gridDelta;
-          break;
-      }
-
-      T sumT = 0.;
-      T sumTsq = 0.;
-
-      for(int i = 0; i < D; i++){
-        sumT += stencilMin[i];
-        sumTsq += stencilMin[i]*stencilMin[i];
-      }
-
-      T a = T(dim);
-      T b = -2*sumT;
-      T c = sumTsq - 1; //gridDeltaSqared;
-      T q = b*b - 4*a*c;
-      
-      //discriminant is negative must perform a lower dimensional update
-      if(q < 0.){
-        //remove max value
-        T max = 0.;
-        int maxIndex = 0;
-        for(int i = 0; i < D; i++){
-          if(stencilMin[i] > max){
-            max = stencilMin[i];
-            maxIndex = i;
-          }
-        }
-        dim--;
-        stencilMin[maxIndex] = 0.;
-
-      }else{
-
-        //the distance has to increase and most of the time be greater 0 so we only need the bigger solution
-        sol = (-b + std::sqrt(q))/(2.*a);
-        break;
-      }
-    }    
-
+    //solve Eikonal equation
+    T sol = solveEikonal(stencilMin, dim);
 
     if(inside){
       return -sol; ///gridDelta;
@@ -507,59 +548,7 @@ public:
     
   }
 
-  T calcDist(hrleSparseStarIterator<typename lsDomain<T, D>::DomainType>& starStencil, bool inside){
-
-    //TODO: write eikonal equation somwhere
-
-    T stencilMin[D];
-
-    int dim = 0;
-    int undefined = 0;
-
-
-    //find the maximum values in the stencil
-    for(int i = 0; i < D; i++){
-
-      T pos = starStencil.getNeighbor(i).getValue(); // * gridDelta;
-
-      T neg = starStencil.getNeighbor(i+D).getValue(); // * gridDelta;
-
-      //change the sign to make fast marching on the inside correct
-      if(inside){
-        pos = pos * -1.;
-        neg = neg * -1.;
-      }
-
-      //check if the current point in the stencil is defined (not +/- inf)
-      if( pos !=  lsDomain<T, D>::POS_VALUE && 
-          pos !=  lsDomain<T, D>::NEG_VALUE){
-
-        if(neg !=  lsDomain<T, D>::POS_VALUE && 
-           neg !=  lsDomain<T, D>::NEG_VALUE){
-            if(pos < neg){
-              stencilMin[i] = pos;
-            }else{
-              stencilMin[i] = neg;
-            }
-        }else{
-          stencilMin[i] = pos;
-        }
-        dim++;
-      }else if(neg !=  lsDomain<T, D>::POS_VALUE && 
-               neg !=  lsDomain<T, D>::NEG_VALUE){
-        stencilMin[i] = neg;
-        dim++;
-      }else{
-        undefined++;
-        stencilMin[i] = 0.;
-      }
-
-    }
-
-    //all points in the stencil are undefined return 0. (infinity)
-    if(undefined == D)
-      return 0.;
-
+  T solveEikonal(std::array<T, D>& stencilMin, int dim){
     T sol = 0.;
     
     for(int run = D; run > 0; run--){
@@ -567,8 +556,7 @@ public:
       if(dim == 1){
           for(int i = 0; i < D; i++)
               sol += stencilMin[i];
-          sol += 1; //gridDelta;
-          break;
+          return sol + gridDelta;
       }
 
       T sumT = 0.;
@@ -581,7 +569,7 @@ public:
 
       T a = T(dim);
       T b = -2*sumT;
-      T c = sumTsq - 1;//gridDeltaSqared;
+      T c = sumTsq - gridDeltaSqared;
       T q = b*b - 4*a*c;
       
       //discriminant is negative must perform a lower dimensional update
@@ -599,19 +587,11 @@ public:
         stencilMin[maxIndex] = 0.;
 
       }else{
-
-        //the distance has to increase and most of the time be greater 0 so we only need the bigger solution
-        sol = (-b + std::sqrt(q))/(2.*a);
+        //the distance has to increase so we only need the bigger solution
+        return (-b + std::sqrt(q))/(2.*a);
         break;
       }
     }    
-
-    if(inside){
-      return -sol; ///gridDelta;
-    }else{
-      return sol; ///gridDelta;
-    }
-    
   }
 
 };
@@ -619,3 +599,4 @@ public:
 
 
 #endif // LS_EIKONAL_EXPAND_TEST_HPP
+

@@ -216,7 +216,7 @@ void create_output(lsSmartPointer<lsDomain<double, D>> levelSet,
                     neighborIt(levelSet->getDomain(), startVector);
                     neighborIt.getIndices() < endVector; neighborIt.next()) {
                    
-                //TODO: add value for Euler normalization!!!
+                //TODO: add value for EUCLID normalization!!!
                 if (!neighborIt.getCenter().isDefined() || std::abs(neighborIt.getCenter().getValue()) > 0.5) {
                        continue;
                 } 
@@ -352,7 +352,7 @@ void create_output(lsSmartPointer<lsDomain<double, D>> levelSet,
     auto narrowband = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
 
-    if(levelSet->getNormalization() == lsNormalizations::MANHATTEN){
+    if(levelSet->getLevelSetNormalization() == lsNormalizations::MANHATTEN){
       lsToMesh<NumericType, D>(levelSet, narrowband, true, true).apply();
     }else{
       lsToMesh<NumericType, D>(levelSet, narrowband, true, true, gridDelta).apply();
@@ -380,7 +380,7 @@ void create_output(lsSmartPointer<lsDomain<double, D>> levelSet,
 
 int main(int argc, char* argv[]) {
 
-    lsNormalizations normalization = lsNormalizations::EULER;
+    lsNormalizations normalization = lsNormalizations::EUCLID;
 
     omp_set_num_threads(4);
 
@@ -393,7 +393,7 @@ int main(int argc, char* argv[]) {
 
 
     if(argc == 5){
-        if(std::string(argv[1]) != "euler"){
+        if(std::string(argv[1]) != "euclid"){
            normalization = lsNormalizations::MANHATTEN;
         }
 
@@ -421,7 +421,7 @@ int main(int argc, char* argv[]) {
 
 
     std::cout << "Fast Marching..." << std::endl;
-    if(normalization == lsNormalizations::EULER){
+    if(normalization == lsNormalizations::EUCLID){
       lsEikonalExpandTest<NumericType, D> expander(levelSets.back(), 5);
       expander.apply(); 
     }else{

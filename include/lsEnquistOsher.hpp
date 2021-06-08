@@ -31,7 +31,7 @@ public:
   static void prepareLS(lsSmartPointer<lsDomain<T, D>> passedlsDomain) {
 
     //the level set needs to have a width of order + 2 to have enough values for finite differences 
-    if(passedlsDomain->getNormalization() == lsNormalizations::MANHATTEN){
+    if(passedlsDomain->getLevelSetNormalization() == lsNormalizations::MANHATTEN){
        assert(order == 1 || order == 2);
       lsExpand<T, D>(passedlsDomain, 2 * order + 1).apply();
     }else{
@@ -150,6 +150,9 @@ public:
 
     // convert coordinate to std array for interface
     std::array<T, 3> coordArray = {coordinate[0], coordinate[1], coordinate[2]};
+
+    //TODO: currently hack!
+    if()
 
     double scalarVelocity =
         velocities->getScalarVelocity(coordArray, material, normalVector);

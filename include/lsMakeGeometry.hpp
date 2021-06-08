@@ -178,7 +178,7 @@ private:
 
 //     TEST start
 
-    if(levelSet->getNormalization() == lsNormalizations::EULER){
+    if(levelSet->getLevelSetNormalization() == lsNormalizations::EUCLID){
       //for Euler level set
       while(index<endIndex){
           T pointRadius = 0.;
@@ -203,7 +203,7 @@ private:
 
 
       }
-    }else if(levelSet->getNormalization() == lsNormalizations::MANHATTEN){
+    }else if(levelSet->getLevelSetNormalization() == lsNormalizations::MANHATTEN){
 
       while (index < endIndex) {
         // take shortest manhatten distance to gridline intersection

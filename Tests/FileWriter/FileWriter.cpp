@@ -26,7 +26,7 @@ int main() {
   lsMakeGeometry<double, D>(
       levelSet, lsSmartPointer<lsSphere<double, D>>::New(centre, radius))
       .apply();
-
+/*
   lsPointData &data = levelSet->getPointData();
   typename lsPointData::ScalarDataType scalars;
   typename lsPointData::VectorDataType vectors;
@@ -38,7 +38,7 @@ int main() {
 
   data.insertNextScalarData(scalars, "myScalars");
   data.insertNextVectorData(vectors, "llaalalalalaalalalalalaalal");
-
+*/
   lsWriter<double, D>(levelSet, "test.lvst").apply();
 
   // read it in again
@@ -46,7 +46,7 @@ int main() {
   lsReader<double, D>(newLevelSet, "test.lvst").apply();
 
   auto mesh = lsSmartPointer<lsMesh>::New();
-  lsToSurfaceMesh<double, D>(levelSet, mesh).apply();
+  lsToSurfaceMesh<double, D>(newLevelSet, mesh).apply();
   lsVTKWriter(mesh, "test.vtk").apply();
 
   return 0;

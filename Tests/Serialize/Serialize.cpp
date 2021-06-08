@@ -4,6 +4,9 @@
 #include <lsDomain.hpp>
 #include <lsMakeGeometry.hpp>
 #include <lsPointData.hpp>
+#include <lsToSurfaceMesh.hpp>
+#include <lsVTKWriter.hpp>
+#include <lsWriter.hpp>
 
 /**
   Minimal example showing how to serialize an lsDomain and deserialize.
@@ -61,6 +64,10 @@ int main() {
     }
     fin.close();
   }
+
+    auto newLevelSet = lsSmartPointer<lsMesh>::New();
+  lsToSurfaceMesh<double, D>(levelSet, mesh).apply();
+  lsVTKWriter(mesh, "test.vtk").apply();
 
   return 0;
 }

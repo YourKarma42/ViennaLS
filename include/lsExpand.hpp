@@ -8,10 +8,6 @@
 #include <lsDomain.hpp>
 #include <lsMessage.hpp>
 
-enum metric {
-  MANHATTEN_SPARSE,
-  EULER
-};
 
 /// Expands the leveleSet to the specified number of layers.
 /// The largest value in the levelset is thus width*0.5
@@ -20,8 +16,6 @@ template <class T, int D> class lsExpand {
   typedef typename lsDomain<T, D>::GridType GridType;
   lsSmartPointer<lsDomain<T, D>> levelSet = nullptr;
   int width = 0;
-
-  metric usedMetric = MANHATTEN_SPARSE;
 
 public:
   lsExpand() {}
@@ -33,8 +27,8 @@ public:
       : levelSet(passedlsDomain), width(passedWidth) {}
 
   //TODO: create setter functions for Metric
-  lsExpand(lsDomain<T, D> &passedlsDomain, int passedWidth, metric passedMetric)
-    : levelSet(&passedlsDomain), width(passedWidth), usedMetric(passedMetric) {}
+  lsExpand(lsDomain<T, D> &passedlsDomain, int passedWidth)
+    : levelSet(&passedlsDomain), width(passedWidth) {}
 
   
   void setLevelSet(lsSmartPointer<lsDomain<T, D>> passedlsDomain) {
@@ -54,13 +48,6 @@ public:
       lsMessage::getInstance()
           .addWarning("No level set passed to lsExpand. Not expanding.")
           .print();
-    }
-
-    if(usedMetric == EULER){
-      testFMM();
-    }
-    if(levelSet->getNumberOfPoints() == 0) {
-      return;
     }
 
     const T totalLimit = width * 0.5;

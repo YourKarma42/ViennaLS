@@ -19,8 +19,6 @@ template <class T, int D> class lsReduce {
   int width = 0;
   bool noNewSegment = false;
 
-  T lsValLimit = 0.;
-
 public:
   lsReduce() {}
 
@@ -33,8 +31,6 @@ public:
            bool passedNoNewSegment = false)
       : levelSet(passedlsDomain), width(passedWidth),
         noNewSegment(passedNoNewSegment){
-        //TODO: check LS type
-        lsValLimit = levelSet->getGrid().getGridDelta();
         
   };
 
@@ -71,10 +67,17 @@ public:
 
     auto &grid = levelSet->getGrid();
     auto newlsDomain = lsSmartPointer<lsDomain<T, D>>::New(levelSet->getGrid());
+
+    if(levelSet->getLevelSetNormalization() == lsNormalizations::EUCLID){
+      newlsDomain->setLevelSetNormalization(lsNormalizations::EUCLID);
+    }else if(levelSet->getLevelSetNormalization() == lsNormalizations::MANHATTEN){
+      newlsDomain->setLevelSetNormalization(lsNormalizations::MANHATTEN);
+    }
+
+
     typename lsDomain<T, D>::DomainType &newDomain = newlsDomain->getDomain();
     typename lsDomain<T, D>::DomainType &domain = levelSet->getDomain();
 
-    //const T valueLimit = width * lsValLimit;
     const T valueLimit = width * 0.5;
 
     newDomain.initialize(domain.getNewSegmentation(), domain.getAllocation());

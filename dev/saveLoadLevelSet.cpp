@@ -111,59 +111,51 @@ lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius){
 }
 
 
-int main(int argc, char* argv[]) {
 
-    int numThreads = 1;
+int main() {
+  constexpr int D = 2;
 
-    if(argc != 1){
-        numThreads = std::stoi(argv[1]);
-    }
+  omp_set_num_threads(4);
 
-    std::cout << "running program with " << numThreads << " threads" << std::endl;
+  auto levelSet = lsSmartPointer<lsDomain<double, D>>::New();
 
+  const double radius = 7.3;
+  const hrleVectorType<double, D> centre(5., 0.);
 
-    omp_set_num_threads(numThreads);
+  lsMakeGeometry<double, D>(
+      levelSet, lsSmartPointer<lsSphere<double, D>>::New(centre, radius))
+      .apply();
+/*
+  lsPointData &data = levelSet->getPointData();
+  typename lsPointData::ScalarDataType scalars;
+  typename lsPointData::VectorDataType vectors;
+  for (unsigned i = 0; i < levelSet->getNumberOfPoints(); ++i) {
+    scalars.push_back(i);
+    vectors.push_back(
+        typename lsPointData::VectorDataType::value_type({double(i)}));
+  }
 
-    int numRuns = 1;
+  data.insertNextScalarData(scalars, "myScalars");
+  data.insertNextVectorData(vectors, "llaalalalalaalalalalalaalal");
+*/
+  lsWriter<double, D>(levelSet, "test.lvst").apply();
 
-    NumericType gridDelta = 0.25;
+  // read it in again
+  auto newLevelSet = lsSmartPointer<lsDomain<double, D>>::New();
+  lsReader<double, D>(newLevelSet, "test.lvst").apply();
 
-    NumericType radius = 100.;
+  auto mesh = lsSmartPointer<lsMesh>::New();
+  lsToSurfaceMesh<double, D>(levelSet, mesh).apply();
+  lsVTKWriter(mesh, "test.vtk").apply();
 
-    //___________________________START GEOMETRY INPUT
+  auto narrowband = lsSmartPointer<lsMesh>::New();
+  std::cout << "Extracting narrowband..." << std::endl;
+  lsToMesh<NumericType, D>(newLevelSet, narrowband, true, true, 0.5).apply();
 
-    //lsSmartPointer<lsDomain<double, D>> levelSet = makeSphere(gridDelta, radius);
+  lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "loadedLvlSet" ).apply();
 
-    std::vector<NumericType> planeNormal = {0. , 0. , 1.};
-
-    lsSmartPointer<lsDomain<double, D>> levelSet = makeTrench(gridDelta, planeNormal);
-
-
-    std::cout << "writing Level Set" << std::endl;
-
-    lsWriter<NumericType, D>(levelSet, "test.lvst").apply();
-
-    std::cout << "reading Level Set" << std::endl;
-
-    auto readLevelSet = lsSmartPointer<lsDomain<double, D>>::New();
-
-    lsReader<NumericType, D>(readLevelSet, "test.lvst").apply();
-
-    readLevelSet->print();
-
-    auto narrowband = lsSmartPointer<lsMesh>::New();
-    std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<NumericType, D>(readLevelSet, narrowband, true, true, 0.5).apply();
-  
-    lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "loadedLvlSet" ).apply();
-
-
-
-    std::cout << "Finished" << std::endl;
-
-    return 0;
+  return 0;
 }
-
 
 
 

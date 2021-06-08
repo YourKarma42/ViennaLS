@@ -69,7 +69,7 @@ template <class T, int D> class eulerAdvect {
   double advectionTime = 0.;
   double advectedTime = 0.;
   unsigned numberOfTimeSteps = 0;
-  bool saveAdvectionVelocities = false;
+  bool saveAdvectionVelocities = true;
   static constexpr double wrappingLayerEpsilon = 1e-4;
 
 
@@ -114,19 +114,14 @@ template <class T, int D> class eulerAdvect {
 
     lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "beforeRebuild" ).apply();
 
-    std::cout << "Debug: Starting Expand" << std::endl;
-
-    //if FMM is done in every time step time step is 3
-    lsEikonalExpandTest<T, D>(levelSets.back(), 3).apply();
-    //std::cout << "Debug: Expention done" << std::endl;
     lsReduce<T, D>(levelSets.back(), 2, true).apply();
-    //std::cout << "Debug: Velocity extention done" << std::endl;
 
-    auto narrowband1 = lsSmartPointer<lsMesh>::New();
+
+    auto narrowband2 = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<T, D>(levelSets.back(), narrowband1, true, true, 0.25).apply();
+    lsToMesh<T, D>(levelSets.back(), narrowband2, true, true, 2).apply();
 
-    lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "afterRebuild" ).apply();
+    lsVTKWriter(narrowband2, lsFileFormatEnum::VTU , "afterRebuild" ).apply();
 
     std::cout << "step finished" << std::endl;
    
@@ -545,7 +540,7 @@ template <class T, int D> class eulerAdvect {
 
     auto narrowband3 = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<T, D>(levelSets.back(), narrowband3, true, true, 5*gridDelta).apply();
+    lsToMesh<T, D>(levelSets.back(), narrowband3, true, true, 3).apply();
 
     lsVTKWriter(narrowband3, lsFileFormatEnum::VTU , "beforeAdvectionStep" ).apply();
 
@@ -556,6 +551,123 @@ template <class T, int D> class eulerAdvect {
     if (ignoreVoids) {
       lsMarkVoidPoints<T, D>(levelSets.back()).apply();
     }
+
+//TODO: LS is far to big during this process think of how to make it smaller stream line this process
+
+//TODO: currently this part is completely serial, paralellization see Quell papers
+
+// TODO: Talk to Xaver different velocity field for Euler advection!
+
+
+//######################################################
+//### Calculate Velocity for each surface point ########
+//######################################################
+
+//TODO: SINGLE CORE!!!!!!
+
+    std::vector<double> & vels = velocities->getVelocitiesVector();
+
+    vels.reserve(topDomain.getNumberOfPoints());
+
+    for (hrleSparseIterator<typename lsDomain<T, D>::DomainType> it(topDomain);
+          !it.isFinished(); ++it) {
+
+
+      T largeValue = 1000;
+
+      if (!it.isDefined() || std::abs(it.getValue()) > 1){
+        //increase size of velocity values for Velocity extention
+        T value = 0.;
+        if(std::abs(it.getValue()) <= 3){
+          value = largeValue;
+        }else{
+          value = 2*largeValue;
+        }
+
+        if(it.isDefined()){
+          if( it.getValue() < 0.){
+            vels.push_back(-value);
+          }else{
+            vels.push_back( value);
+          }
+        }
+
+        continue;
+
+      }
+      //TMP VALUES
+      //TODO: if normal vector is needed for velocitey something needs to be done here!
+      std::array<T, 3> coordArray = {0, 0, 0};
+      vels.push_back(velocities->calculateScalarVelocity(coordArray, 0, coordArray));
+
+    }
+
+
+//#################################
+//### Velocity Extention ##########
+//#################################
+
+
+  //velocity extetnion
+  lsEikonalExpandTest<T, D>(levelSets.back(), 3).apply(vels);
+  //TODO rethink this part is ist necessary
+
+
+    auto narrowband1 = lsSmartPointer<lsMesh>::New();
+    std::cout << "Extracting narrowband..." << std::endl;
+    lsToMesh<T, D>(levelSets.back(), narrowband1, true, true, 60000).apply();
+
+    narrowband1->insertNextScalarData(vels, "Velocitys");
+
+    lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "baseVelocities" ).apply();
+
+  //TODO: Do voids effent this step?
+#pragma omp parallel num_threads((levelSets.back())->getNumberOfSegments())
+    {
+      int p = 0;
+#ifdef _OPENMP
+      p = omp_get_thread_num();
+#endif
+
+      //TODO: copy of velVec for each thread!
+
+      hrleVectorType<hrleIndexType, D> startVector =
+          (p == 0) ? grid.getMinGridPoint()
+                   : topDomain.getSegmentation()[p - 1];
+
+      hrleVectorType<hrleIndexType, D> endVector =
+          (p != static_cast<int>(topDomain.getNumberOfSegments() - 1))
+              ? topDomain.getSegmentation()[p]
+              : grid.incrementIndices(grid.getMaxGridPoint());
+
+      auto &tempRates = totalTempRates[p];
+      tempRates.reserve(topDomain.getNumberOfPoints() /
+                            double((levelSets.back())->getNumberOfSegments()) +
+                        10);
+
+      
+      //TODO: what to do with voids? handle in velocity extetntion?
+      //IntegrationSchemeType scheme(IntegrationScheme);
+      //auto &voidPoints =
+      //    *(levelSets.back()->getPointData().getScalarData("VoidPointMarkers"));
+
+      /*for (hrleSparseIterator<typename lsDomain<T, D>::DomainType> it(
+               topDomain, startVector);
+           it.getStartIndices() < endVector; ++it) {
+
+
+        if (!it.isDefined() || std::abs(it.getValue()) > 2){
+          continue;
+        }
+        //add velocity to tmp rates
+        tempRates.push_back(std::make_pair(velVec[it.getPointId()], std::numeric_limits<T>::max()));
+      }*/
+    }
+
+
+//#######################################
+//### Use Schme to Solve LS Equation ####
+//#######################################
 
 #pragma omp parallel num_threads((levelSets.back())->getNumberOfSegments())
     {
@@ -597,10 +709,11 @@ template <class T, int D> class eulerAdvect {
            it.getStartIndices() < endVector; ++it) {
 
         //Lenz: Euler advection
-        //We need to advect the whole narrowband when using Eulernormalization thus > 1
-        //probably use 1 for euler advect? and 0.5 for manhatten?
-        if (!it.isDefined() || std::abs(it.getValue()) > 1)
+        //We need to advect the whole narrowband when using Eulernormalization thus > 2
+        if (!it.isDefined() || std::abs(it.getValue()) > 2){
           continue;
+        }
+
 
         T value = it.getValue();
         double maxStepTime = 0;
@@ -680,7 +793,6 @@ template <class T, int D> class eulerAdvect {
           tempMaxTimeStep = maxStepTime;
       }
 
-//std::cout << "Debug: Velocities calculated" << std::endl;
 
 #pragma omp critical
       {
@@ -696,26 +808,14 @@ template <class T, int D> class eulerAdvect {
     }
 
 
-    auto narrowband = lsSmartPointer<lsMesh>::New();
-    std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<T, D>(levelSets.back(), narrowband, true, true, 3).apply();
+//#################################
+//### Apply Velocities to Grid ####
+//#################################
 
-    lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "beforeFirstReduce" ).apply();
+    //Reduce ls size to the size that is required for the advection step
+    // DO NOT CHANGE SEGMENTATION HERE (true parameter)
+    lsReduce<T, D>(levelSets.back(), 4, true).apply();
 
-    //LENZ: euler advection need to change thikness
-
-    // reduce to one layer thickness and apply new values directly to the
-    // domain segments --> DO NOT CHANGE SEGMENTATION HERE (true parameter)
-    //Euler advection needs narrowband so 2 *0.5 = 1
-    lsReduce<T, D>(levelSets.back(), 2, true).apply();
-
-
-
-    auto narrowband1 = lsSmartPointer<lsMesh>::New();
-    std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<T, D>(levelSets.back(), narrowband1, true, true, 2).apply();
-
-    lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "afterFirstReduce" ).apply();
 
     const bool saveVelocities = saveAdvectionVelocities;
     std::vector<std::vector<double>> velocityVectors(

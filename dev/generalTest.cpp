@@ -76,14 +76,29 @@ lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
 }
 
 class velocityField : public lsVelocityField<double> {
+
+  std::vector<double> velocities;
+
 public:
+
+  std::vector<double> & getVelocitiesVector() {return velocities;}
+
+
+  double calculateScalarVelocity(const std::array<double, 3> & /*coordinate*/,
+                    int /*material*/,
+                    const std::array<double, 3>
+                        & /*normalVector = hrleVectorType<double, 3>(0.)*/){
+                
+    double velocity = 1.;
+    return velocity;
+  }
+
   double
   getScalarVelocity(const std::array<double, 3> & /*coordinate*/,
                     int /*material*/,
                     const std::array<double, 3>
                         & /*normalVector = hrleVectorType<double, 3>(0.)*/) {
     // Some arbitrary velocity function of your liking
-    // (try changing it and see what happens :)
     double velocity = 1.;
     return velocity;
   }
@@ -105,14 +120,14 @@ int main() {
 
     std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets1;
 
-    NumericType radius = 9.;
+    NumericType radius = 7;
 
 
 
     //GEOMETRY CREATION
   //lsNormalizations::MANHATTEN
 
-    lsSmartPointer<lsDomain<double, D>> levelSet1 = makeSphere(gridDelta, radius, lsNormalizations::EULER);
+    lsSmartPointer<lsDomain<double, D>> levelSet1 = makeSphere(gridDelta, radius, lsNormalizations::EUCLID);
 
     levelSets1.push_back(levelSet1);  
 
@@ -122,12 +137,12 @@ int main() {
     std::cout << "Advecting levelset..." << std::endl;
     eulerAdvect<NumericType, D> advectionKernel(levelSets1, velocities);
 
-    advectionKernel.setAdvectionTime(1.);
+    advectionKernel.setAdvectionTime(3.);
     advectionKernel.apply();
 
     auto narrowband1 = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband after advection..." << std::endl;
-    lsToMesh<NumericType, D>(levelSets1.back(), narrowband1, true, false, gridDelta).apply();
+    lsToMesh<NumericType, D>(levelSets1.back(), narrowband1, true, false, 1).apply();
 
  
     //lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "narrowband" ).apply();
@@ -172,6 +187,8 @@ int main() {
     std::vector<NumericType> meanCurvatureG;
 
     std::vector<NumericType> calculatedRadius;
+
+    std::vector<NumericType> distCircle;
 
 
     hrleConstSparseStarIterator<typename lsDomain<NumericType, D>::DomainType> neighborStarIterator(levelSets1.back()->getDomain());
@@ -226,7 +243,21 @@ int main() {
           r += indices[i] * gridDelta * indices[i] * gridDelta ;
         }
 
+        if(indices[0]*gridDelta == 0 && indices[1]*gridDelta == -10){
+          std::cout << "blub" << std::endl;
+        }
+
         calculatedRadius.push_back(std::sqrt(r) - centerIt.getValue()*gridDelta);
+
+
+        distCircle.push_back(std::sqrt(r) - 10);
+        /*if(centerIt.getValue() > 0.){
+          
+        }else{
+          distCircle.push_back(std::sqrt(r) - 10);
+        }
+*/
+        
 
         meanCurvatureSD1.push_back(shape1(neighborStarIterator));
 
@@ -246,6 +277,8 @@ int main() {
     narrowband2->insertNextVectorData(grad1, "Normals");
 
     narrowband2->insertNextScalarData(calculatedRadius, "radius");
+
+    narrowband2->insertNextScalarData(distCircle, "distance Circle");
 
     narrowband2->insertNextScalarData(meanCurvatureSD1, "curve");
 
