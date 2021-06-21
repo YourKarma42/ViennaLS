@@ -9,9 +9,12 @@
 /// the velocity field used during advection using lsAdvect.
 template <class T> class lsVelocityField {
 
-    std::vector<double> velocities;
+    
 
 public:
+  //TODO: should be private
+  std::vector<double> velocities;
+
   lsVelocityField() {}
 
   /// Should return a scalar value for the velocity at coordinate

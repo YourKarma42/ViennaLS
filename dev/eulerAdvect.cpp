@@ -565,7 +565,10 @@ template <class T, int D> class eulerAdvect {
 
 //TODO: SINGLE CORE!!!!!!
 
+    //TODO: these lines need to be somewhere else
     std::vector<double> & vels = velocities->getVelocitiesVector();
+
+    vels.clear();
 
     vels.reserve(topDomain.getNumberOfPoints());
 
@@ -585,11 +588,12 @@ template <class T, int D> class eulerAdvect {
         }
 
         if(it.isDefined()){
-          if( it.getValue() < 0.){
+           vels.push_back(value);
+          /*if( it.getValue() < 0.){
             vels.push_back(-value);
           }else{
             vels.push_back( value);
-          }
+          }*/
         }
 
         continue;
@@ -715,6 +719,7 @@ template <class T, int D> class eulerAdvect {
         }
 
 
+
         T value = it.getValue();
         double maxStepTime = 0;
         double cfl = timeStepRatio;
@@ -743,7 +748,7 @@ template <class T, int D> class eulerAdvect {
               }
             }
           }
-
+  
           T valueBelow;
           // get value of material below (before in levelSets list)
           if (currentLevelSetId > 0) {
@@ -788,6 +793,8 @@ template <class T, int D> class eulerAdvect {
             }
           }
         }
+
+
 
         if (maxStepTime < tempMaxTimeStep)
           tempMaxTimeStep = maxStepTime;
@@ -884,13 +891,13 @@ template <class T, int D> class eulerAdvect {
 
 //std::cout << "Debug: Advection done" << std::endl;
 
-/*
+
     auto narrowband2 = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
     lsToMesh<T, D>(levelSets.back(), narrowband2, true, true, 6).apply();
 
     lsVTKWriter(narrowband2, lsFileFormatEnum::VTU , "afterIntegrateTime" ).apply();
-*/
+
     return maxTimeStep;
   }
 

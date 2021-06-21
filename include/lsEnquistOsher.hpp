@@ -151,13 +151,18 @@ public:
     // convert coordinate to std array for interface
     std::array<T, 3> coordArray = {coordinate[0], coordinate[1], coordinate[2]};
 
-    //TODO: currently hack!
-    if()
+    double scalarVelocity;
+    std::array<T, 3> vectorVelocity;
 
-    double scalarVelocity =
-        velocities->getScalarVelocity(coordArray, material, normalVector);
-    std::array<T, 3> vectorVelocity =
-        velocities->getVectorVelocity(coordArray, material, normalVector);
+    //TODO: currently hack!
+    if(levelSet->getLevelSetNormalization() == lsNormalizations::EUCLID){
+      scalarVelocity =  velocities->getScalarVelocity(coordArray, neighborIterator.getCenter().getPointId(), normalVector);
+    }else{
+      scalarVelocity =
+          velocities->getScalarVelocity(coordArray, material, normalVector);
+      vectorVelocity =
+          velocities->getVectorVelocity(coordArray, material, normalVector);
+    }
 
     if (scalarVelocity > 0) {
       vel_grad += std::sqrt(gradPosTotal) * scalarVelocity;

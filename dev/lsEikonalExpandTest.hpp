@@ -77,16 +77,17 @@ public:
                           minHeap(myCompare(), std::move(container));
 
     //collect all grid points needed for velocity extention
+    //TODO: use only sparse iterator
       for (hrleSparseStarIterator<hrleDomainType> it(levelSet->getDomain());
         !it.isFinished(); ++it) {
 
         if(!it.getCenter().isDefined() || std::abs(velocities[it.getCenter().getPointId()]) != 1000)
           continue;
 
-        std::array<T, D> stencilMin;
+         /*std::array<T, D> stencilMin;
 
         //find the min values in the stencil
-        for(int i = 0; i < D; i++){
+       for(int i = 0; i < D; i++){
 
           T pos = it.getNeighbor(i).getValue(); // * gridDelta;
 
@@ -106,9 +107,9 @@ public:
 
         }
 
-        T dist = solveEikonal(stencilMin, D);
+        T dist = solveEikonal(stencilMin, D);*/
       
-        minHeap.push(std::make_pair(std::abs(dist), it.getIndices()));
+        minHeap.push(std::make_pair(std::abs(it.getCenter().getValue()), it.getIndices()));
    
      }
 
@@ -145,7 +146,11 @@ public:
 
         }
 
+        std::array<T, D> stencilbackup = stencilMin;
+
         T dist = solveEikonal(stencilMin, D);
+
+
 
         velocities[neighborStarIterator.getCenter().getPointId()] = dist;
 

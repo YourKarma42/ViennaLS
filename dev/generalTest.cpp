@@ -60,7 +60,7 @@ lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
 
     std::cout << "creating sphere..." << std::endl;
 
-    double origin[3] = {0.0, 0.0, 0.0};
+    double origin[3] = {0., 0., 0.0};
     
     auto levelSet =
         lsSmartPointer<lsDomain<double, D>>::New(gridDelta, normalization);
@@ -77,12 +77,7 @@ lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
 
 class velocityField : public lsVelocityField<double> {
 
-  std::vector<double> velocities;
-
 public:
-
-  std::vector<double> & getVelocitiesVector() {return velocities;}
-
 
   double calculateScalarVelocity(const std::array<double, 3> & /*coordinate*/,
                     int /*material*/,
@@ -95,12 +90,10 @@ public:
 
   double
   getScalarVelocity(const std::array<double, 3> & /*coordinate*/,
-                    int /*material*/,
+                    int pointID,
                     const std::array<double, 3>
                         & /*normalVector = hrleVectorType<double, 3>(0.)*/) {
-    // Some arbitrary velocity function of your liking
-    double velocity = 1.;
-    return velocity;
+    return 1.;//velocities[pointID];
   }
 };
 
@@ -109,7 +102,7 @@ int main() {
 
     omp_set_num_threads(1);
 
-    NumericType gridDelta = 0.5;
+    NumericType gridDelta = 0.25;
 
     //______________________________First____________________________________________________________________
 
@@ -120,7 +113,7 @@ int main() {
 
     std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets1;
 
-    NumericType radius = 7;
+    NumericType radius = 9.;
 
 
 
@@ -137,7 +130,7 @@ int main() {
     std::cout << "Advecting levelset..." << std::endl;
     eulerAdvect<NumericType, D> advectionKernel(levelSets1, velocities);
 
-    advectionKernel.setAdvectionTime(3.);
+    advectionKernel.setAdvectionTime(1.);
     advectionKernel.apply();
 
     auto narrowband1 = lsSmartPointer<lsMesh>::New();
