@@ -68,7 +68,7 @@ if(VIENNALS_BUILD_SHARED_LIBS)
   if(NOT ViennaHRLE_DIR)
     set(ViennaHRLE_DIR $ENV{VIENNAHRLE_DIR})
   endif(NOT ViennaHRLE_DIR)
-  list(APPEND VIENNALS_LIBRARIES ViennaHRLE)
+  # list(APPEND VIENNALS_LIBRARIES ViennaHRLE)
   find_package(ViennaHRLE REQUIRED)
   
   # add all specialisation source files
@@ -82,7 +82,7 @@ if(VIENNALS_BUILD_SHARED_LIBS)
   endif(VIENNALS_STATIC_BUILD)
 
   target_link_libraries(${PROJECT_NAME} ${VIENNALS_LIBRARIES})
-  target_include_directories(${PROJECT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/include/")
+  target_include_directories(${PROJECT_NAME} PRIVATE "${PROJECT_SOURCE_DIR}/include/" ${VIENNAHRLE_INCLUDE_DIRS})
   set_target_properties(${PROJECT_NAME} PROPERTIES VERSION ${PROJECT_VERSION})
 else(VIENNALS_BUILD_SHARED_LIBS)
   add_library(${PROJECT_NAME} INTERFACE)

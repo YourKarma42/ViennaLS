@@ -1,6 +1,9 @@
 #ifndef EULER_ADVECT_HPP
 #define EULER_ADVECT_HPP
 
+//only for debugging!
+//#define DETAILED_OUTPUT
+
 #include <lsPreCompileMacros.hpp>
 
 #include <limits>
@@ -107,16 +110,18 @@ template <class T, int D> class eulerAdvect {
 
   void rebuildLSEuler() {
   
-  
+#ifdef DETAILED_OUTPUT
     auto narrowband = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
     lsToMesh<T, D>(levelSets.back(), narrowband, true, true, 3).apply();
 
     lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "beforeRebuild" ).apply();
+#endif
+
 
     lsReduce<T, D>(levelSets.back(), 2, true).apply();
 
-
+#ifdef DETAILED_OUTPUT
     auto narrowband2 = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
     lsToMesh<T, D>(levelSets.back(), narrowband2, true, true, 2).apply();
@@ -124,7 +129,7 @@ template <class T, int D> class eulerAdvect {
     lsVTKWriter(narrowband2, lsFileFormatEnum::VTU , "afterRebuild" ).apply();
 
     std::cout << "step finished" << std::endl;
-   
+#endif
 
     //LENZ: TODO: think of how to trancsfare vector data after Velocity extention
 
@@ -538,12 +543,13 @@ template <class T, int D> class eulerAdvect {
     //Lenz: needed for euler advection
     T gridDelta = grid.getGridDelta();
 
+#ifdef DETAILED_OUTPUT
     auto narrowband3 = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
     lsToMesh<T, D>(levelSets.back(), narrowband3, true, true, 3).apply();
 
     lsVTKWriter(narrowband3, lsFileFormatEnum::VTU , "beforeAdvectionStep" ).apply();
-
+#endif
     std::vector<std::vector<std::pair<T, T>>> totalTempRates;
     totalTempRates.resize((levelSets.back())->getNumberOfSegments());
 
@@ -616,14 +622,17 @@ template <class T, int D> class eulerAdvect {
   lsEikonalExpandTest<T, D>(levelSets.back(), 3).apply(vels);
   //TODO rethink this part is ist necessary
 
-
+#ifdef DETAILED_OUTPUT
     auto narrowband1 = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
     lsToMesh<T, D>(levelSets.back(), narrowband1, true, true, 60000).apply();
 
     narrowband1->insertNextScalarData(vels, "Velocitys");
 
+
     lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "baseVelocities" ).apply();
+#endif
+
 
   //TODO: Do voids effent this step?
 #pragma omp parallel num_threads((levelSets.back())->getNumberOfSegments())
@@ -891,12 +900,13 @@ template <class T, int D> class eulerAdvect {
 
 //std::cout << "Debug: Advection done" << std::endl;
 
-
+#ifdef DETAILED_OUTPUT
     auto narrowband2 = lsSmartPointer<lsMesh>::New();
     std::cout << "Extracting narrowband..." << std::endl;
     lsToMesh<T, D>(levelSets.back(), narrowband2, true, true, 6).apply();
 
     lsVTKWriter(narrowband2, lsFileFormatEnum::VTU , "afterIntegrateTime" ).apply();
+#endif
 
     return maxTimeStep;
   }

@@ -50,7 +50,7 @@
 
 //____________testing end___________________________
 
-constexpr int D = 2;
+constexpr int D = 3;
 typedef double NumericType;
 typedef typename lsDomain<NumericType, D>::DomainType hrleDomainType;
 
@@ -113,7 +113,7 @@ int main() {
 
     std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets1;
 
-    NumericType radius = 9.;
+    NumericType radius = 5.;
 
 
 
@@ -130,7 +130,7 @@ int main() {
     std::cout << "Advecting levelset..." << std::endl;
     eulerAdvect<NumericType, D> advectionKernel(levelSets1, velocities);
 
-    advectionKernel.setAdvectionTime(1.);
+    advectionKernel.setAdvectionTime(5.);
     advectionKernel.apply();
 
     auto narrowband1 = lsSmartPointer<lsMesh>::New();

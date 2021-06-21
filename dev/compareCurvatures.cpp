@@ -14,10 +14,12 @@
 
 
 #include <lsEikonalExpand.hpp>
-
-
-
 #include <../dev/derivatives.hpp>
+
+
+#include <lsAdvect.hpp>
+#include <../dev/eulerAdvect.cpp>
+
 
 #include <omp.h>
 
@@ -355,7 +357,7 @@ void create_output(lsSmartPointer<lsDomain<double, D>> levelSet,
     if(levelSet->getLevelSetNormalization() == lsNormalizations::MANHATTEN){
       lsToMesh<NumericType, D>(levelSet, narrowband, true, true).apply();
     }else{
-      lsToMesh<NumericType, D>(levelSet, narrowband, true, true, gridDelta).apply();
+      lsToMesh<NumericType, D>(levelSet, narrowband, true, true).apply();
     }
     
 
@@ -375,6 +377,27 @@ void create_output(lsSmartPointer<lsDomain<double, D>> levelSet,
   }
 
 
+class velocityField : public lsVelocityField<double> {
+
+public:
+
+  double calculateScalarVelocity(const std::array<double, 3> & /*coordinate*/,
+                    int /*material*/,
+                    const std::array<double, 3>
+                        & /*normalVector = hrleVectorType<double, 3>(0.)*/){
+                
+    double velocity = 1.;
+    return velocity;
+  }
+
+  double
+  getScalarVelocity(const std::array<double, 3> & /*coordinate*/,
+                    int pointID,
+                    const std::array<double, 3>
+                        & /*normalVector = hrleVectorType<double, 3>(0.)*/) {
+    return 1.;//velocities[pointID];
+  }
+};
 
 
 
@@ -382,11 +405,13 @@ int main(int argc, char* argv[]) {
 
     lsNormalizations normalization = lsNormalizations::EUCLID;
 
-    omp_set_num_threads(4);
+    omp_set_num_threads(1);
 
-    NumericType gridDelta = 0.5;
+    NumericType gridDelta = 0.25;
 
-    NumericType radius = 10.;
+    NumericType radius = 5.;
+
+    NumericType advectionTime = 5.;
 
     std::string outputName = "curveOutput";
 
@@ -411,14 +436,25 @@ int main(int argc, char* argv[]) {
     std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets;
 
     lsSmartPointer<lsDomain<double, D>> levelSet = makeSphere(gridDelta, radius, normalization);
-
-    //std::vector<NumericType> normal = {0., 0., 1.};
-
-    //lsSmartPointer<lsDomain<double, D>> levelSet = makeTrench(gridDelta, normal);
-
  
-    levelSets.push_back(levelSet);  
+    levelSets.push_back(levelSet); 
 
+    //Advection
+
+    auto velocities = lsSmartPointer<velocityField>::New();
+
+  /*   std::cout << "Advecting levelset..." << std::endl;
+
+   if(normalization == lsNormalizations::EUCLID){
+      eulerAdvect<NumericType, D> advectionKernel(levelSets, velocities);
+      advectionKernel.setAdvectionTime(advectionTime);
+      advectionKernel.apply();
+    }else{
+      lsAdvect<NumericType, D> advectionKernel(levelSets, velocities);
+      advectionKernel.setAdvectionTime(advectionTime);
+      advectionKernel.apply();
+    } 
+*/
 
     std::cout << "Fast Marching..." << std::endl;
     if(normalization == lsNormalizations::EUCLID){

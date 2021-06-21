@@ -252,11 +252,11 @@ public:
         levelSet->deepCopy(newlsDomain);     
     }
 
-    auto narrowband0 = lsSmartPointer<lsMesh>::New();
-    std::cout << "Extracting narrowband..." << std::endl;
-    lsToMesh<T, D>(levelSet, narrowband0, true, true, 2*largeValue+10).apply();
+    //auto narrowband0 = lsSmartPointer<lsMesh>::New();
+    //std::cout << "Extracting narrowband..." << std::endl;
+    //lsToMesh<T, D>(levelSet, narrowband0, true, true, 2*largeValue+10).apply();
 
-    lsVTKWriter(narrowband0, lsFileFormatEnum::VTU , "afterExpansion" ).apply();
+    //lsVTKWriter(narrowband0, lsFileFormatEnum::VTU , "afterExpansion" ).apply();
 
     std::vector<double> tmp;
     //initialize the Domain for FMM
@@ -594,9 +594,10 @@ public:
       }else{
         //the distance has to increase so we only need the bigger solution
         return (-b + std::sqrt(q))/(2.*a);
-        break;
       }
-    }    
+    }
+    throw std::runtime_error("Did not reach valid solution for eikonal equation.");
+    return -1;
   }
 
 };

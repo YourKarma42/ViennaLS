@@ -24,7 +24,7 @@ ENDMACRO()
 if(NOT ViennaHRLE_DIR)
   set(ViennaHRLE_DIR $ENV{VIENNAHRLE_DIR})
 endif(NOT ViennaHRLE_DIR)
-list(APPEND VIENNALS_LIBRARIES ViennaHRLE)
+# list(APPEND VIENNALS_LIBRARIES ViennaHRLE)
 find_package(ViennaHRLE REQUIRED)
 
 set(ViennaLS_DIR "${ViennaLS_BINARY_DIR}")
