@@ -415,6 +415,10 @@ int main(int argc, char* argv[]) {
 
     std::string outputName = "curveOutput";
 
+    lsIntegrationSchemeEnum scheme = lsIntegrationSchemeEnum::LOCAL_LAX_FRIEDRICHS_ANALYTICAL_1ST_ORDER;
+
+    //lsIntegrationSchemeEnum scheme = lsIntegrationSchemeEnum::ENGQUIST_OSHER_1ST_ORDER;
+
 
 
     if(argc == 5){
@@ -443,18 +447,20 @@ int main(int argc, char* argv[]) {
 
     auto velocities = lsSmartPointer<velocityField>::New();
 
-  /*   std::cout << "Advecting levelset..." << std::endl;
+     std::cout << "Advecting levelset..." << std::endl;
 
    if(normalization == lsNormalizations::EUCLID){
       eulerAdvect<NumericType, D> advectionKernel(levelSets, velocities);
       advectionKernel.setAdvectionTime(advectionTime);
+      advectionKernel.setIntegrationScheme(scheme);
       advectionKernel.apply();
     }else{
       lsAdvect<NumericType, D> advectionKernel(levelSets, velocities);
       advectionKernel.setAdvectionTime(advectionTime);
+      advectionKernel.setIntegrationScheme(scheme);
       advectionKernel.apply();
     } 
-*/
+
 
     std::cout << "Fast Marching..." << std::endl;
     if(normalization == lsNormalizations::EUCLID){

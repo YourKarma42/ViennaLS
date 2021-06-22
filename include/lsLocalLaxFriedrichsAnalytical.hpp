@@ -42,7 +42,13 @@ public:
     assert(order == 1 || order == 2);
     // at least order+1 layers since we need neighbor neighbors for
     // dissipation alpha calculation
-    lsExpand<T, D>(passedlsDomain, 2 * (order + 2) + 1).apply();
+
+    if(passedlsDomain->getLevelSetNormalization() == lsNormalizations::MANHATTEN){
+      assert(order == 1 || order == 2);
+      lsExpand<T, D>(passedlsDomain, 2 * (order + 2) + 1).apply();
+    }else{
+      lsEikonalExpandTest<T, D>(passedlsDomain, order + 3).apply();
+    }
   }
 
   // neighboriterator always needs order 2 for alpha calculation
