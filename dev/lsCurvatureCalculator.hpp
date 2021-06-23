@@ -7,7 +7,7 @@
 
 #include <hrleSparseBoxIterator.hpp>
 
-#include "hrleTestIterator.hpp"
+#include <hrleCartesianPlaneIterator.hpp>
 
 
 //TODO: Descritption

@@ -4,7 +4,7 @@
 
 #include <hrleSparseBoxIterator.hpp>
 
-#include "hrleTestIterator.hpp"
+#include <hrleCartesianPlaneIterator.hpp>
 
 //TODO: calculate grid delta values in consturctor
 

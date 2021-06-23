@@ -45,9 +45,9 @@ add_executable(flaggingTest flaggingTest.cpp)
 target_include_directories(flaggingTest PUBLIC ${VIENNALS_INCLUDE_DIRS})
 target_link_libraries(flaggingTest PRIVATE ${VIENNALS_LIBRARIES})
 
-add_executable(iteratorTests iteratorTests.cpp)
-target_include_directories(iteratorTests PUBLIC ${VIENNALS_INCLUDE_DIRS})
-target_link_libraries(iteratorTests PRIVATE ${VIENNALS_LIBRARIES})
+#add_executable(iteratorTests iteratorTests.cpp)
+#target_include_directories(iteratorTests PUBLIC ${VIENNALS_INCLUDE_DIRS})
+#target_link_libraries(iteratorTests PRIVATE ${VIENNALS_LIBRARIES})
 
 add_executable(StackedNanowire StackedNanowire.cpp)
 target_include_directories(StackedNanowire PUBLIC ${VIENNALS_INCLUDE_DIRS})
@@ -61,9 +61,12 @@ add_executable(timeDerivativesCurve timeDerivativesCurve.cpp)
 target_include_directories(timeDerivativesCurve PUBLIC ${VIENNALS_INCLUDE_DIRS})
 target_link_libraries(timeDerivativesCurve PRIVATE ${VIENNALS_LIBRARIES})
 
-add_executable(saveLoadLevelSet saveLoadLevelSet.cpp)
-target_include_directories(saveLoadLevelSet PUBLIC ${VIENNALS_INCLUDE_DIRS})
-target_link_libraries(saveLoadLevelSet PRIVATE ${VIENNALS_LIBRARIES})
+#add_executable(saveLoadLevelSet saveLoadLevelSet.cpp)
+#target_include_directories(saveLoadLevelSet PUBLIC ${VIENNALS_INCLUDE_DIRS})
+#target_link_libraries(saveLoadLevelSet PRIVATE ${VIENNALS_LIBRARIES})
 
+add_executable(thinLyers thinLyers.cpp)
+target_include_directories(thinLyers PUBLIC ${VIENNALS_INCLUDE_DIRS})
+target_link_libraries(thinLyers PRIVATE ${VIENNALS_LIBRARIES})
 
 

@@ -23,7 +23,7 @@
 #include <lsConvertEuclid.hpp>
 #include <lsEikonalExpand.hpp>
 
-#include "hrleTestIterator.hpp"
+#include <hrleCartesianPlaneIterator.hpp>
 
 
 #include <omp.h>
