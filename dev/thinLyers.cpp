@@ -150,7 +150,7 @@ int main() {
 
     omp_set_num_threads(1);
 
-    double gridDelta = 0.05;
+    double gridDelta = 0.03125;
 
     double extent = 30;
 
@@ -159,43 +159,70 @@ int main() {
 
     std::vector<lsSmartPointer<lsDomain<double, D>>> layers;
 
-    double min[3] = {-extent - 1, -1., 0.};
+    std::vector<std::pair<NumericType, NumericType>> matPos;
+
+    //first min; second max
+    matPos.push_back(std::make_pair(-1., 0.)); 
+
+    matPos.push_back(std::make_pair(-3., -1.));
+
+    matPos.push_back(std::make_pair(-4.5, -3.)); 
+
+    matPos.push_back(std::make_pair(-5.2, -4.5));  
+
+    matPos.push_back(std::make_pair(-5.8, -5.2)); 
+
+    matPos.push_back(std::make_pair(-10., -5.8)); 
+
+    double min[3] = {-extent - 1, 0., 0.};
 
     double max[3] = {extent + 1, 0., 0.};
 
-    layers.push_back(makeMaterialLayerBox(gridDelta, min, max, extent, lsNormalizations::MANHATTEN));
+    double posSingleLayer[3] = {0., 0., 0.};
 
-    min[1] = -3.;
+    int maxNumLayers = 1;
 
-    max[1] = -1.;
+    for(auto pos: matPos){
+    
+        //min[1] = pos.first;
 
-    layers.push_back(makeMaterialLayerBox(gridDelta, min, max,  extent, lsNormalizations::MANHATTEN));
+        //max[1] = pos.second;
+    
+        //layers.push_back(makeMaterialLayerBox(gridDelta, min, max, extent, lsNormalizations::MANHATTEN));
 
-    min[1] = -6.;
+        posSingleLayer[1] = pos.second;
 
-    max[1] = -3.;
+        layers.push_back(makeMaterialLayer(gridDelta, posSingleLayer , extent, lsNormalizations::MANHATTEN));
+    
+        maxNumLayers++;
+    }
 
-    layers.push_back(makeMaterialLayerBox(gridDelta, min, max, extent, lsNormalizations::MANHATTEN));
-
-
+    
     std::cout << "Booling Layers..." << std::endl;
 
-    double minCorner[3] = {0., -1., 0.};
+    double minCorner[3] = {0., 0., 0.};
 
-    auto box = makeBox(gridDelta, minCorner, extent);
+    int numLayers = 1;
 
-    lsBooleanOperation<double, D>(layers[0], box, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
-      .apply();
+    for(auto pos: matPos){
 
-    minCorner[1] = -3.0;
+        if(numLayers == maxNumLayers-1)
+            break;
 
-    box = makeBox(gridDelta, minCorner, extent);
+        minCorner[1] = pos.first;
 
-    lsBooleanOperation<double, D>(layers[0], box, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
-      .apply();
+        auto box = makeBox(gridDelta, minCorner, extent);
 
-    lsBooleanOperation<double, D>(layers[1], box, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
-      .apply();
+        //bool all previous layers
+        for(int i=0; i < numLayers; i++){
+            lsBooleanOperation<double, D>(layers[i], box, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+                .apply();
+
+        }
+
+        numLayers++;
+
+    }
 
 
     printLayers(layers);

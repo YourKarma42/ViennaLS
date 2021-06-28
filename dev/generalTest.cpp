@@ -50,7 +50,7 @@
 
 //____________testing end___________________________
 
-constexpr int D = 3;
+constexpr int D = 2;
 typedef double NumericType;
 typedef typename lsDomain<NumericType, D>::DomainType hrleDomainType;
 
@@ -77,6 +77,9 @@ lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
 
 class velocityField : public lsVelocityField<double> {
 
+  //hrleCartesianPlaneIterator<typename lsDomain<NumericType, D>::DomainType> lsIt;
+  //TODO initialize iterator
+
 public:
 
   double calculateScalarVelocity(const std::array<double, 3> & /*coordinate*/,
@@ -89,10 +92,12 @@ public:
   }
 
   double
-  getScalarVelocity(const std::array<double, 3> & /*coordinate*/,
+  getScalarVelocity(const std::array<double, 3> & coordinate,
                     int pointID,
                     const std::array<double, 3>
                         & /*normalVector = hrleVectorType<double, 3>(0.)*/) {
+    //lsIt.goToIndices(coordinate);
+    
     return 1.;//velocities[pointID];
   }
 };
