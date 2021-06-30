@@ -144,13 +144,31 @@ lsSmartPointer<lsDomain<double, D>> makeBox(double gridDelta, double minCorner[3
 }
 
 
+//Idea of bool operation
+
+//This algorithm does not require redistancing it only iterates over ls values!
+
+//expandLS because of manhatten
+
+//LS A / LS B
+
+//mybool (only relative complement)
+    //keeps Ls values up to a certain value
+
+// when the value of LS B is choosen this cell is "marked"
+
+// "expand" "marked" cells in the direction of LS A
+
+// mark LS A as effected by boolean operation
+
+
 
 int main() {
 
 
     omp_set_num_threads(1);
 
-    double gridDelta = 0.03125;
+    double gridDelta = 0.0625;
 
     double extent = 30;
 
@@ -197,7 +215,34 @@ int main() {
         maxNumLayers++;
     }
 
-    
+
+    std::cout << "Booling Layers..." << std::endl;
+
+    double minCorner[3] = {0., 0., 0.};
+
+    minCorner[1] = matPos[matPos.size()-2].first;
+
+    auto box = makeBox(gridDelta, minCorner, extent);
+
+    for(auto layer: layers){
+
+        lsBooleanOperation<double, D>(layer, box, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+            .apply();
+
+    }
+
+
+    printLayers(layers);
+
+    std::cout << "Finished" << std::endl;
+
+    return 0;
+}
+
+
+/*
+    OLD BOOL LAYER
+
     std::cout << "Booling Layers..." << std::endl;
 
     double minCorner[3] = {0., 0., 0.};
@@ -225,12 +270,12 @@ int main() {
     }
 
 
-    printLayers(layers);
 
-    std::cout << "Finished" << std::endl;
 
-    return 0;
-}
+
+*/
+
+
 
 
 /*
