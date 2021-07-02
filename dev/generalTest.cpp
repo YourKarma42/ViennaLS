@@ -77,8 +77,6 @@ lsSmartPointer<lsDomain<double, D>> makeSphere(double gridDelta, double radius,
 
 class velocityField : public lsVelocityField<double> {
 
-  //hrleCartesianPlaneIterator<typename lsDomain<NumericType, D>::DomainType> lsIt;
-  //TODO initialize iterator
 
 public:
 
@@ -96,9 +94,42 @@ public:
                     int pointID,
                     const std::array<double, 3>
                         & /*normalVector = hrleVectorType<double, 3>(0.)*/) {
-    //lsIt.goToIndices(coordinate);
-    
+  
     return 1.;//velocities[pointID];
+  }
+};
+
+
+class CurvatureVelocityField : public lsVelocityField<double> {
+
+  hrleCartesianPlaneIterator<typename lsDomain<NumericType, D>::DomainType> lsIt;
+  curvaturGeneralFormula<NumericType, D> curvatureCalculator;
+  //TODO initialize iterator
+
+public:
+
+  CurvatureVelocityField(lsSmartPointer<lsDomain<double, D>> levelSet) : 
+    lsIt(levelSet->getDomain()), curvatureCalculator(levelSet->getDomain().getGrid().getGridDelta()) {}
+
+  double calculateScalarVelocity(const std::array<double, 3> & /*coordinate*/,
+                    int /*material*/,
+                    const std::array<double, 3>
+                        & /*normalVector = hrleVectorType<double, 3>(0.)*/){
+                
+    double velocity = 1.;
+    return velocity;
+  }
+
+  double
+  getScalarVelocity(const std::array<double, 3> & coordinate,
+                    int pointID,
+                    const std::array<double, 3>
+                        & /*normalVector = hrleVectorType<double, 3>(0.)*/) {
+    lsIt.goToIndices(coordinate);
+
+    NumericType curve = curvatureCalculator(lsIt);
+    
+    return curve;//velocities[pointID];
   }
 };
 
@@ -118,7 +149,7 @@ int main() {
 
     std::vector<lsSmartPointer<lsDomain<double, D>>> levelSets1;
 
-    NumericType radius = 5.;
+    NumericType radius = 9.;
 
 
 
@@ -130,12 +161,14 @@ int main() {
     levelSets1.push_back(levelSet1);  
 
     //ADVECTION
-    auto velocities = lsSmartPointer<velocityField>::New();
+    //auto velocities = lsSmartPointer<velocityField>::New();
+
+    auto velocities =  lsSmartPointer<CurvatureVelocityField>::New(levelSets1.back());
 
     std::cout << "Advecting levelset..." << std::endl;
     eulerAdvect<NumericType, D> advectionKernel(levelSets1, velocities);
 
-    advectionKernel.setAdvectionTime(5.);
+    advectionKernel.setAdvectionTime(1.);
     advectionKernel.apply();
 
     auto narrowband1 = lsSmartPointer<lsMesh>::New();

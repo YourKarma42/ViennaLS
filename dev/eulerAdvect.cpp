@@ -1020,6 +1020,7 @@ public:
       numberOfTimeSteps = 0;
       while (currentTime < advectionTime) {
         currentTime += advect(advectionTime - currentTime);
+        std::cout << currentTime << std::endl;
         ++numberOfTimeSteps;
       }
     }

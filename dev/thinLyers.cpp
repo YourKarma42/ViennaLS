@@ -43,6 +43,11 @@ void printLayers(std::vector<lsSmartPointer<lsDomain<double, D>>> layers){
         lsToSurfaceMesh<double, D>(layer, mesh).apply();
         lsVTKWriter(mesh, "Layer" + std::to_string(i)  + ".vtk").apply();
 
+
+        auto mesh1 = lsSmartPointer<lsMesh>::New();
+        lsToMesh<double, D>(layer, mesh, true, false, 3.).apply();
+        lsVTKWriter(mesh, "pointsLayer" + std::to_string(i)  + ".vtk").apply();
+
         i++;
 
     }
@@ -161,6 +166,130 @@ lsSmartPointer<lsDomain<double, D>> makeBox(double gridDelta, double minCorner[3
 
 // mark LS A as effected by boolean operation
 
+//only for development!
+typedef NumericType T;
+
+  void myTestBool(lsSmartPointer<lsDomain<T, D>> levelSetA, lsSmartPointer<lsDomain<T, D>> levelSetB) {
+    auto &grid = levelSetA->getGrid();
+    auto newlsDomain = lsSmartPointer<lsDomain<T, D>>::New(grid);
+    typename lsDomain<T, D>::DomainType &newDomain = newlsDomain->getDomain();
+    typename lsDomain<T, D>::DomainType &domain = levelSetA->getDomain();
+
+    newDomain.initialize(domain.getNewSegmentation(), domain.getAllocation());
+
+    std::vector<std::vector<double>> markedCellsSegments(
+    newlsDomain->getNumberOfSegments());
+    double pointsPerSegment =
+        double(2 * newlsDomain->getDomain().getNumberOfPoints()) /
+        double(newlsDomain->getLevelSetWidth());
+
+#pragma omp parallel num_threads(newDomain.getNumberOfSegments())
+    {
+      int p = 0;
+#ifdef _OPENMP
+      p = omp_get_thread_num();
+#endif
+
+      auto &domainSegment = newDomain.getDomainSegment(p);
+
+      auto &markedCellsSegmentVector = markedCellsSegments[p];
+      markedCellsSegmentVector.reserve(pointsPerSegment);
+
+      hrleVectorType<hrleIndexType, D> currentVector =
+          (p == 0) ? grid.getMinGridPoint()
+                   : newDomain.getSegmentation()[p - 1];
+
+      hrleVectorType<hrleIndexType, D> endVector =
+          (p != static_cast<int>(newDomain.getNumberOfSegments() - 1))
+              ? newDomain.getSegmentation()[p]
+              : grid.incrementIndices(grid.getMaxGridPoint());
+
+      hrleConstSparseIterator<hrleDomainType> itA(levelSetA->getDomain(),
+                                                  currentVector);
+      hrleConstSparseIterator<hrleDomainType> itB(levelSetB->getDomain(),
+                                                  currentVector);
+
+      while (currentVector < endVector) {
+
+        //(const T &currentValue = comp(itA.getValue(), itB.getValue());
+//___________________________My Compare Test_______________________________________________
+        T currentValue = 0.;
+        bool mark = false;
+
+        T A = itA.getValue();
+
+        T B = itB.getValue();
+
+        if(A >= -B){
+            currentValue = A;
+        }else{
+            currentValue = -B;
+            mark = true;
+        }
+
+//___________________________My Compare Test End____________________________________________
+        if (currentValue != lsDomain<T, D>::NEG_VALUE &&
+            currentValue != lsDomain<T, D>::POS_VALUE) {
+          domainSegment.insertNextDefinedPoint(currentVector, currentValue);
+          if(mark){
+            markedCellsSegmentVector.push_back(1);
+          }else{
+            markedCellsSegmentVector.push_back(0);
+          }
+        } else {
+          domainSegment.insertNextUndefinedPoint(
+              currentVector, (currentValue < 0) ? lsDomain<T, D>::NEG_VALUE
+                                                : lsDomain<T, D>::POS_VALUE);
+        }
+
+        switch (compare(itA.getEndIndices(), itB.getEndIndices())) {
+        case -1:
+          itA.next();
+          break;
+        case 0:
+          itA.next();
+        default:
+          itB.next();
+        }
+        currentVector = std::max(itA.getStartIndices(), itB.getStartIndices());
+      }
+    }
+
+    unsigned numberOfMarks = 0;
+    for (unsigned i = 0; i < newlsDomain->getNumberOfSegments(); ++i) {
+      numberOfMarks += markedCellsSegments[i].size();
+    }
+    markedCellsSegments[0].reserve(numberOfMarks);
+
+    for (unsigned i = 1; i < newlsDomain->getNumberOfSegments(); ++i) {
+      markedCellsSegments[0].insert(markedCellsSegments[0].end(),
+                                    markedCellsSegments[i].begin(),
+                                    markedCellsSegments[i].end());
+    }
+    // insert into pointData of levelSet
+    auto &pointData = newlsDomain->getPointData();
+    auto scalarDataPointer = pointData.getScalarData("BoolMarks");
+    // if it does not exist, insert new marked cells
+    if (scalarDataPointer == nullptr) {
+      pointData.insertNextScalarData(markedCellsSegments[0], "BoolMarks");
+    } else {
+      // if it does exist, just swap the old with the new values
+      *scalarDataPointer = std::move(markedCellsSegments[0]);
+    }
+
+    newDomain.finalize();
+    newDomain.segment();
+    //TODO: rethink this
+    newlsDomain->setLevelSetWidth(levelSetA->getLevelSetWidth());
+    
+    //lsPrune<T, D>(newlsDomain).apply();
+
+    levelSetA->deepCopy(newlsDomain);
+  }
+
+
+
+
 
 
 int main() {
@@ -168,7 +297,7 @@ int main() {
 
     omp_set_num_threads(1);
 
-    double gridDelta = 0.0625;
+    double gridDelta = 0.05;
 
     double extent = 30;
 
@@ -210,7 +339,11 @@ int main() {
 
         posSingleLayer[1] = pos.second;
 
-        layers.push_back(makeMaterialLayer(gridDelta, posSingleLayer , extent, lsNormalizations::MANHATTEN));
+        auto newLayer = makeMaterialLayer(gridDelta, posSingleLayer, extent, lsNormalizations::MANHATTEN);
+
+        lsExpand(newLayer, 4.);
+
+        layers.push_back(newLayer);
     
         maxNumLayers++;
     }
@@ -224,10 +357,14 @@ int main() {
 
     auto box = makeBox(gridDelta, minCorner, extent);
 
+    lsExpand(box, 4.);
+
     for(auto layer: layers){
 
-        lsBooleanOperation<double, D>(layer, box, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
-            .apply();
+        myTestBool(layer, box);
+
+        //lsBooleanOperation<double, D>(layer, box, lsBooleanOperationEnum::RELATIVE_COMPLEMENT)
+        //    .apply();
 
     }
 

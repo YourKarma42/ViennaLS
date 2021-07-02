@@ -156,7 +156,9 @@ public:
 
     //TODO: currently hack!
     if(levelSet->getLevelSetNormalization() == lsNormalizations::EUCLID){
-      scalarVelocity =  velocities->getScalarVelocity(coordArray, neighborIterator.getCenter().getPointId(), normalVector);
+      //TODO: test for curvature maby make option to pass indices to velocity function?
+      std::array<T, 3> testCoordArray = {indices[0], indices[1], indices[2]};
+      scalarVelocity =  velocities->getScalarVelocity(testCoordArray, neighborIterator.getCenter().getPointId(), normalVector);
     }else{
       scalarVelocity =
           velocities->getScalarVelocity(coordArray, material, normalVector);
