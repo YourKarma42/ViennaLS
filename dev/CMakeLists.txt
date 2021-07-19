@@ -69,4 +69,10 @@ add_executable(thinLyers thinLyers.cpp)
 target_include_directories(thinLyers PUBLIC ${VIENNALS_INCLUDE_DIRS})
 target_link_libraries(thinLyers PRIVATE ${VIENNALS_LIBRARIES})
 
+add_executable(planeBoxEuclid planeBoxEuclid.cpp)
+target_include_directories(planeBoxEuclid PUBLIC ${VIENNALS_INCLUDE_DIRS})
+target_link_libraries(planeBoxEuclid PRIVATE ${VIENNALS_LIBRARIES})
+
+
+
 

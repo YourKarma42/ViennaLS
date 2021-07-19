@@ -45,7 +45,7 @@ void printLayers(std::vector<lsSmartPointer<lsDomain<double, D>>> layers){
 
 
         auto mesh1 = lsSmartPointer<lsMesh>::New();
-        lsToMesh<double, D>(layer, mesh, true, false, 3.).apply();
+        lsToMesh<double, D>(layer, mesh, true, false, 6.).apply();
         lsVTKWriter(mesh, "pointsLayer" + std::to_string(i)  + ".vtk").apply();
 
         i++;
@@ -341,7 +341,7 @@ int main() {
 
         auto newLayer = makeMaterialLayer(gridDelta, posSingleLayer, extent, lsNormalizations::MANHATTEN);
 
-        lsExpand(newLayer, 4.);
+        lsExpand<NumericType, D>(newLayer, 6.).apply();
 
         layers.push_back(newLayer);
     
@@ -357,7 +357,7 @@ int main() {
 
     auto box = makeBox(gridDelta, minCorner, extent);
 
-    lsExpand(box, 4.);
+    lsExpand<NumericType, D>(box, 6.).apply();
 
     for(auto layer: layers){
 
