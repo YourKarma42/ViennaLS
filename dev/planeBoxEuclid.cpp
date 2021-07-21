@@ -41,7 +41,11 @@ typedef NumericType T;
 typedef typename lsDomain<NumericType, D>::DomainType hrleDomainType;
 
 
-lsSmartPointer<lsDomain<double, D>> makePlane(lsSmartPointer<lsDomain<double, D>> levelSet, double normal[3], double point[3]){
+typedef typename lsDomain<T, D>::PointValueVectorType pointDataType;
+pointDataType pointData;
+
+
+lsSmartPointer<lsDomain<double, D>> makePlane(lsSmartPointer<lsDomain<double, D>> levelSet, hrleVectorType<T, D> passedNormal, hrleVectorType<T, D> origin){
 
 
 
@@ -49,21 +53,96 @@ lsSmartPointer<lsDomain<double, D>> makePlane(lsSmartPointer<lsDomain<double, D>
     auto &grid = levelSet->getGrid();
     hrleCoordType gridDelta = grid.getGridDelta();
 
-    // calculate indices from sphere size
-    hrleVectorType<hrleIndexType, D> index;
-    hrleVectorType<hrleIndexType, D> endIndex;
+
+    // normalise passedNormal
+    double modulus = 0.;
+    hrleVectorType<double, D> normal(passedNormal);
+    for (unsigned i = 0; i < D; ++i) {
+      modulus += normal[i] * normal[i];
+    }
+    modulus = std::sqrt(modulus);
+    for (unsigned i = 0; i < D; ++i) {
+      normal[i] /= modulus;
+    }
+
+    // check that boundary conditions are correct
+    unsigned i = 0;
+    bool infDimSet = false;
+    for (unsigned n = 0; n < D; ++n) {
+      if (grid.getBoundaryConditions(n) ==
+          hrleGrid<D>::boundaryType::INFINITE_BOUNDARY) {
+        if (!infDimSet) {
+          i = n;
+          infDimSet = true;
+        } else {
+          lsMessage::getInstance().addError(
+              "Planes can only be created with one Infinite Boundary "
+              "Condition. More than one found!");
+        }
+      }
+    }
+    if (!infDimSet) {
+      lsMessage::getInstance().addError("Planes require exactly one Infinite "
+                                        "Boundary Condition. None found!");
+    }
+
+    if (passedNormal[i] == 0.) {
+      lsMessage::getInstance().addError(
+          "lsMakeGeometry: Plane cannot be parallel to Infinite Boundary "
+          "direction!");
+    }
+
 
     //get grid boundaries
+    //rethink width
+    const T width = 2;
 
     if(levelSet->getLevelSetNormalization() == lsNormalizations::EUCLID){
 
-    //iterate over grid use formula
+
+        pointDataType pointData;
+
+        hrleVectorType<hrleIndexType, D> index = grid.getMinIndex();
+        hrleVectorType<hrleIndexType, D> minIndex = grid.getMinIndex();
+        hrleVectorType<hrleIndexType, D> endIndex = grid.getMaxIndex();
+
+        while(index<endIndex){
+           
+           T distToSurf = 0.;
+           hrleVectorType<double, D> distPointSurf;
+            
+            //calculate distance
+
+            for(int i = 0; i < D; i++){
+                distPointSurf[i] = index[i] - origin[i];
+            }
+
+            for(int i = 0; i < D; i++){
+                distToSurf = normal[i] * distPointSurf[i];
+            }
+
+            //add distance into the ls
+            if(std::abs(distToSurf <= gridDelta)){
+                pointData.push_back(std::make_pair(index, (distToSurf/gridDelta )));
+                
+            }
+
+            int dim = 0;
+            for (; dim < D - 1; ++dim) {
+                if (index[dim] < endIndex[dim])
+                break;
+                index[dim] = minIndex[dim];
+            }
+            ++index[dim];
+
+
+        }
 
     }
 
-    //levelSet->insertPoints(pointData);
-    //levelSet->getDomain().segment();
-    //levelSet->finalize(width);
+    levelSet->insertPoints(pointData);
+    levelSet->getDomain().segment();
+    levelSet->finalize(width);
 
 
 
@@ -105,8 +184,12 @@ int main() {
 
     double point[3] = {0., 0., 0.};
 
+    hrleVectorType<T, D> normalHrle(normal);
 
-    lsSmartPointer<lsDomain<double, D>> levelSet1 = makePlane(levelSet1, normal, point);
+    hrleVectorType<T, D> pointHrle(point);
+
+
+    lsSmartPointer<lsDomain<double, D>> levelSet1 = makePlane(levelSet, normalHrle, pointHrle);
 
     levelSets.push_back(levelSet1);  
 
@@ -116,7 +199,7 @@ int main() {
     lsToMesh<NumericType, D>(levelSets.back(), narrowband1, true, false, 1).apply();
  
     //lsVTKWriter(narrowband, lsFileFormatEnum::VTU , "narrowband" ).apply();
-    lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "narrowband" ).apply();
+    lsVTKWriter(narrowband1, lsFileFormatEnum::VTU , "planeTEST" ).apply();
 
     //FMM
 
